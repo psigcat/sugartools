@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Dialog</class>
+ <widget class="QDialog" name="Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>859</width>
+    <height>670</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="12" column="1">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Site (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="19" column="1">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>PushButton</string>
+     </property>
+    </widget>
+   </item>
+   <item row="23" column="0">
+    <widget class="QLabel" name="label_6">
+     <property name="text">
+      <string>Restrict archeaelogical units (n1, n2, n3) (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="21" column="0">
+    <widget class="QLabel" name="label_8">
+     <property name="text">
+      <string>Overlay layer symbology (.lyr file) (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="1">
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Extent</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <widget class="QCheckBox" name="xmin">
+        <property name="text">
+         <string>X Min (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="xmax">
+        <property name="text">
+         <string>X Max (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ymin">
+        <property name="text">
+         <string>Y Min (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ymax">
+        <property name="text">
+         <string>Y Max (optional)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="16" column="0">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>Options</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="option_points">
+        <property name="text">
+         <string>Block points (points) (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="option_paint">
+        <property name="text">
+         <string>Paint blocks (polygons) (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QCheckBox" name="option_exclude_red">
+        <property name="text">
+         <string>Exclude points marked in red (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QCheckBox" name="option_exclude_duplicated">
+        <property name="text">
+         <string>Exclude duplicated points (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QCheckBox" name="option_exclude_nocoord">
+        <property name="text">
+         <string>Exclude No_Coord and Samples (optional)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QgsFileWidget" name="workspace"/>
+   </item>
+   <item row="13" column="1">
+    <widget class="QComboBox" name="site"/>
+   </item>
+   <item row="3" column="1">
+    <widget class="QComboBox" name="db_view"/>
+   </item>
+   <item row="14" column="1">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Symbology (.lyr file) (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" rowspan="7">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Sections</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="ew">
+        <property name="text">
+         <string>EW cross-sections (optional)</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ns">
+        <property name="text">
+         <string>NS cross-sections (optional)</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ew_inverted">
+        <property name="text">
+         <string>Inverted EW cross-sections (optional)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ns_inverted">
+        <property name="text">
+         <string>Inverted NS cross-sections (optional)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="22" column="0" colspan="2">
+    <widget class="QgsFileWidget" name="overlay_symbology"/>
+   </item>
+   <item row="26" column="0" colspan="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="24" column="0" colspan="2">
+    <widget class="QLineEdit" name="restricted_units"/>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Database View</string>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="1">
+    <widget class="QgsFileWidget" name="symbology"/>
+   </item>
+   <item row="18" column="0">
+    <widget class="QLabel" name="label_7">
+     <property name="text">
+      <string>Overlay layer (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="25" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Thickness</string>
+     </property>
+    </widget>
+   </item>
+   <item row="19" column="0">
+    <widget class="QLineEdit" name="overlay_layer"/>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Workspace</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QgsSpinBox" name="thickness">
+     <property name="minimum">
+      <number>10</number>
+     </property>
+     <property name="maximum">
+      <number>1000</number>
+     </property>
+     <property name="singleStep">
+      <number>10</number>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsFileWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsfilewidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>qgsspinbox.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>Dialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>Dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
