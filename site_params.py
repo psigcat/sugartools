@@ -21,3 +21,17 @@ lyr_files = ["simb_strplanta.lyr",
              "simb_strEW.lyr",
              "simb_strNS_planta.lyr",
              "simb_strEW_planta.lyr"]
+
+symbologies = [
+    "levels_CG",
+    "levels_Al",
+    "levels_BD",
+    "levels_BG"
+]
+
+symbologies_overlays = [
+    "overlay_levels_CG",
+    "overlay_levels_Al",
+    "overlay_levels_BD",
+    "overlay_levels_BG"
+]

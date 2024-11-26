@@ -23,12 +23,19 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
+from qgis.gui import QgsFileWidget, QgsSpinBox
 
 from .sugar_tools_dialog import SugarToolsDialog
 import os.path
+import datetime
 
-from .site_params import sites
+from .site_params import sites, symbologies, symbologies_overlays
+from .utils import Utils
+
+
+FIELDS_MANDATORY = ["db_view", "workspace", "thickness"]
+FIELDS_SECTIONS = ["ew", "ew_inverted", "se", "se_inverted"]
 
 
 class SugarTools:
@@ -179,11 +186,157 @@ class SugarTools:
             self.iface.removeToolBarIcon(action)
 
 
-    def load_site_params(self):
-        """ Load site params from python file """
+    def load_db_views(self):
+        """ Load database views """
 
+        self.dlg.db_view.clear()
+        self.dlg.db_view.addItem("localtabac")
+
+
+    def load_site_params(self):
+        """ Load site params from configuration """
+
+        self.dlg.site.clear()
         for site in sites:
             self.dlg.site.addItem(site)
+
+
+    def load_symbologies(self):
+        """ Load symbologies from configuration """
+
+        self.dlg.symbologies.clear()
+        for symbology in symbologies:
+            self.dlg.symbologies.addItem(symbology)
+
+
+    def load_symbologies_overlays(self):
+        """ Load overlay symbologies from configuration """
+
+        self.dlg.symbologies_overlays.clear()
+        for symbology in symbologies_overlays:
+            self.dlg.symbologies_overlays.addItem(symbology)
+
+
+    def get_widget_data(self, fieldname):
+        """ Get widgets and its data """
+
+        widget = None
+        data = None
+        if not hasattr(self.dlg, fieldname):
+            return None, None
+        widget = getattr(self.dlg, fieldname)
+        if type(widget) == QLineEdit:
+            data = widget.text()
+        elif type(widget) == QPlainTextEdit:
+            data = widget.toPlainText()
+        elif type(widget) is QgsFileWidget:
+            data = widget.filePath()
+        elif type(widget) is QgsSpinBox:
+            data = widget.text()
+        elif type(widget) is QComboBox:
+            data = widget.currentText()
+        elif type(widget) == QCheckBox:
+            data = widget.isChecked()
+        else:
+            self.iface.messageBar().pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}")
+        return widget, data
+
+
+    def check_mandatory(self):
+        """ Check if mandatory fields do have values """
+
+        for field in FIELDS_MANDATORY:
+
+            widget, widget_data = self.get_widget_data(field)
+            if widget_data in ('(Seleccionar)', '--') or widget_data == '':
+                self.iface.messageBar().pushMessage(f"Mandatory field without information: {field}")
+                widget.setFocus()
+                return False
+
+        return True
+
+
+    def check_sections(self):
+        """ Check if at least one section is selected """
+
+        for field in FIELDS_SECTIONS:
+
+            widget, widget_data = self.get_widget_data(field)
+            if widget_data:
+                return True
+
+        self.iface.messageBar().pushMessage(f"At least one section has to be selected")
+        return False
+
+
+
+    def createConfig(self):
+        """ Create a geopackage with list of tables """
+
+        ###Folder name:
+        today = datetime.date.today()
+        folder_name = "Sec-" + self.dlg.site.currentText() + "-" + str(self.dlg.thickness.text()) + "--" + today.strftime("%Y") + "-" + today.strftime("%m") + "-" + today.strftime("%d")
+        print(folder_name)
+
+        ###Paths:
+        path_arqueotools = os.path.dirname(os.path.abspath(__file__))
+        print(path_arqueotools)
+        path_gpkg = os.path.join(self.dlg.workspace.filePath(), folder_name, folder_name+".gpkg")
+        gpkg_layername = "|layername="
+        print(path_gpkg)
+
+        #Paths de taules de la geodatabase:
+        all_table = path_gpkg + gpkg_layername + "all_table" #Path de la taula amb totes les dades
+        restr_table = path_gpkg + gpkg_layername + "restr_table" #Path taula restringida a coordenades especificades
+        levels_table = path_gpkg + gpkg_layername + "levels_table" #Path a taula restringida a UA's especificades
+        overlay_table = path_gpkg +  gpkg_layername + "overlay_table" #Path a taula amb dades del Overlay
+        sec_table = path_gpkg +  gpkg_layername + "sec_table" #Path per taula de secció
+        overlay_sec_table = path_gpkg +  gpkg_layername + "overlay_sec_table" #Path per taula de secció Overlay
+        bl_table = path_gpkg +  gpkg_layername + "bl_table" #Path per taula de blocs
+        bl_table_ampliada = path_gpkg +  gpkg_layername + "bl_table_ampliada" #Path per taula ampliada de blocs
+
+        #Declarar variables que s'utilitzaran més endavant
+        data_table = self.dlg.db_view.currentText()
+        xmin = xmax = ymin = ymax = 0
+        empty_lyrfile = ""
+        empty_overlay_lyr = ""
+        lyrfile = self.dlg.symbologies.currentText()
+        sql_overlay = self.dlg.overlay_layer.text()
+        overlay_lyrfile = self.dlg.symbologies_overlays.currentText()
+
+        if self.dlg.xmin.isChecked() and self.dlg.xmax.isChecked() != 0 and self.dlg.ymin.isChecked() != 0 and pself.dlg.ymax.isChecked() != 0:
+            bol_coords = True
+        else:
+            bol_coords = False
+
+        if self.dlg.site.currentText() != "":
+            bol_site = True
+        else:
+            bol_site = False
+        
+        if self.dlg.symbologies.currentText() != "":
+            bol_simb = True
+        else:
+            bol_simb = False
+
+        if self.dlg.symbologies_overlays.currentText() != "":
+            bol_overlay = True
+        else:
+            bol_overlay = False
+
+        par_block = self.dlg.option_points.isChecked()
+        par_dibblock = self.dlg.option_paint.isChecked()
+        if not par_block and par_dibblock: #Si s'activa el dibuix de blocs però no està activada la selecció de punts de blocs, activa aquesta ultima.
+            bol_block = True
+        elif not par_block and not par_dibblock:
+            bol_block = False
+        elif par_block:
+            bol_block = True
+
+        #Set UA's query
+        form_levels = self.dlg.restricted_units.text()
+        if form_levels != "":
+            levels_str, levels_query = Utils.sec_set_uas(form_levels)
 
 
     def run(self):
@@ -195,7 +348,10 @@ class SugarTools:
             self.first_start = False
             self.dlg = SugarToolsDialog()
 
+        self.load_db_views()
         self.load_site_params()
+        self.load_symbologies()
+        self.load_symbologies_overlays()
 
         # show the dialog
         self.dlg.show()
@@ -203,6 +359,7 @@ class SugarTools:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
+
+            self.check_sections()
+            self.check_mandatory()
+            self.createConfig()
