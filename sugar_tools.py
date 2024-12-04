@@ -403,11 +403,11 @@ class SugarTools:
     def run(self):
         """Run method that performs all the real work"""
 
-        if (QgsProject.instance().fileName() == ""):
-            self.iface.messageBar().pushMessage(
-                  "Warning", "Please open a project file in order to use this plugin",
-                  level=Qgis.Warning, duration=3)
-            return False
+        # if (QgsProject.instance()):
+        #     self.iface.messageBar().pushMessage(
+        #           "Warning", "Please open a project file in order to use this plugin",
+        #           level=Qgis.Warning, duration=3)
+        #     return False
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
