@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
 from qgis.gui import QgsFileWidget, QgsSpinBox
-from qgis.core import QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -211,7 +211,7 @@ class SugarTools:
         elif type(widget) == QCheckBox:
             data = widget.isChecked()
         else:
-            self.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}")
+            self.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}", level=Qgis.Warning, duration=3)
         return widget, data
 
 
@@ -230,7 +230,7 @@ class SugarTools:
 
             widget, widget_data = self.get_widget_data(field)
             if widget_data in ('(Select)', '--') or widget_data == '':
-                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}")
+                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning, duration=3)
                 widget.setFocus()
                 return False
 
@@ -246,7 +246,7 @@ class SugarTools:
             if widget_data:
                 return True
 
-        self.dlg.messageBar.pushMessage(f"At least one section has to be selected")
+        self.dlg.messageBar.pushMessage(f"At least one section has to be selected", level=Qgis.Warning, duration=3)
 
         return False
 
@@ -402,6 +402,12 @@ class SugarTools:
 
     def run(self):
         """Run method that performs all the real work"""
+
+        if (QgsProject.instance().fileName() == ""):
+            self.iface.messageBar().pushMessage(
+                  "Warning", "Please open a project file in order to use this plugin",
+                  level=Qgis.Warning, duration=3)
+            return False
 
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
