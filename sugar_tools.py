@@ -25,17 +25,21 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
 from qgis.gui import QgsFileWidget, QgsSpinBox
+from qgis.core import QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer
+from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
-import os.path
+
+import os
 import datetime
-
-from .site_params import sites, symbologies, symbologies_overlays
-from .utils import Utils
+from random import randrange
 
 
-FIELDS_MANDATORY = ["db_view", "workspace", "thickness"]
-FIELDS_SECTIONS = ["ew", "ew_inverted", "se", "se_inverted"]
+FIELDS_SECTIONS = ["section_ew", "section_ns"]
+FIELDS_MANDATORY_IMPORT = ["workspace"]
+FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
+SECTION_EW_PATTERN = "_EW"
+SECTION_NS_PATTERN = "_NS"
 
 
 class SugarTools:
@@ -186,37 +190,6 @@ class SugarTools:
             self.iface.removeToolBarIcon(action)
 
 
-    def load_db_views(self):
-        """ Load database views """
-
-        self.dlg.db_view.clear()
-        self.dlg.db_view.addItem("localtabac")
-
-
-    def load_site_params(self):
-        """ Load site params from configuration """
-
-        self.dlg.site.clear()
-        for site in sites:
-            self.dlg.site.addItem(site)
-
-
-    def load_symbologies(self):
-        """ Load symbologies from configuration """
-
-        self.dlg.symbologies.clear()
-        for symbology in symbologies:
-            self.dlg.symbologies.addItem(symbology)
-
-
-    def load_symbologies_overlays(self):
-        """ Load overlay symbologies from configuration """
-
-        self.dlg.symbologies_overlays.clear()
-        for symbology in symbologies_overlays:
-            self.dlg.symbologies_overlays.addItem(symbology)
-
-
     def get_widget_data(self, fieldname):
         """ Get widgets and its data """
 
@@ -238,18 +211,26 @@ class SugarTools:
         elif type(widget) == QCheckBox:
             data = widget.isChecked()
         else:
-            self.iface.messageBar().pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}")
+            self.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}")
         return widget, data
 
 
-    def check_mandatory(self):
+    def check_mandatory(self, active_tab):
         """ Check if mandatory fields do have values """
+
+        if not self.check_sections():
+            return False
+
+        if active_tab == "tabImport":
+            FIELDS_MANDATORY = FIELDS_MANDATORY_IMPORT
+        elif active_tab == "tabLayout":
+            FIELDS_MANDATORY = FIELDS_MANDATORY_LAYOUT
 
         for field in FIELDS_MANDATORY:
 
             widget, widget_data = self.get_widget_data(field)
-            if widget_data in ('(Seleccionar)', '--') or widget_data == '':
-                self.iface.messageBar().pushMessage(f"Mandatory field without information: {field}")
+            if widget_data in ('(Select)', '--') or widget_data == '':
+                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}")
                 widget.setFocus()
                 return False
 
@@ -265,78 +246,158 @@ class SugarTools:
             if widget_data:
                 return True
 
-        self.iface.messageBar().pushMessage(f"At least one section has to be selected")
+        self.dlg.messageBar.pushMessage(f"At least one section has to be selected")
+
         return False
 
 
+    def fill_layer(self):
+        """ show all layers in combobox """
 
-    def createConfig(self):
-        """ Create a geopackage with list of tables """
+        self.dlg.layer.clear()
+        self.dlg.layer.addItem("(Select)")
+        for group in QgsProject.instance().layerTreeRoot().children():
+            if (self.dlg.section_ew.isChecked() and group.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and group.name().find(SECTION_NS_PATTERN) > 0):
+                self.dlg.layer.addItem(group.name())
 
-        ###Folder name:
-        today = datetime.date.today()
-        folder_name = "Sec-" + self.dlg.site.currentText() + "-" + str(self.dlg.thickness.text()) + "--" + today.strftime("%Y") + "-" + today.strftime("%m") + "-" + today.strftime("%d")
-        print(folder_name)
 
-        ###Paths:
-        path_arqueotools = os.path.dirname(os.path.abspath(__file__))
-        print(path_arqueotools)
-        path_gpkg = os.path.join(self.dlg.workspace.filePath(), folder_name, folder_name+".gpkg")
-        gpkg_layername = "|layername="
-        print(path_gpkg)
+    def fill_layout(self):
+        """ show all layouts in combobox """
 
-        #Paths de taules de la geodatabase:
-        all_table = path_gpkg + gpkg_layername + "all_table" #Path de la taula amb totes les dades
-        restr_table = path_gpkg + gpkg_layername + "restr_table" #Path taula restringida a coordenades especificades
-        levels_table = path_gpkg + gpkg_layername + "levels_table" #Path a taula restringida a UA's especificades
-        overlay_table = path_gpkg +  gpkg_layername + "overlay_table" #Path a taula amb dades del Overlay
-        sec_table = path_gpkg +  gpkg_layername + "sec_table" #Path per taula de secció
-        overlay_sec_table = path_gpkg +  gpkg_layername + "overlay_sec_table" #Path per taula de secció Overlay
-        bl_table = path_gpkg +  gpkg_layername + "bl_table" #Path per taula de blocs
-        bl_table_ampliada = path_gpkg +  gpkg_layername + "bl_table_ampliada" #Path per taula ampliada de blocs
+        self.dlg.layout.clear()
+        self.dlg.layout.addItem("(Select)")
+        layout_manager = QgsProject.instance().layoutManager()
+        for layout in layout_manager.printLayouts():
+            self.dlg.layout.addItem(layout.name())
 
-        #Declarar variables que s'utilitzaran més endavant
-        data_table = self.dlg.db_view.currentText()
-        xmin = xmax = ymin = ymax = 0
-        empty_lyrfile = ""
-        empty_overlay_lyr = ""
-        lyrfile = self.dlg.symbologies.currentText()
-        sql_overlay = self.dlg.overlay_layer.text()
-        overlay_lyrfile = self.dlg.symbologies_overlays.currentText()
 
-        if self.dlg.xmin.isChecked() and self.dlg.xmax.isChecked() != 0 and self.dlg.ymin.isChecked() != 0 and pself.dlg.ymax.isChecked() != 0:
-            bol_coords = True
-        else:
-            bol_coords = False
+    def loadFile(self, file):
+        """ load csv file as vector layer """
 
-        if self.dlg.site.currentText() != "":
-            bol_site = True
-        else:
-            bol_site = False
+        # file = 'Azdo_EW0_MMy77681_87860.txt'
+        uri = os.path.join('file://' + self.secciones_path, file + self.csv_params)
+        csv_layer = QgsVectorLayer(uri, file[:-4], 'delimitedtext')
+        QgsProject.instance().addMapLayer(csv_layer)
+
+        self.set_symbology(csv_layer)
+
+
+    def set_symbology(self, layer):
+        """ set categorized symbology """
+
+        # symbol = csv_layer.renderer().symbol()
+        # print(type(symbol))
+        # if type(symbol) is QgsMarkerSymbol:
+        #     symbol.setSize(10)
         
-        if self.dlg.symbologies.currentText() != "":
-            bol_simb = True
-        else:
-            bol_simb = False
+        field_name = 'nom_nivel'
+        fni = layer.fields().indexFromName(field_name)
+        unique_values = layer.uniqueValues(fni)
 
-        if self.dlg.symbologies_overlays.currentText() != "":
-            bol_overlay = True
-        else:
-            bol_overlay = False
+        # fill categories
+        categories = []
+        for unique_value in unique_values:
+            # initialize the default symbol for this geometry type
+            symbol = QgsSymbol.defaultSymbol(layer.geometryType())
 
-        par_block = self.dlg.option_points.isChecked()
-        par_dibblock = self.dlg.option_paint.isChecked()
-        if not par_block and par_dibblock: #Si s'activa el dibuix de blocs però no està activada la selecció de punts de blocs, activa aquesta ultima.
-            bol_block = True
-        elif not par_block and not par_dibblock:
-            bol_block = False
-        elif par_block:
-            bol_block = True
+            # configure a symbol layer
+            layer_style = {}
+            layer_style['color'] = '%d, %d, %d' % (randrange(0, 256), randrange(0, 256), randrange(0, 256))
+            layer_style['outline'] = '#000000'
+            symbol_layer = QgsSimpleFillSymbolLayer.create(layer_style)
 
-        #Set UA's query
-        form_levels = self.dlg.restricted_units.text()
-        if form_levels != "":
-            levels_str, levels_query = Utils.sec_set_uas(form_levels)
+            # replace default symbol layer with the configured one
+            if symbol_layer is not None:
+                symbol.changeSymbolLayer(0, symbol_layer)
+
+            # create renderer object
+            category = QgsRendererCategory(unique_value, symbol, str(unique_value))
+            # entry for the list of category items
+            categories.append(category)
+
+        # create renderer object
+        renderer = QgsCategorizedSymbolRenderer(field_name, categories)
+
+        # assign the created renderer to the layer
+        if renderer is not None:
+            layer.setRenderer(renderer)
+
+        layer.triggerRepaint()
+
+
+    def get_file_list(self, pattern):
+        """ get all files containing pattern from workspace """
+
+        return [f for f in os.listdir(self.secciones_path) if os.path.isfile(os.path.join(self.secciones_path, f)) and f.find(pattern) > 0]
+
+
+    def import_files(self, active_tab):
+        """ import all files from selected workspace """
+
+        if not self.check_mandatory(active_tab):
+            return False
+
+        # 1. recorrer todos los ficheros de la carpeta roca_bous_secciones
+        # 2. si contienen _EW asigno coordinadas X=X, Y=Z
+        # 3. si contienen _NS asigno coordinadas X=Y, Y=Z
+        # importar como CSV
+
+        self.csv_params = '?delimiter=%5Ct&maxFields=20000&detectTypes=yes&xField=X&yField=Z&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
+        #secciones_path = '/home/gerald/Documents/PSIG/UAB_CEPAP/Entrada/script_sql/roca bous_secciones/'
+        self.secciones_path = self.dlg.workspace.filePath()
+        
+        if self.dlg.section_ew.isChecked():
+            for file in self.get_file_list(SECTION_EW_PATTERN):
+                self.loadFile(file)
+
+        if self.dlg.section_ns.isChecked():
+            for file in self.get_file_list(SECTION_NS_PATTERN):
+                self.loadFile(file)
+
+        # close dialog
+        self.dlg.close()
+
+
+    def load_layout(self, active_tab):
+        """ only show selected layer and load into layout """
+
+        if not self.check_mandatory(active_tab):
+            return False
+
+        # hide all layers but selected
+        for group in QgsProject.instance().layerTreeRoot().children():
+            group.setItemVisibilityChecked(group.name() == self.dlg.layer.currentText())
+
+        # zoom to selected layer
+        active_layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
+        iface.setActiveLayer(active_layer)
+        iface.zoomToActiveLayer()
+
+        # get selected layout
+        layout_manager = QgsProject.instance().layoutManager()
+        layout = layout_manager.layoutByName(self.dlg.layout.currentText())
+
+        # set map extent to match main canvas extent
+        mapItem = layout.itemById('Map 1')
+        mapCanvas = iface.mapCanvas()
+        mapItem.zoomToExtent(mapCanvas.extent())
+
+        # open layout
+        iface.openLayoutDesigner(layout)
+
+        # close dialog
+        self.dlg.close()
+
+
+    def process(self):
+        """ execute actions when ok clicked """
+
+        active_tab = self.dlg.tabWidget.currentWidget().objectName()
+
+        if active_tab == "tabImport":
+            self.import_files(active_tab)
+        elif active_tab == "tabLayout":
+            self.load_layout(active_tab)
 
 
     def run(self):
@@ -347,19 +408,19 @@ class SugarTools:
         if self.first_start == True:
             self.first_start = False
             self.dlg = SugarToolsDialog()
-
-        self.load_db_views()
-        self.load_site_params()
-        self.load_symbologies()
-        self.load_symbologies_overlays()
+            self.dlg.buttonBox.accepted.disconnect()
+            self.dlg.buttonBox.accepted.connect(self.process)
+            self.dlg.section_ew.stateChanged.connect(self.fill_layer)
+            self.dlg.section_ns.stateChanged.connect(self.fill_layer)
 
         # show the dialog
+        self.fill_layer()
+        self.fill_layout()
         self.dlg.show()
+
         # Run the dialog event loop
         result = self.dlg.exec_()
+
         # See if OK was pressed
         if result:
-
-            self.check_sections()
-            self.check_mandatory()
-            self.createConfig()
+            pass
