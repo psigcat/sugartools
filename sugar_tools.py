@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
 from qgis.gui import QgsFileWidget, QgsSpinBox
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -40,6 +40,7 @@ FIELDS_MANDATORY_IMPORT = ["workspace"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
+LAYOUT_MAP_ITEM = "Map 1"
 
 
 class SugarTools:
@@ -251,14 +252,25 @@ class SugarTools:
         return False
 
 
+    def get_layer_tree(self, node):
+        """ recursevly parse whole layer tree """
+
+        if isinstance(node, QgsLayerTreeLayer):
+            if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
+                self.dlg.layer.addItem(node.name())
+
+        elif isinstance(node, QgsLayerTreeGroup):
+            for child in node.children():
+                self.get_layer_tree(child)
+
+
     def fill_layer(self):
         """ show all layers in combobox """
 
         self.dlg.layer.clear()
         self.dlg.layer.addItem("(Select)")
         for group in QgsProject.instance().layerTreeRoot().children():
-            if (self.dlg.section_ew.isChecked() and group.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and group.name().find(SECTION_NS_PATTERN) > 0):
-                self.dlg.layer.addItem(group.name())
+            self.get_layer_tree(group)
 
 
     def fill_layout(self):
@@ -378,7 +390,7 @@ class SugarTools:
         layout = layout_manager.layoutByName(self.dlg.layout.currentText())
 
         # set map extent to match main canvas extent
-        mapItem = layout.itemById('Map 1')
+        mapItem = layout.itemById(LAYOUT_MAP_ITEM)
         mapCanvas = iface.mapCanvas()
         mapItem.zoomToExtent(mapCanvas.extent())
 
