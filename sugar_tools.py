@@ -40,7 +40,7 @@ FIELDS_MANDATORY_IMPORT = ["workspace"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
-LAYOUT_MAP_ITEM = "Map 1"
+LAYOUT_MAP_ITEM = "Mapa principal"
 
 
 class SugarTools:
