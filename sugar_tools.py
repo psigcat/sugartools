@@ -24,8 +24,8 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
-from qgis.gui import QgsFileWidget, QgsSpinBox
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup
+from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -35,12 +35,21 @@ import datetime
 from random import randrange
 
 
-FIELDS_SECTIONS = ["section_ew", "section_ns"]
+COMBO_SELECT = "(Select)"
+FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
 FIELDS_MANDATORY_IMPORT = ["workspace"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
+INVERTED_STR = " inverted"
 LAYOUT_MAP_ITEM = "Mapa principal"
+#CSV_PARAMS = '?delimiter=%5Ct&maxFields=20000&detectTypes=yes&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
+CSV_PARAMS = '?maxFields=20000&detectTypes=yes&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
+CSV_PARAMS_COORDS_EW = '&xField=X&yField=Z'
+CSV_PARAMS_COORDS_NS = '&xField=Y&yField=Z'
+CSV_PARAMS_COORDS_EW_NEG = '&xField=X_NEG&yField=Z'
+CSV_PARAMS_COORDS_NS_NEG = '&xField=Y_NEG&yField=Z'
+
 
 
 class SugarTools:
@@ -212,7 +221,7 @@ class SugarTools:
         elif type(widget) == QCheckBox:
             data = widget.isChecked()
         else:
-            self.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}", level=Qgis.Warning, duration=3)
+            self.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}", level=Qgis.Warning)
         return widget, data
 
 
@@ -230,8 +239,8 @@ class SugarTools:
         for field in FIELDS_MANDATORY:
 
             widget, widget_data = self.get_widget_data(field)
-            if widget_data in ('(Select)', '--') or widget_data == '':
-                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning, duration=3)
+            if widget_data in (COMBO_SELECT, '--') or widget_data == '':
+                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning)
                 widget.setFocus()
                 return False
 
@@ -247,7 +256,7 @@ class SugarTools:
             if widget_data:
                 return True
 
-        self.dlg.messageBar.pushMessage(f"At least one section has to be selected", level=Qgis.Warning, duration=3)
+        self.dlg.messageBar.pushMessage(f"At least one section has to be selected", level=Qgis.Warning)
 
         return False
 
@@ -268,7 +277,7 @@ class SugarTools:
         """ show all layers in combobox """
 
         self.dlg.layer.clear()
-        self.dlg.layer.addItem("(Select)")
+        self.dlg.layer.addItem(COMBO_SELECT)
         for group in QgsProject.instance().layerTreeRoot().children():
             self.get_layer_tree(group)
 
@@ -277,18 +286,22 @@ class SugarTools:
         """ show all layouts in combobox """
 
         self.dlg.layout.clear()
-        self.dlg.layout.addItem("(Select)")
+        self.dlg.layout.addItem(COMBO_SELECT)
         layout_manager = QgsProject.instance().layoutManager()
         for layout in layout_manager.printLayouts():
             self.dlg.layout.addItem(layout.name())
 
 
-    def loadFile(self, file):
+    def load_file(self, file, csv_params_coords, inverted=False):
         """ load csv file as vector layer """
 
+        inverted_str = ""
+        if inverted:
+            inverted_str = INVERTED_STR
+
         # file = 'Azdo_EW0_MMy77681_87860.txt'
-        uri = os.path.join('file://' + self.secciones_path, file + self.csv_params)
-        csv_layer = QgsVectorLayer(uri, file[:-4], 'delimitedtext')
+        uri = os.path.join('file://' + self.secciones_path, file + CSV_PARAMS + csv_params_coords)
+        csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, 'delimitedtext')
         QgsProject.instance().addMapLayer(csv_layer)
 
         self.set_symbology(csv_layer)
@@ -354,20 +367,93 @@ class SugarTools:
         # 3. si contienen _NS asigno coordinadas X=Y, Y=Z
         # importar como CSV
 
-        self.csv_params = '?delimiter=%5Ct&maxFields=20000&detectTypes=yes&xField=X&yField=Z&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
-        #secciones_path = '/home/gerald/Documents/PSIG/UAB_CEPAP/Entrada/script_sql/roca bous_secciones/'
         self.secciones_path = self.dlg.workspace.filePath()
         
         if self.dlg.section_ew.isChecked():
             for file in self.get_file_list(SECTION_EW_PATTERN):
-                self.loadFile(file)
+                self.load_file(file, CSV_PARAMS_COORDS_EW)
 
         if self.dlg.section_ns.isChecked():
             for file in self.get_file_list(SECTION_NS_PATTERN):
-                self.loadFile(file)
+                self.load_file(file, CSV_PARAMS_COORDS_NS)
+
+        if self.dlg.section_ew_inverted.isChecked():
+            for file in self.get_file_list(SECTION_EW_PATTERN):
+                self.load_file(file, CSV_PARAMS_COORDS_EW_NEG, True)
+
+        if self.dlg.section_ns_inverted.isChecked():
+            for file in self.get_file_list(SECTION_NS_PATTERN):
+                self.load_file(file, CSV_PARAMS_COORDS_NS_NEG, True)
 
         # close dialog
         self.dlg.close()
+
+
+    def has_matches(self, active_layer, expression):
+        """ check if any feature in layer matches expression """
+
+        request = QgsFeatureRequest().setFilterExpression(expression)
+        matches = 0
+        for f in active_layer.getFeatures(request):
+           matches += 1
+        if matches > 0:
+            return True
+
+        return False
+
+
+    def write_layout_vars(self, layout):
+        """ write variables to composition """
+
+        section = ""
+        layer_name = iface.activeLayer().name()
+        if layer_name.find(SECTION_EW_PATTERN) > 0:
+            if layer_name.find(INVERTED_STR):
+                section = self.dlg.section_ew.text()
+            else:
+                section = self.dlg.section_ew_inverted.text()
+        elif layer_name.find(SECTION_NS_PATTERN) > 0:
+            if layer_name.find(INVERTED_STR):
+                section = self.dlg.section_ns.text()
+            else:
+                section = self.dlg.section_ns_inverted.text()
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_section", section)
+
+        red_points = self.has_matches(iface.activeLayer(), "bol_nivelok = 'false'")
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_red_points", red_points)
+
+        duplicated_points = self.has_matches(iface.activeLayer(), "bol_duplicado = 'true'")
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_duplicated_points", duplicated_points)
+
+        no_coord = self.has_matches(iface.activeLayer(), "nom_cmateria = 'no coordenad'")
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_no_coord", no_coord)
+
+        # falta thickness: derivar de nombres de capas
+        # falta blocks
+
+
+    def filter_layer_points(self):
+        """ filter active layer by query and selected options """
+
+        expr = self.dlg.filter_expr.text()
+
+        if self.dlg.exclude_red_points.isChecked():
+            if expr != "":
+                expr += " AND "
+            expr = "bol_nivelok = 'true'"
+
+        if self.dlg.exclude_duplicated_points.isChecked():
+            if expr != "":
+                expr += " AND "
+            expr += "bol_duplicado = 'false'"
+
+        if self.dlg.exclude_no_coords.isChecked():
+            if expr != "":
+                expr += " AND "
+            expr = "nom_cmateria != 'no coordenad'"
+        
+        #active_layer.setSubsetString("")
+        iface.activeLayer().setSubsetString(expr)
 
 
     def load_layout(self, active_tab):
@@ -376,18 +462,13 @@ class SugarTools:
         if not self.check_mandatory(active_tab):
             return False
 
-        # hide all layers but selected
-        for group in QgsProject.instance().layerTreeRoot().children():
-            group.setItemVisibilityChecked(group.name() == self.dlg.layer.currentText())
-
-        # zoom to selected layer
-        active_layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
-        iface.setActiveLayer(active_layer)
-        iface.zoomToActiveLayer()
+        # filter points
+        self.filter_layer_points()
 
         # get selected layout
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName(self.dlg.layout.currentText())
+        self.write_layout_vars(layout)
 
         # set map extent to match main canvas extent
         mapItem = layout.itemById(LAYOUT_MAP_ITEM)
@@ -399,6 +480,29 @@ class SugarTools:
 
         # close dialog
         self.dlg.close()
+
+
+    def open_expr_builder(self):
+        """ open QGIS Query Builder"""
+
+        expr_dialog = QgsExpressionBuilderDialog(iface.activeLayer())
+        if expr_dialog.exec_():
+            self.dlg.filter_expr.setText(expr_dialog.expressionText())
+
+
+    def set_active_layer(self):
+        """ set active layer """
+
+        if self.dlg.layer.currentText() == COMBO_SELECT or self.dlg.layer.currentText() == "":
+            return False
+
+        # hide all layers but selected
+        for group in QgsProject.instance().layerTreeRoot().children():
+            group.setItemVisibilityChecked(group.name() == self.dlg.layer.currentText())
+
+        active_layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
+        iface.setActiveLayer(active_layer)
+        iface.zoomToActiveLayer()
 
 
     def process(self):
@@ -430,6 +534,8 @@ class SugarTools:
             self.dlg.buttonBox.accepted.connect(self.process)
             self.dlg.section_ew.stateChanged.connect(self.fill_layer)
             self.dlg.section_ns.stateChanged.connect(self.fill_layer)
+            self.dlg.layer.currentTextChanged.connect(self.set_active_layer)
+            self.dlg.filter_expr_btn.clicked.connect(self.open_expr_builder)
 
         # show the dialog
         self.fill_layer()
