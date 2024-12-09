@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>428</width>
-    <height>328</height>
+    <height>525</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -50,13 +50,27 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="section_ew_inverted">
+        <property name="text">
+         <string>Inverted EW cross-sections</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="section_ns_inverted">
+        <property name="text">
+         <string>Inverted NS cross-sections</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabImport">
       <attribute name="title">
@@ -87,32 +101,83 @@
        <item>
         <widget class="QComboBox" name="symbologies"/>
        </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tabLayout">
       <attribute name="title">
        <string>Layout</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_4">
-       <item>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>Layer</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QComboBox" name="layer"/>
-       </item>
-       <item>
+       <item row="2" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Layout</string>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="3" column="0" colspan="2">
         <widget class="QComboBox" name="layout"/>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QComboBox" name="layer"/>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QCheckBox" name="exclude_red_points">
+         <property name="text">
+          <string>Exclude points marked in red</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QCheckBox" name="exclude_no_coords">
+         <property name="text">
+          <string>Exclude No_Coord and Samples</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2">
+        <widget class="QCheckBox" name="exclude_duplicated_points">
+         <property name="text">
+          <string>Exclude duplicated points</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <widget class="QPushButton" name="filter_expr_btn">
+         <property name="text">
+          <string>Expression Builder</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLineEdit" name="filter_expr"/>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Filter by expression</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
