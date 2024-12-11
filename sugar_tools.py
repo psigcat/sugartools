@@ -538,16 +538,16 @@ class SugarTools:
             self.dlg.filter_expr.setText(expr_dialog.expressionText())
 
 
-    def get_layer_node(self, node):
+    def toggle_layer_node(self, node):
         """ recursevly parse whole layer tree and return first two layers of section """
 
         if isinstance(node, QgsLayerTreeLayer):
             if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
-                return node
+                node.setItemVisibilityChecked(node.name() == self.dlg.layer.currentText())
 
         elif isinstance(node, QgsLayerTreeGroup):
             for child in node.children():
-                return self.get_layer_node(child)
+                self.toggle_layer_node(child)
 
 
     def set_active_layer(self):
@@ -558,8 +558,7 @@ class SugarTools:
 
         # hide all layers but selected
         for group in QgsProject.instance().layerTreeRoot().children():
-            node = self.get_layer_node(group)
-            node.setItemVisibilityChecked(node.name() == self.dlg.layer.currentText())
+            self.toggle_layer_node(group)
 
         active_layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
         iface.setActiveLayer(active_layer)
