@@ -299,9 +299,11 @@ class SugarTools:
         if inverted:
             inverted_str = INVERTED_STR
 
-        # file = 'Azdo_EW0_MMy77681_87860.txt'
-        uri = os.path.join('file://' + self.secciones_path, file + CSV_PARAMS + csv_params_coords)
-        csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, 'delimitedtext')
+        csv_file = os.path.join(self.secciones_path, file)
+        csv_file = os.path.abspath(csv_file)
+        uri = f"file://{csv_file}{CSV_PARAMS}{csv_params_coords}"
+
+        csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, "delimitedtext")
         QgsProject.instance().addMapLayer(csv_layer)
 
         self.set_symbology(csv_layer)
