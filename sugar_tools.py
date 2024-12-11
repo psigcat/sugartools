@@ -36,8 +36,9 @@ from random import randrange
 
 
 COMBO_SELECT = "(Select)"
+SYMBOLOGY_DIR = "qml"
 FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
-FIELDS_MANDATORY_IMPORT = ["workspace"]
+FIELDS_MANDATORY_IMPORT = ["workspace", "symbologies"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
@@ -283,7 +284,7 @@ class SugarTools:
                 return self.get_section_layer(child)
 
 
-    def get_layer_tree(self, node):
+    def add_layer_tree_item(self, node):
         """ recursevly parse whole layer tree """
 
         if isinstance(node, QgsLayerTreeLayer):
@@ -292,7 +293,20 @@ class SugarTools:
 
         elif isinstance(node, QgsLayerTreeGroup):
             for child in node.children():
-                self.get_layer_tree(child)
+                self.add_layer_tree_item(child)
+
+
+    def fill_symbology(self):
+        """ show all symbologies in combobox """
+
+        self.dlg.symbologies.clear()
+        self.dlg.symbologies.addItem(COMBO_SELECT)
+        symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR)
+        symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f))]
+        symbology_files.sort()
+        for file in symbology_files:
+            #self.dlg.symbologies.addItem(file[:-4])
+            self.dlg.symbologies.addItem(file)
 
 
     def fill_layer(self):
@@ -301,7 +315,7 @@ class SugarTools:
         self.dlg.layer.clear()
         self.dlg.layer.addItem(COMBO_SELECT)
         for group in QgsProject.instance().layerTreeRoot().children():
-            self.get_layer_tree(group)
+            self.add_layer_tree_item(group)
 
 
     def fill_layout(self):
@@ -332,6 +346,15 @@ class SugarTools:
 
 
     def set_symbology(self, layer):
+        """ set symbology from selected qml file """
+
+        symbology = self.dlg.symbologies.currentText()
+        symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, symbology)
+        layer.loadNamedStyle(symbology_path)
+        layer.triggerRepaint()
+
+
+    def set_symbology_bck(self, layer):
         """ set categorized symbology """
 
         # symbol = csv_layer.renderer().symbol()
@@ -598,6 +621,7 @@ class SugarTools:
             self.dlg.filter_expr_btn.clicked.connect(self.open_expr_builder)
 
         # show the dialog
+        self.fill_symbology()
         self.fill_layer()
         self.fill_layout()
         self.dlg.show()
