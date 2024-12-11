@@ -301,7 +301,7 @@ class SugarTools:
 
         csv_file = os.path.join(self.secciones_path, file)
         csv_file = os.path.abspath(csv_file)
-        uri = f"file://{csv_file}{CSV_PARAMS}{csv_params_coords}"
+        uri = f"file:///{csv_file}{CSV_PARAMS}{csv_params_coords}"
 
         csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, "delimitedtext")
         QgsProject.instance().addMapLayer(csv_layer)
