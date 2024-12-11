@@ -261,6 +261,28 @@ class SugarTools:
         return False
 
 
+    def get_two_section_layers(self, node):
+        """ recursevly parse whole layer tree and return first two layers of section """
+
+        layer_names = []
+        for group in node:
+            layer_names.append(self.get_section_layer(group))
+
+        return layer_names
+
+
+    def get_section_layer(self, node):
+        """ recursevly parse whole layer tree and return first two layers of section """
+
+        if isinstance(node, QgsLayerTreeLayer):
+            if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
+                return node.name()
+
+        elif isinstance(node, QgsLayerTreeGroup):
+            for child in node.children():
+                return self.get_section_layer(child)
+
+
     def get_layer_tree(self, node):
         """ recursevly parse whole layer tree """
 
@@ -404,6 +426,26 @@ class SugarTools:
         return False
 
 
+    def get_section_thickness(self, layers):
+        """ extract thickness in cm from two layer names """
+
+        layers.sort()
+        parts1 = layers[0].split("_")
+        x1 = int(parts1[2][3:])
+        y1 = int(parts1[3])
+        parts2 = layers[1].split("_")
+        x2 = int(parts2[2][3:])
+        y2 = int(parts2[3])
+
+        diffx = x2-x1
+        diffy = y2-y1
+
+        if diffx==0:
+            return diffy/10
+
+        return diffx/10
+
+
     def write_layout_vars(self, layout):
         """ write variables to composition """
 
@@ -431,6 +473,10 @@ class SugarTools:
         QgsExpressionContextUtils.setLayoutVariable(layout, "layout_no_coord", no_coord)
 
         # falta thickness: derivar de nombres de capas
+        section_layers = self.get_two_section_layers(QgsProject.instance().layerTreeRoot().children())
+        thickness = self.get_section_thickness(section_layers)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_thickness", thickness)
+
         # falta blocks
 
 
@@ -492,6 +538,18 @@ class SugarTools:
             self.dlg.filter_expr.setText(expr_dialog.expressionText())
 
 
+    def get_layer_node(self, node):
+        """ recursevly parse whole layer tree and return first two layers of section """
+
+        if isinstance(node, QgsLayerTreeLayer):
+            if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
+                return node
+
+        elif isinstance(node, QgsLayerTreeGroup):
+            for child in node.children():
+                return self.get_layer_node(child)
+
+
     def set_active_layer(self):
         """ set active layer """
 
@@ -500,7 +558,8 @@ class SugarTools:
 
         # hide all layers but selected
         for group in QgsProject.instance().layerTreeRoot().children():
-            group.setItemVisibilityChecked(group.name() == self.dlg.layer.currentText())
+            node = self.get_layer_node(group)
+            node.setItemVisibilityChecked(node.name() == self.dlg.layer.currentText())
 
         active_layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
         iface.setActiveLayer(active_layer)
