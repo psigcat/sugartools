@@ -44,7 +44,6 @@ SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
 INVERTED_STR = " inverted"
 LAYOUT_MAP_ITEM = "Mapa principal"
-#CSV_PARAMS = '?delimiter=%5Ct&maxFields=20000&detectTypes=yes&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
 CSV_PARAMS = '?maxFields=20000&detectTypes=yes&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
 CSV_PARAMS_COORDS_EW = '&xField=X&yField=Z'
 CSV_PARAMS_COORDS_NS = '&xField=Y&yField=Z'
@@ -335,9 +334,13 @@ class SugarTools:
         if inverted:
             inverted_str = INVERTED_STR
 
+        delimiter = ""
+        if self.dlg.delimiter.currentText() == "Tabulator (TSV)":
+            delimiter = "&delimiter=%5Ct"
+
         csv_file = os.path.join(self.secciones_path, file)
         csv_file = os.path.abspath(csv_file)
-        uri = f"file:///{csv_file}{CSV_PARAMS}{csv_params_coords}"
+        uri = f"file:///{csv_file}{CSV_PARAMS}{delimiter}{csv_params_coords}"
 
         csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, "delimitedtext")
         QgsProject.instance().addMapLayer(csv_layer)

@@ -70,7 +70,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabImport">
       <attribute name="title">
@@ -89,6 +89,27 @@
          <property name="storageMode">
           <enum>QgsFileWidget::GetDirectory</enum>
          </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Delimiter</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="delimiter">
+         <item>
+          <property name="text">
+           <string>Coma (CSV)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Tabulator (TSV)</string>
+          </property>
+         </item>
         </widget>
        </item>
        <item>
