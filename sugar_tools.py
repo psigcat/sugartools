@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -33,12 +33,14 @@ from .sugar_tools_dialog import SugarToolsDialog
 import os
 import datetime
 from random import randrange
+import processing
 
 
 COMBO_SELECT = "(Select)"
 SYMBOLOGY_DIR = "qml"
 FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
-FIELDS_MANDATORY_IMPORT = ["workspace", "symbologies"]
+FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
+FIELDS_MANDATORY_IMPORT_POINTS = ["symbologies"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
@@ -50,6 +52,22 @@ CSV_PARAMS_COORDS_NS = '&xField=Y&yField=Z'
 CSV_PARAMS_COORDS_EW_NEG = '&xField=X_NEG&yField=Z'
 CSV_PARAMS_COORDS_NS_NEG = '&xField=Y_NEG&yField=Z'
 
+# copia de site_params.py
+SITES = {
+    "":["", 0, 0, 0, 0, "", ""],
+    "CG":["Cova Gran", 170000, 270000, 480000, 540000, "files\\simb_levels\\LYR_NOCREAT.lyr", "files\\simb_levels\\OVRLYR_NOCREAT.lyr"],
+    "CG_S1":["Cova Gran, S1", 180000, 205000, 490000, 505000, "files\\simb_levels\\levels_CG_S1.lyr", "files\\simb_levels\\overlay_levels_CG_S1.lyr"],
+    "CG_SV":["Cova Gran, SV", 202000, 205000, 494000, 500000, "files\\simb_levels\\levels_CG_S1.lyr", "files\\simb_levels\\overlay_levels_CG_S1.lyr"],
+    "CG_S2S8":["Cova Gran, S2-S8", 205750, 210250, 500750, 504250, "files\\simb_levels\\levels_CG_S2S8.lyr", "files\\simb_levels\\overlay_levels_CG_S2S8.lyr"],
+    "CG_SEA":["Cova Gran, SEA", 232500, 240700, 524600, 533000, "files\\simb_levels\\levels_CG_SEA.lyr", "files\\simb_levels\\overlay_levels_CG_SEA.lyr"],
+    "RB":["Roca dels Bous", 17000, 40800, 74900, 88600, "files\\simb_levels\\levels_RB.lyr", "files\\simb_levels\\overlay_levels_RB.lyr"],
+    "BG":["Balma Guilanyà", 98900, 110000, 505700, 512500, "files\\simb_levels\\levels_BG.lyr", "files\\simb_levels\\overlay_levels_BG.lyr"],
+    "FR":["Font del Ros", 1000, 83000, 1000, 54000, "files\\simb_levels\\levels_FR.lyr", "files\\simb_levels\\overlay_levels_FR.lyr"],
+    "PZ":["Abric Pizarro", 78000, 105000, 489000, 502000, "files\\simb_levels\\levels_PZ.lyr", "files\\simb_levels\\overlay_levels_PZ.lyr"],
+    "CT":["Cova del Tabac", 295000, 320000, 499900, 510000, "files\\simb_levels\\levels_CT.lyr", "files\\simb_levels\\overlay_levels_CT.lyr"],
+    "empty":["site_empty", 0, 1, 0, 1, "url_lyr", "url_overlyr"],
+    "empty":["site_empty", 0, 1, 0, 1, "url_lyr", "url_overlyr"]
+}
 
 
 class SugarTools:
@@ -86,6 +104,7 @@ class SugarTools:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -177,6 +196,7 @@ class SugarTools:
 
         return action
 
+
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -225,6 +245,18 @@ class SugarTools:
         return widget, data
 
 
+    def check_mandatory_fields(self, fields):
+        """ Check if mandatory fields do have values """
+
+        for field in fields:
+            widget, widget_data = self.get_widget_data(field)
+            if widget_data in (COMBO_SELECT, '--') or widget_data == '':
+                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning, duration=3)
+                widget.setFocus()
+                return False
+        return True
+
+
     def check_mandatory(self, active_tab):
         """ Check if mandatory fields do have values """
 
@@ -232,19 +264,14 @@ class SugarTools:
             return False
 
         if active_tab == "tabImport":
-            FIELDS_MANDATORY = FIELDS_MANDATORY_IMPORT
+            if self.check_mandatory_fields(FIELDS_MANDATORY_IMPORT):
+                if self.dlg.radioPoints.isChecked():
+                    return self.check_mandatory_fields(FIELDS_MANDATORY_IMPORT_POINTS)
+            return True
+
+
         elif active_tab == "tabLayout":
-            FIELDS_MANDATORY = FIELDS_MANDATORY_LAYOUT
-
-        for field in FIELDS_MANDATORY:
-
-            widget, widget_data = self.get_widget_data(field)
-            if widget_data in (COMBO_SELECT, '--') or widget_data == '':
-                self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning)
-                widget.setFocus()
-                return False
-
-        return True
+            return self.check_mandatory_fields(FIELDS_MANDATORY_LAYOUT)
 
 
     def check_sections(self):
@@ -256,7 +283,7 @@ class SugarTools:
             if widget_data:
                 return True
 
-        self.dlg.messageBar.pushMessage(f"At least one section has to be selected", level=Qgis.Warning)
+        self.dlg.messageBar.pushMessage(f"At least one section has to be selected", level=Qgis.Warning, duration=3)
 
         return False
 
@@ -266,7 +293,9 @@ class SugarTools:
 
         layer_names = []
         for group in node:
-            layer_names.append(self.get_section_layer(group))
+            layer_name = self.get_section_layer(group)
+            if layer_name:
+                layer_names.append(layer_name)
 
         return layer_names
 
@@ -275,7 +304,8 @@ class SugarTools:
         """ recursevly parse whole layer tree and return first two layers of section """
 
         if isinstance(node, QgsLayerTreeLayer):
-            if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
+            if ((self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0)) and not node.layer().isTemporary():
+                
                 return node.name()
 
         elif isinstance(node, QgsLayerTreeGroup):
@@ -295,17 +325,28 @@ class SugarTools:
                 self.add_layer_tree_item(child)
 
 
-    def fill_symbology(self):
-        """ show all symbologies in combobox """
+    def point_or_group(self):
+        """ select type of symbology """
 
-        self.dlg.symbologies.clear()
-        self.dlg.symbologies.addItem(COMBO_SELECT)
+        self.dlg.groupBoxPoints.setVisible(self.dlg.radioPoints.isChecked())
+        self.dlg.groupBoxBlocks.setVisible(self.dlg.radioBlocks.isChecked())
+
+        self.dlg.labelSymbology.setVisible(self.dlg.radioPoints.isChecked())
+        self.dlg.symbologies.setVisible(self.dlg.radioPoints.isChecked())
+
+
+    def fill_symbology(self, widget, filter):
+        """ show all symbologies (but starting with overlay) in combobox """
+
+        widget.clear()
+        widget.addItem(COMBO_SELECT)
+
         symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR)
-        symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f))]
+        symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f)) and f.startswith(filter)]
         symbology_files.sort()
         for file in symbology_files:
             #self.dlg.symbologies.addItem(file[:-4])
-            self.dlg.symbologies.addItem(file)
+            widget.addItem(file)
 
 
     def fill_layer(self):
@@ -321,7 +362,7 @@ class SugarTools:
         """ show all layouts in combobox """
 
         self.dlg.layout.clear()
-        self.dlg.layout.addItem(COMBO_SELECT)
+        #self.dlg.layout.addItem(COMBO_SELECT)
         layout_manager = QgsProject.instance().layoutManager()
         for layout in layout_manager.printLayouts():
             self.dlg.layout.addItem(layout.name())
@@ -341,11 +382,19 @@ class SugarTools:
         csv_file = os.path.join(self.secciones_path, file)
         csv_file = os.path.abspath(csv_file)
         uri = f"file:///{csv_file}{CSV_PARAMS}{delimiter}{csv_params_coords}"
-
+        
         csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, "delimitedtext")
         QgsProject.instance().addMapLayer(csv_layer)
 
-        self.set_symbology(csv_layer)
+        self.filter_layer_points(csv_layer)
+
+        if self.dlg.option_polygons.isChecked():
+            self.filter_blocks()
+
+        if self.dlg.radioPoints.isChecked():
+            self.set_symbology(csv_layer)
+
+        self.write_layer_vars(csv_layer)
 
 
     def set_symbology(self, layer):
@@ -453,16 +502,31 @@ class SugarTools:
 
 
     def get_section_thickness(self, layers):
-        """ extract thickness in cm from two layer names """
+        """ extract thickness in cm from two layer names 
+            format similar to: Azdo_EW0_MMy491945_532832.csv """
+
+        if len(layers) < 2:
+            return ""
 
         layers.sort()
         parts1 = layers[0].split("_")
-        x1 = int(parts1[2][3:])
+        if len(parts1) < 4:
+            return ""
+        try:
+            x1 = int(parts1[2][3:])
+        except ValueError:
+            return ""
         y1 = int(parts1[3])
-        parts2 = layers[1].split("_")
-        x2 = int(parts2[2][3:])
-        y2 = int(parts2[3])
 
+        parts2 = layers[1].split("_")
+        if len(parts2) < 4:
+            return ""
+        try:
+            x2 = int(parts2[2][3:])
+        except ValueError:
+            return ""
+        y2 = int(parts2[3])
+        
         diffx = x2-x1
         diffy = y2-y1
 
@@ -475,8 +539,64 @@ class SugarTools:
     def write_layout_vars(self, layout):
         """ write variables to composition """
 
+        if self.dlg.layer.currentText() == COMBO_SELECT or self.dlg.layer.currentText() == "":
+            return False
+        layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
+
+        var_name = "yacimiento"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "layer"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "section"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "red_points"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "duplicated_points"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "no_coord"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "thickness"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+        var_name = "blocks"
+        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+
+
+    def write_layer_vars(self, layer):
+        """ write variables to layer, for later use in layout """
+
+        # yacimiento name
+        request = QgsFeatureRequest()
+        request.setLimit(1)
+        first_feature = layer.getFeatures(request)
+        feature = QgsFeature() 
+        first_feature.nextFeature(feature)
+        abr_yacimiento = feature["abr_yacimiento"]
+        yacimiento = ""
+        if abr_yacimiento.upper() in SITES and len(SITES[abr_yacimiento.upper()]) > 0:
+            yacimiento = SITES[abr_yacimiento.upper()][0]
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_yacimiento", yacimiento)
+
+        # layer name
         section = ""
-        layer_name = iface.activeLayer().name()
+        layer_name = layer.name()
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_layer", layer_name)
+
+        # section
         if layer_name.find(SECTION_EW_PATTERN) > 0:
             if layer_name.find(INVERTED_STR):
                 section = self.dlg.section_ew.text()
@@ -487,26 +607,62 @@ class SugarTools:
                 section = self.dlg.section_ns.text()
             else:
                 section = self.dlg.section_ns_inverted.text()
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_section", section)
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_section", section)
 
+        # red points
         red_points = self.has_matches(iface.activeLayer(), "bol_nivelok = 'false'")
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_red_points", red_points)
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_red_points", red_points)
 
+        # duplicated points
         duplicated_points = self.has_matches(iface.activeLayer(), "bol_duplicado = 'true'")
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_duplicated_points", duplicated_points)
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_duplicated_points", duplicated_points)
 
+        # no coord
         no_coord = self.has_matches(iface.activeLayer(), "nom_cmateria = 'no coordenad'")
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_no_coord", no_coord)
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_no_coord", no_coord)
 
-        # falta thickness: derivar de nombres de capas
+        # thickness: derivar de nombres de capas
         section_layers = self.get_two_section_layers(QgsProject.instance().layerTreeRoot().children())
         thickness = self.get_section_thickness(section_layers)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_thickness", thickness)
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_thickness", thickness)
 
-        # falta blocks
+        # blocks
+        blocks = ""
+        if self.dlg.option_polygons.isChecked():
+            blocks = "Blocks"
+        QgsExpressionContextUtils.setLayerVariable(layer, "layer_blocks", blocks)
 
 
-    def filter_layer_points(self):
+    def filter_blocks(self):
+        """ filter out blocks from active layer """
+
+        active_layer = iface.activeLayer()
+        uri_components = QgsProviderRegistry.instance().decodeUri(active_layer.dataProvider().name(), active_layer.publicSource());
+
+        #print(active_layer.name(), active_layer.source(), uri_components["path"])
+
+        # apply geoprocess convex hull
+        params = {
+            'INPUT': active_layer.source(),
+            #'INPUT': uri_components['path'],
+            'FIELD': 'dib_pieza',
+            'TYPE': 3,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+
+        result = processing.run("qgis:minimumboundinggeometry", params)
+
+        print(result)
+        print(result['OUTPUT'])
+
+        QgsProject.instance().addMapLayer(result['OUTPUT'])
+        #processing.runAndLoadResults("native:buffer", params)
+
+        # rename block
+        result['OUTPUT'].setName(active_layer.name())
+
+
+    def filter_layer_points(self, layer):
         """ filter active layer by query and selected options """
 
         expr = self.dlg.filter_expr.text()
@@ -524,10 +680,10 @@ class SugarTools:
         if self.dlg.exclude_no_coords.isChecked():
             if expr != "":
                 expr += " AND "
-            expr = "nom_cmateria != 'no coordenad'"
+            expr += "nom_cmateria != 'no coordenad'"
         
-        #active_layer.setSubsetString("")
-        iface.activeLayer().setSubsetString(expr)
+        #layer.setSubsetString("")
+        layer.setSubsetString(expr)
 
 
     def load_layout(self, active_tab):
@@ -536,18 +692,15 @@ class SugarTools:
         if not self.check_mandatory(active_tab):
             return False
 
-        # filter points
-        self.filter_layer_points()
-
         # get selected layout
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName(self.dlg.layout.currentText())
         self.write_layout_vars(layout)
 
         # set map extent to match main canvas extent
-        mapItem = layout.itemById(LAYOUT_MAP_ITEM)
-        mapCanvas = iface.mapCanvas()
-        mapItem.zoomToExtent(mapCanvas.extent())
+        map_item = layout.itemById(LAYOUT_MAP_ITEM)
+        map_canvas = iface.mapCanvas()
+        map_item.zoomToExtent(map_canvas.extent())
 
         # open layout
         iface.openLayoutDesigner(layout)
@@ -576,15 +729,30 @@ class SugarTools:
                 self.toggle_layer_node(child)
 
 
-    def set_active_layer(self):
-        """ set active layer """
+    def hide_all_layers_but_selected(self):
+        """ hide all layers in layer tree """
+
+        for group in QgsProject.instance().layerTreeRoot().children():
+            self.toggle_layer_node(group)
+
+
+    def select_layer(self):
+        """ select layer in combo box and zoom to it """
+
+        self.hide_all_layers_but_selected()
+        if iface.activeLayer():
+            active_layer_name = iface.activeLayer().name()
+            self.dlg.layer.setCurrentText(active_layer_name)
+            iface.zoomToActiveLayer()
+
+
+    def set_and_zoom_active_layer(self):
+        """ set active layer and zoom to it """
 
         if self.dlg.layer.currentText() == COMBO_SELECT or self.dlg.layer.currentText() == "":
             return False
 
-        # hide all layers but selected
-        for group in QgsProject.instance().layerTreeRoot().children():
-            self.toggle_layer_node(group)
+        self.hide_all_layers_but_selected()
 
         active_layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
         iface.setActiveLayer(active_layer)
@@ -620,11 +788,15 @@ class SugarTools:
             self.dlg.buttonBox.accepted.connect(self.process)
             self.dlg.section_ew.stateChanged.connect(self.fill_layer)
             self.dlg.section_ns.stateChanged.connect(self.fill_layer)
-            self.dlg.layer.currentTextChanged.connect(self.set_active_layer)
+            self.dlg.layer.currentTextChanged.connect(self.set_and_zoom_active_layer)
             self.dlg.filter_expr_btn.clicked.connect(self.open_expr_builder)
+            self.dlg.radioPoints.toggled.connect(self.point_or_group)
+            iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
 
         # show the dialog
-        self.fill_symbology()
+        self.point_or_group()
+        self.fill_symbology(self.dlg.symbologies, "levels")
+        self.fill_symbology(self.dlg.symbologies_overlay, "overlay")
         self.fill_layer()
         self.fill_layout()
         self.dlg.show()
