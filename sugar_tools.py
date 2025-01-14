@@ -21,9 +21,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox
+from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
 from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature
 from qgis.utils import iface
@@ -40,7 +40,7 @@ COMBO_SELECT = "(Select)"
 SYMBOLOGY_DIR = "qml"
 FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
-FIELDS_MANDATORY_IMPORT_POINTS = ["symbologies"]
+FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
@@ -265,7 +265,7 @@ class SugarTools:
 
         if active_tab == "tabImport":
             if self.check_mandatory_fields(FIELDS_MANDATORY_IMPORT):
-                if self.dlg.radioPoints.isChecked():
+                if self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked():
                     return self.check_mandatory_fields(FIELDS_MANDATORY_IMPORT_POINTS)
             return True
 
@@ -325,14 +325,14 @@ class SugarTools:
                 self.add_layer_tree_item(child)
 
 
-    def point_or_group(self):
+    def point_or_block(self):
         """ select type of symbology """
 
-        self.dlg.groupBoxPoints.setVisible(self.dlg.radioPoints.isChecked())
-        self.dlg.groupBoxBlocks.setVisible(self.dlg.radioBlocks.isChecked())
+        self.dlg.groupBoxPoints.setVisible(self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked())
+        self.dlg.groupBoxBlocks.setVisible(self.dlg.radioBlocks.isChecked() or self.dlg.radioPointsBlocks.isChecked())
 
-        self.dlg.labelSymbology.setVisible(self.dlg.radioPoints.isChecked())
-        self.dlg.symbologies.setVisible(self.dlg.radioPoints.isChecked())
+        self.dlg.labelSymbology.setVisible(self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked())
+        self.dlg.symbology.setVisible(self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked())
 
 
     def fill_symbology(self, widget, filter):
@@ -368,7 +368,7 @@ class SugarTools:
             self.dlg.layout.addItem(layout.name())
 
 
-    def load_file(self, file, csv_params_coords, inverted=False):
+    def load_file(self, file, group, csv_params_coords, prefix, inverted=False):
         """ load csv file as vector layer """
 
         inverted_str = ""
@@ -383,24 +383,31 @@ class SugarTools:
         csv_file = os.path.abspath(csv_file)
         uri = f"file:///{csv_file}{CSV_PARAMS}{delimiter}{csv_params_coords}"
         
-        csv_layer = QgsVectorLayer(uri, file[:-4] + inverted_str, "delimitedtext")
-        QgsProject.instance().addMapLayer(csv_layer)
+        file_name = file[:-4]
+        layer_name = prefix + "_" + file_name.split("MMy")[1]
+        csv_layer = QgsVectorLayer(uri, "Pnt" + layer_name + inverted_str, "delimitedtext")
+        QgsProject.instance().addMapLayer(csv_layer, False)
+
+        layer_group = self.create_group("Sec" + layer_name, group)
+        layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
 
         self.filter_layer_points(csv_layer)
 
-        if self.dlg.radioPoints.isChecked():
+        if self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked():
             self.set_symbology(csv_layer)
 
-        if self.dlg.radioBlocks.isChecked() and self.dlg.option_polygons.isChecked():
-            self.filter_blocks()
+        if (self.dlg.radioBlocks.isChecked() or self.dlg.radioPointsBlocks.isChecked()) and self.dlg.option_polygons.isChecked():
+            self.create_blocks(csv_layer, prefix, layer_group)
 
         self.write_layer_vars(csv_layer)
+
+        self.progress.setValue(self.progress.value() + 1)
 
 
     def set_symbology(self, layer):
         """ set symbology from selected qml file """
 
-        symbology = self.dlg.symbologies.currentText()
+        symbology = self.dlg.symbology.currentText()
         symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, symbology)
         layer.loadNamedStyle(symbology_path)
         layer.triggerRepaint()
@@ -455,37 +462,67 @@ class SugarTools:
         return [f for f in os.listdir(self.secciones_path) if os.path.isfile(os.path.join(self.secciones_path, f)) and f.find(pattern) > 0]
 
 
+    def initProgressBar(self, maxValue, msg, messageBar):
+        """Show progress bar."""
+
+        progressMessageBar = messageBar.createMessage(msg)
+        progress = QProgressBar()
+        progress.setMaximum(maxValue)
+        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+        progressMessageBar.layout().addWidget(progress)
+        messageBar.pushWidget(progressMessageBar, Qgis.Info)
+
+        return progress
+
+
     def import_files(self, active_tab):
         """ import all files from selected workspace """
 
         if not self.check_mandatory(active_tab):
             return False
 
+        # 0. crear grupo
         # 1. recorrer todos los ficheros de la carpeta roca_bous_secciones
         # 2. si contienen _EW asigno coordinadas X=X, Y=Z
         # 3. si contienen _NS asigno coordinadas X=Y, Y=Z
         # importar como CSV
 
+        self.progress = self.initProgressBar(100, "Import sections...", self.dlg.messageBar)
+
         self.secciones_path = self.dlg.workspace.filePath()
         
         if self.dlg.section_ew.isChecked():
+            group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
             for file in self.get_file_list(SECTION_EW_PATTERN):
-                self.load_file(file, CSV_PARAMS_COORDS_EW)
+                self.load_file(file, group, CSV_PARAMS_COORDS_EW, SECTION_EW_PATTERN)
 
         if self.dlg.section_ns.isChecked():
+            group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
             for file in self.get_file_list(SECTION_NS_PATTERN):
-                self.load_file(file, CSV_PARAMS_COORDS_NS)
+                self.load_file(file, group, CSV_PARAMS_COORDS_NS, SECTION_NS_PATTERN)
 
         if self.dlg.section_ew_inverted.isChecked():
+            group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
             for file in self.get_file_list(SECTION_EW_PATTERN):
-                self.load_file(file, CSV_PARAMS_COORDS_EW_NEG, True)
+                self.load_file(file, group, CSV_PARAMS_COORDS_EW_NEG, SECTION_EW_PATTERN, True)
 
         if self.dlg.section_ns_inverted.isChecked():
+            group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
             for file in self.get_file_list(SECTION_NS_PATTERN):
-                self.load_file(file, CSV_PARAMS_COORDS_NS_NEG, True)
+                self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
 
         # close dialog
         self.dlg.close()
+
+
+    def create_group(self, group_name, parent=False):
+        """ create layer group """
+
+        if not parent:
+            parent = QgsProject.instance().layerTreeRoot()
+
+        group = parent.addGroup(group_name)
+        return group
 
 
     def has_matches(self, active_layer, expression):
@@ -610,15 +647,15 @@ class SugarTools:
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_section", section)
 
         # red points
-        red_points = self.has_matches(iface.activeLayer(), "bol_nivelok = 'false'")
+        red_points = self.has_matches(layer, "bol_nivelok = 'false'")
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_red_points", red_points)
 
         # duplicated points
-        duplicated_points = self.has_matches(iface.activeLayer(), "bol_duplicado = 'true'")
+        duplicated_points = self.has_matches(layer, "bol_duplicado = 'true'")
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_duplicated_points", duplicated_points)
 
         # no coord
-        no_coord = self.has_matches(iface.activeLayer(), "nom_cmateria = 'no coordenad'")
+        no_coord = self.has_matches(layer, "nom_cmateria = 'no coordenad'")
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_no_coord", no_coord)
 
         # thickness: derivar de nombres de capas
@@ -633,17 +670,16 @@ class SugarTools:
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_blocks", blocks)
 
 
-    def filter_blocks(self):
+    def create_blocks(self, layer, prefix, layer_group):
         """ filter out blocks from active layer """
 
-        active_layer = iface.activeLayer()
-        uri_components = QgsProviderRegistry.instance().decodeUri(active_layer.dataProvider().name(), active_layer.publicSource());
+        uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
 
-        #print(active_layer.name(), active_layer.source(), uri_components["path"])
+        #print(layer.name(), layer.source(), uri_components["path"])
 
         # apply geoprocess convex hull
         params = {
-            'INPUT': active_layer.source(),
+            'INPUT': layer.source(),
             #'INPUT': uri_components['path'],
             'FIELD': 'dib_pieza',
             'TYPE': 3,
@@ -652,14 +688,17 @@ class SugarTools:
 
         result = processing.run("qgis:minimumboundinggeometry", params)
 
-        print(result)
         print(result['OUTPUT'])
 
-        QgsProject.instance().addMapLayer(result['OUTPUT'])
+        QgsProject.instance().addMapLayer(result['OUTPUT'], False)
+        layer_group.insertChildNode(1, QgsLayerTreeLayer(result['OUTPUT']))
+
         #processing.runAndLoadResults("native:buffer", params)
 
         # rename block
-        result['OUTPUT'].setName(active_layer.name())
+        layer_name_parts = layer.name().split(prefix)
+        layer_name = layer_name_parts[0] + prefix + "_bl" + layer_name_parts[1]
+        result['OUTPUT'].setName(layer_name)
 
 
     def filter_layer_points(self, layer):
@@ -790,13 +829,15 @@ class SugarTools:
             self.dlg.section_ns.stateChanged.connect(self.fill_layer)
             self.dlg.layer.currentTextChanged.connect(self.set_and_zoom_active_layer)
             self.dlg.filter_expr_btn.clicked.connect(self.open_expr_builder)
-            self.dlg.radioPoints.toggled.connect(self.point_or_group)
+            self.dlg.radioPoints.toggled.connect(self.point_or_block)
+            self.dlg.radioBlocks.toggled.connect(self.point_or_block)
+            self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
             iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
 
         # show the dialog
-        self.point_or_group()
-        self.fill_symbology(self.dlg.symbologies, "levels")
-        self.fill_symbology(self.dlg.symbologies_overlay, "overlay")
+        self.point_or_block()
+        self.fill_symbology(self.dlg.symbology, "levels")
+        self.fill_symbology(self.dlg.symbology_overlay, "overlay")
         self.fill_layer()
         self.fill_layout()
         self.dlg.show()
