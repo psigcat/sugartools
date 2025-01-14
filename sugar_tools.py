@@ -388,11 +388,11 @@ class SugarTools:
 
         self.filter_layer_points(csv_layer)
 
-        if self.dlg.option_polygons.isChecked():
-            self.filter_blocks()
-
         if self.dlg.radioPoints.isChecked():
             self.set_symbology(csv_layer)
+
+        if self.dlg.radioBlocks.isChecked() and self.dlg.option_polygons.isChecked():
+            self.filter_blocks()
 
         self.write_layer_vars(csv_layer)
 
