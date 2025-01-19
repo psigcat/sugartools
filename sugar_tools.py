@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -213,6 +213,7 @@ class SugarTools:
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        
         for action in self.actions:
             self.iface.removePluginMenu(
                 self.tr(u'&Sugar Tools'),
@@ -313,16 +314,16 @@ class SugarTools:
                 return self.get_section_layer(child)
 
 
-    def add_layer_tree_item(self, node):
-        """ recursevly parse whole layer tree """
+    # def add_layer_tree_item(self, node):
+    #     """ recursevly parse whole layer tree """
 
-        if isinstance(node, QgsLayerTreeLayer):
-            if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
-                self.dlg.layer.addItem(node.name())
+    #     if isinstance(node, QgsLayerTreeLayer):
+    #         if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
+    #             self.dlg.layer.addItem(node.name())
 
-        elif isinstance(node, QgsLayerTreeGroup):
-            for child in node.children():
-                self.add_layer_tree_item(child)
+    #     elif isinstance(node, QgsLayerTreeGroup):
+    #         for child in node.children():
+    #             self.add_layer_tree_item(child)
 
 
     def point_or_block(self):
@@ -355,7 +356,16 @@ class SugarTools:
         self.dlg.layer.clear()
         self.dlg.layer.addItem(COMBO_SELECT)
         for group in QgsProject.instance().layerTreeRoot().children():
-            self.add_layer_tree_item(group)
+            #self.add_layer_tree_item(self.getLayerTree(group))
+            self.getLayerTree(group)
+
+
+    def getLayerTree(self, node):
+        if isinstance(node, QgsLayerTreeGroup):
+            for child in node.children():
+                self.getLayerTree(child)
+        elif isinstance(node, QgsLayerTreeNode):
+            self.dlg.layer.addItem(node.name())
 
 
     def fill_layout(self):
@@ -383,8 +393,16 @@ class SugarTools:
         csv_file = os.path.abspath(csv_file)
         uri = f"file:///{csv_file}{CSV_PARAMS}{delimiter}{csv_params_coords}"
         
-        file_name = file[:-4]
-        layer_name = prefix + "_" + file_name.split("MMy")[1]
+        file_name = os.path.basename(file)[:-4]
+        if prefix == "_EW":
+            layer_name = file_name.split("_MMy")[1]
+        elif prefix == "_NS":
+            layer_name = file_name.split("_x")[1]
+        else:
+            self.dlg.messageBar.pushMessage(f"Unknown prefix, has to be EW or NS but is '{prefix}'", level=Qgis.Warning)
+            return
+
+        layer_name = prefix + "_" + layer_name
         csv_layer = QgsVectorLayer(uri, "Pnt" + layer_name + inverted_str, "delimitedtext")
         QgsProject.instance().addMapLayer(csv_layer, False)
 
@@ -459,15 +477,36 @@ class SugarTools:
     def get_file_list(self, pattern):
         """ get all files containing pattern from workspace """
 
-        return [f for f in os.listdir(self.secciones_path) if os.path.isfile(os.path.join(self.secciones_path, f)) and f.find(pattern) > 0]
+        for root_dir, dirs, files in os.walk(self.secciones_path):
+            for folder in dirs:
+                if self.dlg.radioPoints.isChecked() and folder.find("UA") != -1:
+                    return self.return_file_list(folder, pattern)
+                elif self.dlg.radioBlocks.isChecked() and folder.find("FO") != -1:
+                    return self.return_file_list(folder, pattern)
+                elif self.dlg.radioPointsBlocks.isChecked() and folder.find("UA") != -1:
+                    return self.return_file_list(folder, pattern)
+                elif self.dlg.radioPointsBlocks.isChecked() and folder.find("FO") != -1:
+                    return self.return_file_list(folder, pattern)
 
 
-    def initProgressBar(self, maxValue, msg, messageBar):
+    def return_file_list(self, folder, pattern):
+        """ Build file list for given folder and pattern. """
+
+        points_blocks_folder = os.path.join(self.secciones_path, folder)
+        return [os.path.join(self.secciones_path, folder, f) for f in os.listdir(points_blocks_folder) if os.path.isfile(os.path.join(points_blocks_folder, f)) and f.find(pattern) > 0]
+
+
+    def initProgressBar(self, msg, messageBar):
         """Show progress bar."""
+
+        fileCount = 0
+        # !!! hace falta limitarlo al directoria usado !!!
+        for root_dir, cur_dir, files in os.walk(self.secciones_path):
+            fileCount += len(files)
 
         progressMessageBar = messageBar.createMessage(msg)
         progress = QProgressBar()
-        progress.setMaximum(maxValue)
+        progress.setMaximum(fileCount)
         progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
         progressMessageBar.layout().addWidget(progress)
         messageBar.pushWidget(progressMessageBar, Qgis.Info)
@@ -482,14 +521,13 @@ class SugarTools:
             return False
 
         # 0. crear grupo
-        # 1. recorrer todos los ficheros de la carpeta roca_bous_secciones
+        # 1. recorrer todos los ficheros del workspace
         # 2. si contienen _EW asigno coordinadas X=X, Y=Z
         # 3. si contienen _NS asigno coordinadas X=Y, Y=Z
         # importar como CSV
 
-        self.progress = self.initProgressBar(100, "Import sections...", self.dlg.messageBar)
-
         self.secciones_path = self.dlg.workspace.filePath()
+        self.progress = self.initProgressBar("Import sections...", self.dlg.messageBar)
         
         if self.dlg.section_ew.isChecked():
             group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
@@ -510,6 +548,9 @@ class SugarTools:
             group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
             for file in self.get_file_list(SECTION_NS_PATTERN):
                 self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
+
+        # remove progress bar
+        self.dlg.messageBar.clearWidgets()
 
         # close dialog
         self.dlg.close()
@@ -622,10 +663,13 @@ class SugarTools:
         first_feature = layer.getFeatures(request)
         feature = QgsFeature() 
         first_feature.nextFeature(feature)
-        abr_yacimiento = feature["abr_yacimiento"]
+
+        abr_yacimiento = None
+        if "abr_yacimiento" in feature:
+            abr_yacimiento = feature["abr_yacimiento"].upper()
         yacimiento = ""
-        if abr_yacimiento.upper() in SITES and len(SITES[abr_yacimiento.upper()]) > 0:
-            yacimiento = SITES[abr_yacimiento.upper()][0]
+        if abr_yacimiento and abr_yacimiento in SITES and len(SITES[abr_yacimiento]) > 0:
+            yacimiento = SITES[abr_yacimiento][0]
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_yacimiento", yacimiento)
 
         # layer name
@@ -688,8 +732,6 @@ class SugarTools:
 
         result = processing.run("qgis:minimumboundinggeometry", params)
 
-        print(result['OUTPUT'])
-
         QgsProject.instance().addMapLayer(result['OUTPUT'], False)
         layer_group.insertChildNode(1, QgsLayerTreeLayer(result['OUTPUT']))
 
@@ -699,6 +741,11 @@ class SugarTools:
         layer_name_parts = layer.name().split(prefix)
         layer_name = layer_name_parts[0] + prefix + "_bl" + layer_name_parts[1]
         result['OUTPUT'].setName(layer_name)
+
+        # apply style
+        symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, "blocks.qml")
+        result['OUTPUT'].loadNamedStyle(symbology_path)
+        result['OUTPUT'].triggerRepaint()
 
 
     def filter_layer_points(self, layer):
@@ -757,15 +804,14 @@ class SugarTools:
 
 
     def toggle_layer_node(self, node):
-        """ recursevly parse whole layer tree and return first two layers of section """
-
-        if isinstance(node, QgsLayerTreeLayer):
-            if (self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0):
-                node.setItemVisibilityChecked(node.name() == self.dlg.layer.currentText())
-
-        elif isinstance(node, QgsLayerTreeGroup):
+        if isinstance(node, QgsLayerTreeGroup):
             for child in node.children():
                 self.toggle_layer_node(child)
+        elif isinstance(node, QgsLayerTreeNode):
+            if isinstance(iface.activeLayer(), QgsVectorLayer):
+                node.setItemVisibilityChecked(node.name() == iface.activeLayer().name() or node.name() == self.dlg.layer.currentText())
+            else:
+                node.setItemVisibilityChecked(node.name() == self.dlg.layer.currentText())
 
 
     def hide_all_layers_but_selected(self):
