@@ -281,6 +281,24 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tabUtils">
+      <attribute name="title">
+       <string>Utils</string>
+      </attribute>
+      <widget class="QPushButton" name="import_layout_btn">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>20</y>
+         <width>221</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Import layout from plugin</string>
+       </property>
+      </widget>
+     </widget>
     </widget>
    </item>
    <item row="1" column="0">

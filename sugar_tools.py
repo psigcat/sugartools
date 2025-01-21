@@ -21,11 +21,12 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QFile
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
+from qgis.PyQt.QtXml import QDomDocument
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -251,7 +252,7 @@ class SugarTools:
 
         for field in fields:
             widget, widget_data = self.get_widget_data(field)
-            if widget_data in (COMBO_SELECT, '--') or widget_data == '':
+            if widget_data in (COMBO_SELECT, '--') or not widget_data or widget_data == '':
                 self.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning, duration=3)
                 widget.setFocus()
                 return False
@@ -268,6 +269,12 @@ class SugarTools:
             if self.check_mandatory_fields(FIELDS_MANDATORY_IMPORT):
                 if self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked():
                     return self.check_mandatory_fields(FIELDS_MANDATORY_IMPORT_POINTS)
+                elif self.dlg.radioBlocks.isChecked():
+                    return True
+                else:
+                    return False
+            else:
+                return False
             return True
 
 
@@ -359,6 +366,10 @@ class SugarTools:
             #self.add_layer_tree_item(self.getLayerTree(group))
             self.getLayerTree(group)
 
+        # select active layer
+        if iface.activeLayer():
+            self.dlg.layer.setCurrentText(iface.activeLayer().name())
+
 
     def getLayerTree(self, node):
         if isinstance(node, QgsLayerTreeGroup):
@@ -380,6 +391,8 @@ class SugarTools:
 
     def load_file(self, file, group, csv_params_coords, prefix, inverted=False):
         """ load csv file as vector layer """
+
+        print("import file", file)
 
         inverted_str = ""
         if inverted:
@@ -411,13 +424,14 @@ class SugarTools:
 
         self.filter_layer_points(csv_layer)
 
-        if self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked():
-            self.set_symbology(csv_layer)
+        #if self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked():
+        self.set_symbology(csv_layer)
 
         if (self.dlg.radioBlocks.isChecked() or self.dlg.radioPointsBlocks.isChecked()) and self.dlg.option_polygons.isChecked():
-            self.create_blocks(csv_layer, prefix, layer_group)
-
-        self.write_layer_vars(csv_layer)
+            new_layer = self.create_blocks(csv_layer, prefix, layer_group)
+            self.write_layer_vars(new_layer)
+        else:
+            self.write_layer_vars(csv_layer)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -487,6 +501,10 @@ class SugarTools:
                     return self.return_file_list(folder, pattern)
                 elif self.dlg.radioPointsBlocks.isChecked() and folder.find("FO") != -1:
                     return self.return_file_list(folder, pattern)
+                # elif (self.dlg.radioPointsBlocks.isChecked() and folder.find("UA") != -1) or (self.dlg.radioPointsBlocks.isChecked() and folder.find("FO") != -1):
+                #     return self.return_file_list(folder, pattern)
+
+        return []
 
 
     def return_file_list(self, folder, pattern):
@@ -526,31 +544,48 @@ class SugarTools:
         # 3. si contienen _NS asigno coordinadas X=Y, Y=Z
         # importar como CSV
 
+        success = False
         self.secciones_path = self.dlg.workspace.filePath()
         self.progress = self.initProgressBar("Import sections...", self.dlg.messageBar)
         
         if self.dlg.section_ew.isChecked():
-            group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
-            for file in self.get_file_list(SECTION_EW_PATTERN):
-                self.load_file(file, group, CSV_PARAMS_COORDS_EW, SECTION_EW_PATTERN)
+            file_list = self.get_file_list(SECTION_EW_PATTERN)
+            if file_list:
+                success = True
+                group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
+                for file in file_list:
+                    self.load_file(file, group, CSV_PARAMS_COORDS_EW, SECTION_EW_PATTERN)
 
         if self.dlg.section_ns.isChecked():
-            group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
-            for file in self.get_file_list(SECTION_NS_PATTERN):
-                self.load_file(file, group, CSV_PARAMS_COORDS_NS, SECTION_NS_PATTERN)
+            file_list = self.get_file_list(SECTION_NS_PATTERN)
+            if file_list:
+                success = True
+                group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
+                for file in file_list:
+                    self.load_file(file, group, CSV_PARAMS_COORDS_NS, SECTION_NS_PATTERN)
 
         if self.dlg.section_ew_inverted.isChecked():
-            group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
-            for file in self.get_file_list(SECTION_EW_PATTERN):
-                self.load_file(file, group, CSV_PARAMS_COORDS_EW_NEG, SECTION_EW_PATTERN, True)
+            file_list = self.get_file_list(SECTION_EW_PATTERN)
+            if file_list:
+                success = True
+                group = self.create_group(SECTION_EW_PATTERN[1:] + " cross-sections")
+                for file in file_list:
+                    self.load_file(file, group, CSV_PARAMS_COORDS_EW_NEG, SECTION_EW_PATTERN, True)
 
         if self.dlg.section_ns_inverted.isChecked():
-            group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
-            for file in self.get_file_list(SECTION_NS_PATTERN):
-                self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
+            file_list = self.get_file_list(SECTION_NS_PATTERN)
+            if file_list:
+                success = True
+                group = self.create_group(SECTION_NS_PATTERN[1:] + " cross-sections")
+                for file in file_list:
+                    self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
 
         # remove progress bar
         self.dlg.messageBar.clearWidgets()
+
+        if not success:
+            self.dlg.messageBar.pushMessage(f"No files imported, workspace has to have UA folder with points data or FO folder with blocks data.", level=Qgis.Warning)
+            return
 
         # close dialog
         self.dlg.close()
@@ -747,6 +782,12 @@ class SugarTools:
         result['OUTPUT'].loadNamedStyle(symbology_path)
         result['OUTPUT'].triggerRepaint()
 
+        # delete point layer
+        if self.dlg.option_polygons.isChecked() and not self.dlg.radioPointsBlocks.isChecked():
+            QgsProject.instance().removeMapLayer(layer)
+
+        return result['OUTPUT']
+
 
     def filter_layer_points(self, layer):
         """ filter active layer by query and selected options """
@@ -844,6 +885,37 @@ class SugarTools:
         iface.zoomToActiveLayer()
 
 
+    def import_layout(self):
+        """ create layout from template shipped with plugin """
+
+        project = QgsProject.instance()
+        qpt_file_path = os.path.join(self.plugin_dir, "qpt", "plantilla_v2.qpt")
+
+        # Create a new layout
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        #layout.setName("Sections")
+        qpt_file = QFile(qpt_file_path)
+
+        if qpt_file.open(QFile.ReadOnly | QFile.Text):
+            document = QDomDocument()
+            if document.setContent(qpt_file):
+                context = QgsReadWriteContext()
+                if not layout.loadFromTemplate(document, context):
+                    self.dlg.messageBar.pushMessage(f"Failed to load {qpt_file_path} template from plugin folder.", level=Qgis.Warning)
+                else:
+                    self.dlg.messageBar.pushMessage(f"QPT template {layout.name()} loaded successfully.", level=Qgis.Success)
+            qpt_file.close()
+        # else:
+        #     print("Failed to open QPT file.")
+
+        project.layoutManager().addLayout(layout)
+
+        # add to combo box
+        self.dlg.layout.addItem(layout.name())
+
+
+
     def process(self):
         """ execute actions when ok clicked """
 
@@ -878,6 +950,7 @@ class SugarTools:
             self.dlg.radioPoints.toggled.connect(self.point_or_block)
             self.dlg.radioBlocks.toggled.connect(self.point_or_block)
             self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
+            self.dlg.import_layout_btn.clicked.connect(self.import_layout)
             iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
 
         # show the dialog
