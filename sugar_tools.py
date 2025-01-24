@@ -43,6 +43,7 @@ FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_n
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
+FIELDS_MANDATORY_SHAPEFILES = ["shapefiles_folder"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
 INVERTED_STR = " inverted"
@@ -832,6 +833,7 @@ class SugarTools:
         # open layout
         iface.openLayoutDesigner(layout)
 
+
         # close dialog
         self.dlg.close()
 
@@ -885,11 +887,11 @@ class SugarTools:
         iface.zoomToActiveLayer()
 
 
-    def import_layout(self):
+    def import_layout(self, template):
         """ create layout from template shipped with plugin """
 
         project = QgsProject.instance()
-        qpt_file_path = os.path.join(self.plugin_dir, "qpt", "plantilla_v2.qpt")
+        qpt_file_path = os.path.join(self.plugin_dir, "qpt", template)
 
         # Create a new layout
         layout = QgsPrintLayout(project)
@@ -914,6 +916,22 @@ class SugarTools:
         # add to combo box
         self.dlg.layout.addItem(layout.name())
 
+
+    def import_shapefiles(self):
+        """ import all shapefiles from a folder """
+
+        if not self.check_mandatory_fields(FIELDS_MANDATORY_SHAPEFILES):
+            return False
+
+        shp_group = self.create_group("Plant")
+        shp_path = self.dlg.shapefiles_folder.filePath()
+        for file in os.listdir(shp_path):
+            if file.endswith(".shp"):
+                file_path = os.path.join(shp_path, file)
+                print(file_path, file)
+                shp_layer = QgsVectorLayer(file_path, file, "ogr")
+                QgsProject.instance().addMapLayer(shp_layer, False)
+                shp_group.insertChildNode(1, QgsLayerTreeLayer(shp_layer))
 
 
     def process(self):
@@ -950,7 +968,9 @@ class SugarTools:
             self.dlg.radioPoints.toggled.connect(self.point_or_block)
             self.dlg.radioBlocks.toggled.connect(self.point_or_block)
             self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
-            self.dlg.import_layout_btn.clicked.connect(self.import_layout)
+            self.dlg.import_layout_btn.clicked.connect(lambda:self.import_layout("plantilla_v2.qpt"))
+            self.dlg.import_layout_plant_btn.clicked.connect(lambda:self.import_layout("Plantilla_CG.qpt"))
+            self.dlg.import_shapefiles_btn.clicked.connect(self.import_shapefiles)
             iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
 
         # show the dialog

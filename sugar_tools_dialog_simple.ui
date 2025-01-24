@@ -60,7 +60,7 @@
    <item row="2" column="0" colspan="2">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tabImport">
       <attribute name="title">
@@ -285,19 +285,74 @@
       <attribute name="title">
        <string>Utils</string>
       </attribute>
-      <widget class="QPushButton" name="import_layout_btn">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>20</y>
-         <width>221</width>
-         <height>25</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Import layout from plugin</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>Layouts</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QPushButton" name="import_layout_btn">
+            <property name="text">
+             <string>Import layout from plugin</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="import_layout_plant_btn">
+            <property name="text">
+             <string>Import plant layout from plugin</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Plant</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Select folder containing shapefiles:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QgsFileWidget" name="shapefiles_folder">
+            <property name="storageMode">
+             <enum>QgsFileWidget::GetDirectory</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="import_shapefiles_btn">
+            <property name="text">
+             <string>Import plant shapefiles</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>209</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>
