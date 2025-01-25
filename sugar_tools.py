@@ -26,7 +26,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -35,6 +35,7 @@ import os
 import datetime
 from random import randrange
 import processing
+import tempfile
 
 
 COMBO_SELECT = "(Select)"
@@ -751,11 +752,9 @@ class SugarTools:
 
 
     def create_blocks(self, layer, prefix, layer_group):
-        """ filter out blocks from active layer """
+        """ create blocks from point layer """
 
         uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
-
-        #print(layer.name(), layer.source(), uri_components["path"])
 
         # apply geoprocess convex hull
         params = {
@@ -783,11 +782,38 @@ class SugarTools:
         result['OUTPUT'].loadNamedStyle(symbology_path)
         result['OUTPUT'].triggerRepaint()
 
+        self.make_permanent(result['OUTPUT'])
+
         # delete point layer
         if self.dlg.option_polygons.isChecked() and not self.dlg.radioPointsBlocks.isChecked():
             QgsProject.instance().removeMapLayer(layer)
 
         return result['OUTPUT']
+
+
+    def make_permanent(self, layer):
+        """ save temporary layer to gpkg """
+
+        # Get destination file path
+        path = QgsProject.instance().homePath()
+        if not path:
+            path = tempfile.gettempdir()
+        path = os.path.join(path, "sections")
+        if not os.path.exists(path):
+            os.makedirs(path)
+        path = os.path.join(path, layer.name() + ".gpkg")
+            
+        error = QgsVectorFileWriter.writeAsVectorFormat(layer, path, "UTF-8")
+        if error[0] != QgsVectorFileWriter.NoError:
+            print ("Error generating geopackage: ", error)
+
+        else:
+            block_layer = QgsVectorLayer(path, 'Layer geopackage')
+            QgsProject.instance().addMapLayer(block_layer, False)
+
+            # change the data source
+            layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')
+            #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
 
     def filter_layer_points(self, layer):
