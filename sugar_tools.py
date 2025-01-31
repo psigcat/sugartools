@@ -449,9 +449,7 @@ class SugarTools:
         layer_group = self.create_group("Sec" + layer_name, group)
         layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
 
-        self.filter_layer_points(csv_layer)
-
-        #if self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked():
+        self.filter_layer_points(csv_layer, layer_group)
         self.set_symbology(csv_layer)
 
         if (self.dlg.radioBlocks.isChecked() or self.dlg.radioPointsBlocks.isChecked()) and self.dlg.option_polygons.isChecked():
@@ -470,6 +468,18 @@ class SugarTools:
         symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, symbology)
         layer.loadNamedStyle(symbology_path)
         layer.triggerRepaint()
+
+
+    def set_symbology_overlay(self, layer):
+        """ set symbology defined by filter from selected qml file """
+
+        filter_text = self.dlg.filter_expr.text()
+        symbology_overlay = self.dlg.symbology_overlay.currentText()
+        if filter_text != "" and symbology_overlay != COMBO_SELECT:
+            layer.setSubsetString(filter_text)
+            symbology_overlay_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, symbology_overlay)
+            layer.loadNamedStyle(symbology_overlay_path)
+            layer.triggerRepaint()
 
 
     def set_symbology_bck(self, layer):
@@ -856,11 +866,15 @@ class SugarTools:
         #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
 
-    def filter_layer_points(self, layer):
+    def filter_layer_points(self, layer, group):
         """ filter active layer by query and selected options """
 
-        expr = self.dlg.filter_expr.text()
+        expr = ""
+        filter_expr = self.dlg.filter_expr.text()
+        if filter_expr != "":
+            expr = f'NOT ({filter_expr})'
 
+        
         if self.dlg.exclude_red_points.isChecked():
             if expr != "":
                 expr += " AND "
@@ -878,6 +892,20 @@ class SugarTools:
         
         #layer.setSubsetString("")
         layer.setSubsetString(expr)
+
+        if filter_expr != "" and self.dlg.symbology_overlay.currentText() != COMBO_SELECT:
+            duplicate_layer = self.duplicate_layer(layer, group)
+            self.set_symbology_overlay(duplicate_layer)
+
+
+    def duplicate_layer(self, layer, group):
+        """ duplicate existing layer in layer group """
+
+        layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
+        QgsProject.instance().addMapLayer(layer_clone, False)
+        group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
+
+        return layer_clone
 
 
     def load_layout(self, active_tab):
