@@ -26,7 +26,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -210,8 +210,33 @@ class SugarTools:
             callback=self.run,
             parent=self.iface.mainWindow())
 
-        # will be set False in run()
-        self.first_start = True
+        icon_path = self.plugin_dir + '/icon2.png'
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Sugar Tools Layout'),
+            callback=lambda:self.load_layout('tabLayout'),
+            parent=self.iface.mainWindow())
+
+        # Create the dialog with elements (after translation) and keep reference
+        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+        self.first_start = False
+        self.dlg = SugarToolsDialog()
+        self.dlg.buttonBox.accepted.disconnect()
+        self.dlg.buttonBox.accepted.connect(self.process)
+        self.dlg.section_ew.stateChanged.connect(self.fill_layer)
+        self.dlg.section_ns.stateChanged.connect(self.fill_layer)
+        self.dlg.layer.currentTextChanged.connect(self.set_and_zoom_active_layer)
+        self.dlg.filter_expr_btn.clicked.connect(self.open_expr_builder)
+        self.dlg.radioPoints.toggled.connect(self.point_or_block)
+        self.dlg.radioBlocks.toggled.connect(self.point_or_block)
+        self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
+        self.dlg.import_layout_btn.clicked.connect(lambda:self.import_layout("plantilla_v2.qpt"))
+        self.dlg.import_layout_plant_btn.clicked.connect(lambda:self.import_layout("Plantilla_CG.qpt"))
+        self.dlg.import_shapefiles_btn.clicked.connect(self.import_shapefiles)
+        iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
+
+        self.fill_layer()
+        self.fill_layout()
 
 
     def unload(self):
@@ -589,6 +614,9 @@ class SugarTools:
             self.dlg.messageBar.pushMessage(f"No files imported, workspace has to have UA folder with points data or FO folder with blocks data.", level=Qgis.Warning)
             return
 
+        self.fill_layer()
+        self.fill_layout()
+
         # close dialog
         self.dlg.close()
 
@@ -756,11 +784,15 @@ class SugarTools:
 
         uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
 
+        field = 'dib_pieza'
+        if self.dlg.radioPointsBlocks.isChecked():
+            field = 'nom_nivel'
+
         # apply geoprocess convex hull
         params = {
             'INPUT': layer.source(),
             #'INPUT': uri_components['path'],
-            'FIELD': 'dib_pieza',
+            'FIELD': field,
             'TYPE': 3,
             'OUTPUT': 'TEMPORARY_OUTPUT'
         }
@@ -782,7 +814,7 @@ class SugarTools:
         result['OUTPUT'].loadNamedStyle(symbology_path)
         result['OUTPUT'].triggerRepaint()
 
-        self.make_permanent(result['OUTPUT'])
+        #self.make_permanent(result['OUTPUT'])
 
         # delete point layer
         if self.dlg.option_polygons.isChecked() and not self.dlg.radioPointsBlocks.isChecked():
@@ -795,25 +827,33 @@ class SugarTools:
         """ save temporary layer to gpkg """
 
         # Get destination file path
+        print(layer.name(), layer.crs())
         path = QgsProject.instance().homePath()
         if not path:
+            #path = os.path.expanduser('~')
             path = tempfile.gettempdir()
+
         path = os.path.join(path, "sections")
         if not os.path.exists(path):
             os.makedirs(path)
         path = os.path.join(path, layer.name() + ".gpkg")
             
-        error = QgsVectorFileWriter.writeAsVectorFormat(layer, path, "UTF-8")
-        if error[0] != QgsVectorFileWriter.NoError:
-            print ("Error generating geopackage: ", error)
+        #error = QgsVectorFileWriter.writeAsVectorFormat(layer, path, "UTF-8")
 
-        else:
-            block_layer = QgsVectorLayer(path, 'Layer geopackage')
-            QgsProject.instance().addMapLayer(block_layer, False)
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GPKG"
+        options.fileEncoding = "UTF-8"
+        options.layerName = layer.name()            
+        options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(3857), QgsProject.instance())
 
-            # change the data source
-            layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')
-            #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
+        QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
+
+        block_layer = QgsVectorLayer(path, 'Layer geopackage')
+        QgsProject.instance().addMapLayer(block_layer, False)
+
+        # change the data source
+        layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')
+        #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
 
     def filter_layer_points(self, layer):
@@ -844,6 +884,7 @@ class SugarTools:
         """ only show selected layer and load into layout """
 
         if not self.check_mandatory(active_tab):
+            self.iface.messageBar().pushMessage(f"You have to import data and a layout first.", level=Qgis.Warning, duration=3)
             return False
 
         # get selected layout
@@ -980,31 +1021,12 @@ class SugarTools:
         #           level=Qgis.Warning, duration=3)
         #     return False
 
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start == True:
-            self.first_start = False
-            self.dlg = SugarToolsDialog()
-            self.dlg.buttonBox.accepted.disconnect()
-            self.dlg.buttonBox.accepted.connect(self.process)
-            self.dlg.section_ew.stateChanged.connect(self.fill_layer)
-            self.dlg.section_ns.stateChanged.connect(self.fill_layer)
-            self.dlg.layer.currentTextChanged.connect(self.set_and_zoom_active_layer)
-            self.dlg.filter_expr_btn.clicked.connect(self.open_expr_builder)
-            self.dlg.radioPoints.toggled.connect(self.point_or_block)
-            self.dlg.radioBlocks.toggled.connect(self.point_or_block)
-            self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
-            self.dlg.import_layout_btn.clicked.connect(lambda:self.import_layout("plantilla_v2.qpt"))
-            self.dlg.import_layout_plant_btn.clicked.connect(lambda:self.import_layout("Plantilla_CG.qpt"))
-            self.dlg.import_shapefiles_btn.clicked.connect(self.import_shapefiles)
-            iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
-
         # show the dialog
         self.point_or_block()
         self.fill_symbology(self.dlg.symbology, "levels")
         self.fill_symbology(self.dlg.symbology_overlay, "overlay")
-        self.fill_layer()
-        self.fill_layout()
+        #self.fill_layer()
+        #self.fill_layout()
         self.dlg.show()
 
         # Run the dialog event loop
