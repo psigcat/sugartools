@@ -235,6 +235,8 @@ class SugarTools:
         self.dlg.import_layout_btn.clicked.connect(lambda:self.import_layout("plantilla_v2.qpt"))
         self.dlg.import_layout_plant_btn.clicked.connect(lambda:self.import_layout("Plantilla_CG.qpt"))
         self.dlg.import_shapefiles_btn.clicked.connect(self.import_shapefiles)
+        self.dlg.symbology_folder.fileChanged.connect(self.fill_symbology)
+        self.dlg.symbology_overlay_folder.fileChanged.connect(self.fill_symbology_overlay)
         iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
 
         self.fill_layer()
@@ -360,13 +362,33 @@ class SugarTools:
         self.dlg.symbology.setVisible(self.dlg.radioPoints.isChecked() or self.dlg.radioPointsBlocks.isChecked())
 
 
-    def fill_symbology(self, widget, filter):
+    def preset_fields(self):
         """ show all symbologies (but starting with overlay) in combobox """
+
+        self.dlg.symbology_folder.setFilePath(os.path.join(self.plugin_dir, SYMBOLOGY_DIR))
+        self.dlg.symbology_overlay_folder.setFilePath(os.path.join(self.plugin_dir, SYMBOLOGY_DIR))
+
+
+    def fill_symbology(self):
+        """ show all symbologies (but starting with levels) in combobox """
+
+        symbology_path = self.dlg.symbology_folder.filePath()
+        self.fill_symbology_files(self.dlg.symbology, "levels", symbology_path)
+
+
+    def fill_symbology_overlay(self):
+        """ show all symbologies (but starting with overlay) in combobox """
+
+        symbology_path = self.dlg.symbology_overlay_folder.filePath()
+        self.fill_symbology_files(self.dlg.symbology_overlay, "overlay", symbology_path)
+
+
+    def fill_symbology_files(self, widget, filter, symbology_path):
+        """ show all symbologies in combobox """
 
         widget.clear()
         widget.addItem(COMBO_SELECT)
 
-        symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR)
         symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f)) and f.startswith(filter)]
         symbology_files.sort()
         for file in symbology_files:
@@ -1004,8 +1026,9 @@ class SugarTools:
 
         # show the dialog
         self.point_or_block()
-        self.fill_symbology(self.dlg.symbology, "levels")
-        self.fill_symbology(self.dlg.symbology_overlay, "overlay")
+        self.preset_fields()
+        self.fill_symbology()
+        self.fill_symbology_overlay()
         #self.fill_layer()
         #self.fill_layout()
         self.dlg.show()
