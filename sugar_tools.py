@@ -48,8 +48,8 @@ FIELDS_MANDATORY_SHAPEFILES = ["shapefiles_folder"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
 INVERTED_STR = " inverted"
-POINT_PATTERN = "UA"
-BLOCK_PATTERN = "FO"
+POINT_PATTERN = "_UA"
+BLOCK_PATTERN = "_FO"
 LAYOUT_MAP_ITEM = "Mapa principal"
 CSV_PARAMS = '?maxFields=20000&detectTypes=yes&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
 CSV_PARAMS_COORDS_EW = '&xField=X&yField=Z'
@@ -460,16 +460,17 @@ class SugarTools:
 
         # check if group already does exist
         layer_group = self.get_layer_group("Sec" + layer_name, group)
-        print(layer_group)
         if not layer_group:
             layer_group = self.create_group("Sec" + layer_name, group)
-        layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
+        #layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
+        layer_group.addChildNode(QgsLayerTreeLayer(csv_layer))
 
-        self.filter_layer_points(csv_layer, layer_group)
-        self.set_symbology(csv_layer)
+        if file.find(POINT_PATTERN) > -1:
+            self.filter_layer_points(csv_layer, layer_group)
+            self.set_symbology(csv_layer)
 
         if (self.dlg.radioBlocks.isChecked() or (self.dlg.radioPointsBlocks.isChecked() and file.find(BLOCK_PATTERN) > -1)) and self.dlg.option_polygons.isChecked():
-            new_layer = self.create_blocks(csv_layer, prefix, layer_group)
+            new_layer = self.create_blocks(csv_layer, prefix, layer_group, file)
             self.write_layer_vars(new_layer)
         else:
             self.write_layer_vars(csv_layer)
@@ -481,7 +482,6 @@ class SugarTools:
         """ get layer group inside another group, false if it doesn't exist """
 
         for group in section_group.findGroups():
-            print(group.name(), layer_group_name)
             if group.name() == layer_group_name:
                 return group
         return False
@@ -513,9 +513,7 @@ class SugarTools:
 
         file_list = []
         for root_dir, dirs, files in os.walk(self.secciones_path):
-            print(dirs)
             for folder in dirs:
-                print(folder)
                 if self.dlg.radioPoints.isChecked() and folder.find(POINT_PATTERN) != -1 or self.dlg.radioBlocks.isChecked() and folder.find(BLOCK_PATTERN) != -1 or self.dlg.radioPointsBlocks.isChecked() and folder.find(POINT_PATTERN) != -1 or self.dlg.radioPointsBlocks.isChecked() and folder.find(BLOCK_PATTERN) != -1:
                     file_list += self.return_file_list(folder, pattern)
         return file_list
@@ -600,6 +598,10 @@ class SugarTools:
                 for file in file_list:
                     self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
 
+        # hide all layers
+        iface.setActiveLayer(None)
+        self.hide_all_layers_but_selected()
+
         # remove progress bar
         self.dlg.messageBar.clearWidgets()
 
@@ -682,6 +684,7 @@ class SugarTools:
         var_name = "yacimiento"
         var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
         QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+        print("layout_" + var_name, var)
 
         var_name = "layer"
         var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
@@ -772,8 +775,10 @@ class SugarTools:
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_blocks", blocks)
 
 
-    def create_blocks(self, layer, prefix, layer_group):
+    def create_blocks(self, layer, prefix, layer_group, file):
         """ create blocks from point layer """
+
+        #print("create blocks", layer.name(), file)
 
         uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
 
@@ -793,7 +798,8 @@ class SugarTools:
         result = processing.run("qgis:minimumboundinggeometry", params)
 
         QgsProject.instance().addMapLayer(result['OUTPUT'], False)
-        layer_group.insertChildNode(1, QgsLayerTreeLayer(result['OUTPUT']))
+        #layer_group.insertChildNode(1, QgsLayerTreeLayer(result['OUTPUT']))
+        layer_group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
 
         #processing.runAndLoadResults("native:buffer", params)
 
@@ -810,7 +816,7 @@ class SugarTools:
         #self.make_permanent(result['OUTPUT'])
 
         # delete point layer
-        if self.dlg.option_polygons.isChecked():
+        if self.dlg.option_polygons.isChecked(): #and self.dlg.radioPointsBlocks.isChecked() and layer.name().find(BLOCK_PATTERN) > -1:
             QgsProject.instance().removeMapLayer(layer)
 
         return result['OUTPUT']
@@ -852,6 +858,8 @@ class SugarTools:
     def filter_layer_points(self, layer, group):
         """ filter active layer by query and selected options """
 
+        print("filter", layer.name())
+
         expr = ""
         # filter_expr = self.dlg.filter_expr.text()
         # if filter_expr != "":
@@ -884,7 +892,8 @@ class SugarTools:
 
         layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
         QgsProject.instance().addMapLayer(layer_clone, False)
-        group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
+        #group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
+        group.addChildNode(QgsLayerTreeLayer(layer_clone))
 
         return layer_clone
 

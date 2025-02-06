@@ -179,7 +179,7 @@
              <item row="1" column="0">
               <widget class="QLineEdit" name="filter_expr">
                <property name="text">
-                <string> &quot;fec_archivo&quot; &gt;  '12/31/2000 0:00:00' </string>
+                <string>&quot;fec_archivo&quot; &gt; '2020-01-01'</string>
                </property>
               </widget>
              </item>
