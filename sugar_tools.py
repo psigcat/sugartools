@@ -464,8 +464,8 @@ class SugarTools:
         layer_group = self.get_layer_group("Sec" + layer_name, group)
         if not layer_group:
             layer_group = self.create_group("Sec" + layer_name, group)
-        #layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
-        layer_group.addChildNode(QgsLayerTreeLayer(csv_layer))
+        # insert as first element in group to assure that it does appear before blocks
+        layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
 
         if file.find(POINT_PATTERN) > -1:
             self.filter_layer_points(csv_layer, layer_group)
@@ -803,7 +803,7 @@ class SugarTools:
         result = processing.run("qgis:minimumboundinggeometry", params)
 
         QgsProject.instance().addMapLayer(result['OUTPUT'], False)
-        #layer_group.insertChildNode(1, QgsLayerTreeLayer(result['OUTPUT']))
+        # insert as last element in group
         layer_group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
 
         #processing.runAndLoadResults("native:buffer", params)
@@ -898,8 +898,8 @@ class SugarTools:
 
         layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
         QgsProject.instance().addMapLayer(layer_clone, False)
-        #group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
-        group.addChildNode(QgsLayerTreeLayer(layer_clone))
+        # insert after points, but before blocks
+        group.insertChildNode(2, QgsLayerTreeLayer(layer_clone))
 
         return layer_clone
 
@@ -914,6 +914,7 @@ class SugarTools:
         # get selected layout
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName(self.dlg.layout.currentText())
+        layout.refreshed.connect(lambda:self.write_layer_vars(iface.activeLayer()))
         self.write_layout_vars(layout)
 
         # set map extent to match main canvas extent
@@ -923,7 +924,6 @@ class SugarTools:
 
         # open layout
         iface.openLayoutDesigner(layout)
-
 
         # close dialog
         self.dlg.close()
