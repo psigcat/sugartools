@@ -232,8 +232,8 @@ class SugarTools:
         self.dlg.radioPoints.toggled.connect(self.point_or_block)
         self.dlg.radioBlocks.toggled.connect(self.point_or_block)
         self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
-        self.dlg.import_layout_btn.clicked.connect(lambda:self.import_layout("plantilla_v2.qpt"))
-        self.dlg.import_layout_plant_btn.clicked.connect(lambda:self.import_layout("Plantilla_CG.qpt"))
+        self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.import_layout("layout_sections.qpt"))
+        self.dlg.import_layout_map_btn.clicked.connect(lambda:self.import_layout("layout_map.qpt"))
         self.dlg.import_shapefiles_btn.clicked.connect(self.import_shapefiles)
         self.dlg.symbology_folder.fileChanged.connect(self.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.fill_symbology_overlay)
@@ -408,6 +408,8 @@ class SugarTools:
         # select active layer
         if iface.activeLayer():
             self.dlg.layer.setCurrentText(iface.activeLayer().name())
+        else:
+            self.dlg.layer.setCurrentIndex(1)
 
 
     def getLayerTree(self, node):
@@ -671,6 +673,8 @@ class SugarTools:
         if diffx==0:
             return diffy/10
 
+        print("thickness", diffx)
+
         return diffx/10
 
 
@@ -684,7 +688,6 @@ class SugarTools:
         var_name = "yacimiento"
         var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
         QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
-        print("layout_" + var_name, var)
 
         var_name = "layer"
         var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
@@ -728,9 +731,11 @@ class SugarTools:
         abr_yacimiento = None
         if "abr_yacimiento" in feature:
             abr_yacimiento = feature["abr_yacimiento"].upper()
+        #print("abr_yacimiento", abr_yacimiento)
         yacimiento = ""
         if abr_yacimiento and abr_yacimiento in SITES and len(SITES[abr_yacimiento]) > 0:
             yacimiento = SITES[abr_yacimiento][0]
+        #print("yacimiento", yacimiento)
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_yacimiento", yacimiento)
 
         # layer name
@@ -778,7 +783,7 @@ class SugarTools:
     def create_blocks(self, layer, prefix, layer_group, file):
         """ create blocks from point layer """
 
-        #print("create blocks", layer.name(), file)
+        print("create block", layer.name(), file)
 
         uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
 
@@ -813,7 +818,7 @@ class SugarTools:
         result['OUTPUT'].loadNamedStyle(symbology_path)
         result['OUTPUT'].triggerRepaint()
 
-        #self.make_permanent(result['OUTPUT'])
+        self.make_permanent(result['OUTPUT'])
 
         # delete point layer
         if self.dlg.option_polygons.isChecked(): #and self.dlg.radioPointsBlocks.isChecked() and layer.name().find(BLOCK_PATTERN) > -1:
@@ -826,13 +831,12 @@ class SugarTools:
         """ save temporary layer to gpkg """
 
         # Get destination file path
-        print(layer.name(), layer.crs())
-        path = QgsProject.instance().homePath()
-        if not path:
-            #path = os.path.expanduser('~')
-            path = tempfile.gettempdir()
+        #print(layer.name(), layer.crs())
+        # path = QgsProject.instance().homePath()
+        # if not path:
+        #     path = tempfile.gettempdir()
 
-        path = os.path.join(path, "sections")
+        path = os.path.join(self.secciones_path, "sections")
         if not os.path.exists(path):
             os.makedirs(path)
         path = os.path.join(path, layer.name() + ".gpkg")
@@ -858,7 +862,7 @@ class SugarTools:
     def filter_layer_points(self, layer, group):
         """ filter active layer by query and selected options """
 
-        print("filter", layer.name())
+        #print("filter", layer.name())
 
         expr = ""
         # filter_expr = self.dlg.filter_expr.text()
@@ -889,6 +893,8 @@ class SugarTools:
 
     def duplicate_layer(self, layer, group):
         """ duplicate existing layer in layer group """
+
+        print("duplicate overlay", layer.name())
 
         layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
         QgsProject.instance().addMapLayer(layer_clone, False)
@@ -1008,7 +1014,7 @@ class SugarTools:
         if not self.check_mandatory_fields(FIELDS_MANDATORY_SHAPEFILES):
             return False
 
-        shp_group = self.create_group("Plant")
+        shp_group = self.create_group("Map")
         shp_path = self.dlg.shapefiles_folder.filePath()
         for file in os.listdir(shp_path):
             if file.endswith(".shp"):
@@ -1016,7 +1022,8 @@ class SugarTools:
                 print(file_path, file)
                 shp_layer = QgsVectorLayer(file_path, file, "ogr")
                 QgsProject.instance().addMapLayer(shp_layer, False)
-                shp_group.insertChildNode(1, QgsLayerTreeLayer(shp_layer))
+                #shp_group.insertChildNode(1, QgsLayerTreeLayer(shp_layer))
+                shp_group.addChildNode(QgsLayerTreeLayer(shp_layer))
 
 
     def process(self):

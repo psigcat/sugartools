@@ -353,16 +353,16 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
-           <widget class="QPushButton" name="import_layout_btn">
+           <widget class="QPushButton" name="import_layout_sections_btn">
             <property name="text">
-             <string>Import layout from plugin</string>
+             <string>Import Sections layout</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="import_layout_plant_btn">
+           <widget class="QPushButton" name="import_layout_map_btn">
             <property name="text">
-             <string>Import plant layout from plugin</string>
+             <string>Import Map layout</string>
             </property>
            </widget>
           </item>
@@ -372,7 +372,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox_3">
          <property name="title">
-          <string>Plant</string>
+          <string>Map geometries</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
@@ -392,7 +392,7 @@
           <item>
            <widget class="QPushButton" name="import_shapefiles_btn">
             <property name="text">
-             <string>Import plant shapefiles</string>
+             <string>Import Map shapefiles</string>
             </property>
            </widget>
           </item>
