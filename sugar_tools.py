@@ -327,29 +327,34 @@ class SugarTools:
         return False
 
 
-    def get_two_section_layers(self, node):
+    def get_two_section_layers(self):
         """ recursevly parse whole layer tree and return first two layers of section """
 
         layer_names = []
-        for group in node:
-            layer_name = self.get_section_layer(group)
-            if layer_name:
-                layer_names.append(layer_name)
+        for group in QgsProject.instance().layerTreeRoot().children():
+            for subgroup in group.children():
+                layer_name = self.get_section_layer(subgroup)
+                #print(layer_name)
+                if layer_name:
+                    layer_names.append(layer_name)
+            break
 
+        #print(layer_names)
         return layer_names
 
 
     def get_section_layer(self, node):
         """ recursevly parse whole layer tree and return first two layers of section """
 
-        if isinstance(node, QgsLayerTreeLayer):
-            if ((self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0)) and not node.layer().isTemporary():
+        # if isinstance(node, QgsLayerTreeLayer):
+        #     if ((self.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0)) and not node.layer().isTemporary():
                 
-                return node.name()
+        #         return node.name()
 
-        elif isinstance(node, QgsLayerTreeGroup):
+        if isinstance(node, QgsLayerTreeGroup):
             for child in node.children():
-                return self.get_section_layer(child)
+                #return self.get_section_layer(child)
+                return node.name()
 
 
     def point_or_block(self):
@@ -465,7 +470,7 @@ class SugarTools:
         if not layer_group:
             layer_group = self.create_group("Sec" + layer_name, group)
         # insert as first element in group to assure that it does appear before blocks
-        layer_group.insertChildNode(1, QgsLayerTreeLayer(csv_layer))
+        layer_group.insertChildNode(0, QgsLayerTreeLayer(csv_layer))
 
         if file.find(POINT_PATTERN) > -1:
             self.filter_layer_points(csv_layer, layer_group)
@@ -476,6 +481,8 @@ class SugarTools:
             self.write_layer_vars(new_layer)
         else:
             self.write_layer_vars(csv_layer)
+            # !!! only for first layer !!!
+            self.write_layout_yacimiento(csv_layer)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -645,6 +652,8 @@ class SugarTools:
         """ extract thickness in cm from two layer names 
             format similar to: Azdo_EW0_MMy491945_532832.csv """
 
+        #print("layers", layers)
+
         if len(layers) < 2:
             return ""
 
@@ -673,7 +682,7 @@ class SugarTools:
         if diffx==0:
             return diffy/10
 
-        print("thickness", diffx)
+        #print("thickness", diffx)
 
         return diffx/10
 
@@ -685,9 +694,9 @@ class SugarTools:
             return False
         layer = QgsProject.instance().mapLayersByName(self.dlg.layer.currentText())[0]
 
-        var_name = "yacimiento"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+        # var_name = "yacimiento"
+        # var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+        # QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
 
         var_name = "layer"
         var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
@@ -718,7 +727,7 @@ class SugarTools:
         QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
 
 
-    def write_layer_vars(self, layer):
+    def write_layout_yacimiento(self, layout):
         """ write variables to layer, for later use in layout """
 
         # yacimiento name
@@ -731,12 +740,24 @@ class SugarTools:
         abr_yacimiento = None
         if "abr_yacimiento" in feature:
             abr_yacimiento = feature["abr_yacimiento"].upper()
-        #print("abr_yacimiento", abr_yacimiento)
-        yacimiento = ""
-        if abr_yacimiento and abr_yacimiento in SITES and len(SITES[abr_yacimiento]) > 0:
-            yacimiento = SITES[abr_yacimiento][0]
-        #print("yacimiento", yacimiento)
-        QgsExpressionContextUtils.setLayerVariable(layer, "layer_yacimiento", yacimiento)
+        print("abr_yacimiento", abr_yacimiento)
+        # yacimiento = ""
+        # if abr_yacimiento and abr_yacimiento in SITES and len(SITES[abr_yacimiento]) > 0:
+        #     yacimiento = SITES[abr_yacimiento][0]
+        # #print("yacimiento", yacimiento)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_yacimiento", abr_yacimiento)
+
+
+    def write_layout_thickness(self, layout):
+        """ write variables to layer, for later use in layout """
+
+        section_layers = self.get_two_section_layers()
+        thickness = self.get_section_thickness(section_layers)
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_thickness", thickness)
+
+
+    def write_layer_vars(self, layer):
+        """ write variables to layer, for later use in layout """
 
         # layer name
         section = ""
@@ -769,9 +790,9 @@ class SugarTools:
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_no_coord", no_coord)
 
         # thickness: derivar de nombres de capas
-        section_layers = self.get_two_section_layers(QgsProject.instance().layerTreeRoot().children())
-        thickness = self.get_section_thickness(section_layers)
-        QgsExpressionContextUtils.setLayerVariable(layer, "layer_thickness", thickness)
+        # section_layers = self.get_two_section_layers()
+        # thickness = self.get_section_thickness(section_layers)
+        # QgsExpressionContextUtils.setLayerVariable(layer, "layer_thickness", thickness)
 
         # blocks
         blocks = ""
@@ -847,7 +868,7 @@ class SugarTools:
         options.driverName = "GPKG"
         options.fileEncoding = "UTF-8"
         options.layerName = layer.name()            
-        options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(3857), QgsProject.instance())
+        options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(25831), QgsProject.instance())
 
         QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
 
@@ -899,7 +920,7 @@ class SugarTools:
         layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
         QgsProject.instance().addMapLayer(layer_clone, False)
         # insert after points, but before blocks
-        group.insertChildNode(2, QgsLayerTreeLayer(layer_clone))
+        group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
 
         return layer_clone
 
@@ -914,8 +935,10 @@ class SugarTools:
         # get selected layout
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName(self.dlg.layout.currentText())
-        layout.refreshed.connect(lambda:self.write_layer_vars(iface.activeLayer()))
+        #layout.refreshed.connect(lambda:self.write_layer_vars(iface.activeLayer()))
         self.write_layout_vars(layout)
+        self.write_layout_thickness(layout)
+        #self.write_layout_yacimiento(layout)
 
         # set map extent to match main canvas extent
         map_item = layout.itemById(LAYOUT_MAP_ITEM)
