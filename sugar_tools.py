@@ -26,16 +26,18 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsPointXY, QgsGeometry, QgsPolygon, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
+from .utils_database import utils_database
 
 import os
 import datetime
 from random import randrange
 import processing
 import tempfile
+import json
 
 
 COMBO_SELECT = "(Select)"
@@ -45,6 +47,7 @@ FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 FIELDS_MANDATORY_SHAPEFILES = ["shapefiles_folder"]
+FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
 INVERTED_STR = " inverted"
@@ -234,6 +237,7 @@ class SugarTools:
         self.dlg.radioPointsBlocks.toggled.connect(self.point_or_block)
         self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.import_layout("layout_sections.qpt"))
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.import_layout("layout_map.qpt"))
+        self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.import_layout("layout_structures.qpt"))
         self.dlg.import_shapefiles_btn.clicked.connect(self.import_shapefiles)
         self.dlg.symbology_folder.fileChanged.connect(self.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.fill_symbology_overlay)
@@ -482,7 +486,7 @@ class SugarTools:
         else:
             self.write_layer_vars(csv_layer)
             # !!! only for first layer !!!
-            self.write_layout_yacimiento(csv_layer)
+            # self.write_layout_yacimiento(csv_layer)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -972,7 +976,7 @@ class SugarTools:
 
 
     def hide_all_layers_but_selected(self):
-        """ hide all layers in layer tree """
+        """ hide all layers in layer tree but selected, nor layers belonging to selected layer group """
 
         for group in QgsProject.instance().layerTreeRoot().children():
             self.toggle_layer_node(group)
@@ -1049,15 +1053,241 @@ class SugarTools:
                 shp_group.addChildNode(QgsLayerTreeLayer(shp_layer))
 
 
+    def read_database_config(self):
+        """ read params from databases.json """
+
+        self.databases = {}
+        try:
+            with open(os.path.join(self.plugin_dir, "databases.json")) as f:
+                self.databases = json.load(f)
+
+        except Exception as e:
+            print(e)
+
+
+    def fill_db(self):
+        """ fill databases combobox """
+
+        for database in self.databases:
+            self.dlg.structures_db.addItem(self.databases[database]["name"], {"value": database})
+
+
+    def process_structures_bck(self):
+        """ get structures from database """
+
+        if not self.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
+            return False
+
+        # connect to database
+        db = self.databases[self.dlg.structures_db.currentData()["value"]]
+        self.structures_db_obj = utils_database(self.plugin_dir, db)
+        #self.structures_db.read_config()
+        self.structures_db = self.structures_db_obj.open_database()
+
+        # get table niveles
+        name = self.dlg.structures_name.text()
+        sql = f"SELECT * FROM niveles WHERE cod_tnivel='FO' AND nom_nivel='{name}'"
+        rows = self.structures_db_obj.get_rows(sql)
+        cod_nivel = rows[0][0]
+        #cod_nivel = self.structures_db_obj.get_field(sql, "cod_nivel")
+
+        # get table inventari
+        sql = f"SELECT * FROM inventario WHERE cod_nivel='{cod_nivel}'"
+        rows = self.structures_db_obj.get_rows(sql)
+        coord_x = rows[0][10]
+        coord_y = rows[0][11]
+        coord_z = rows[0][12]
+
+        self.create_structures_points(name, rows)
+        #self.create_structures_polygon(name, rows)
+
+
+    def process_structures(self):
+        """ get structures from database """
+
+        if not self.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
+            return False
+
+        # connect to database
+        db = self.databases[self.dlg.structures_db.currentData()["value"]]
+        self.structures_db_obj = utils_database(self.plugin_dir, db)
+        self.structures_db = self.structures_db_obj.open_database()
+
+        # save layout vars
+        name = self.dlg.structures_name.text()
+        layout_manager = QgsProject.instance().layoutManager()
+        layout = layout_manager.layoutByName("structures")
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_db", db["name"])
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)        
+
+        # get view formas EW
+        sql_ew = f"SELECT * FROM formas WHERE nom_nivel='{name}ew'"
+        rows_ew = self.structures_db_obj.get_rows(sql_ew)
+        if not rows_ew or len(rows_ew) == 0:
+            self.dlg.messageBar.pushMessage(f"No structures found with name '{name}ew' in db '{db['name']}'", level=Qgis.Warning)
+            return
+        self.create_structures_points(name, rows_ew, "label", "ew")
+        layer_ew = self.create_structures_points(name, rows_ew, "ew")
+        self.create_map_theme(name, "ew")
+        self.create_spatial_bookmark("ew", layer_ew)
+
+        # get view formas NS
+        sql_ns = f"SELECT * FROM formas WHERE nom_nivel='{name}ns'"
+        rows_ns = self.structures_db_obj.get_rows(sql_ns)
+        if not rows_ns or len(rows_ns) == 0:
+            self.dlg.messageBar.pushMessage(f"No structures found with name '{name}ns' in db '{db['name']}'", level=Qgis.Warning)
+            return
+        self.create_structures_points(name, rows_ns, "label", "ns")
+        layer_ns = self.create_structures_points(name, rows_ns, "ns")
+        self.create_map_theme(name, "ns")
+        self.create_spatial_bookmark("ns", layer_ns)
+
+        # draw ns and ew for map
+        self.create_structures_points(name, rows_ew, "label", "map_ew")
+        self.create_structures_points(name, rows_ew, "map_ew")
+        self.create_structures_points(name, rows_ns, "label", "map_ns")
+        self.create_structures_points(name, rows_ns, "map_ns")
+
+        # get view formas map
+        sql = f"SELECT * FROM formas WHERE nom_nivel='{name}'"
+        rows = self.structures_db_obj.get_rows(sql)
+        if not rows or len(rows) == 0:
+            self.dlg.messageBar.pushMessage(f"No structures found with name '{name}' in db '{db['name']}'", level=Qgis.Warning)
+            return
+        self.create_structures_points(name, rows, "label", "map")
+        layer_map = self.create_structures_points(name, rows, "map")
+        self.create_map_theme(name, "map")
+        bookmark = self.create_spatial_bookmark("map", layer_map)
+        iface.mapCanvas().setExtent(bookmark.extent())
+
+
+    def create_map_theme(self, name, type):
+        """ create map theme from given layers """
+
+        mapThemesCollection = QgsProject.instance().mapThemeCollection()
+        mapThemes = mapThemesCollection.mapThemes()
+        layersToChanges = [f"{name}_{type}", f"{name}_{type}_label"]
+        if type == "map":
+            layersToChanges.append(f"{name}_map_ns")
+            layersToChanges.append(f"{name}_map_ns_label")
+            layersToChanges.append(f"{name}_map_ew")
+            layersToChanges.append(f"{name}_map_ew_label")
+
+        for child in QgsProject.instance().layerTreeRoot().children():
+            if isinstance(child, QgsLayerTreeLayer):
+                child.setItemVisibilityChecked(child.name() in layersToChanges)
+            else:
+                child.setItemVisibilityChecked(False)
+        
+        mapThemeRecord = QgsMapThemeCollection.createThemeFromCurrentState(
+            QgsProject.instance().layerTreeRoot(),
+            iface.layerTreeView().layerTreeModel()
+        )
+        mapThemesCollection.insert(type, mapThemeRecord)
+
+
+    def create_spatial_bookmark(self, name, layer):
+        """ create map theme from given layers """
+
+        bookmark = QgsBookmark()
+        bookmark.setId(name)
+        bookmark.setName(name)
+        referenced_extent = QgsReferencedRectangle(layer.extent(), layer.crs())
+        bookmark.setExtent(referenced_extent)
+        bookmark_manager = QgsProject.instance().bookmarkManager()
+        bookmark_manager.addBookmark(bookmark)
+
+        return bookmark
+
+
+    def create_structures_points(self, name, rows, type, label_type=None):
+        """ make vector layer with points """
+
+        point_layer_uri = "Point?crs=epsg:25831&field=id:integer"
+        name_type = type
+        if label_type:
+            name_type = f"{label_type}_label"
+        point_layer = QgsVectorLayer(point_layer_uri, f"{name}_{name_type}", "memory")
+
+        QgsProject.instance().addMapLayer(point_layer)
+        point_layer.startEditing()
+
+        # coordinates
+        pos_x = 3 # x
+        pos_y = 4 # y
+        if type == "ns" or label_type == "ns":
+            pos_x = 4 # y
+            pos_y = 5 # z
+        elif type == "ew" or label_type == "ew":
+            pos_x = 3 # x
+            pos_y = 5 # z
+
+        #for i in range(rows):
+        for row in rows:
+            feature = QgsFeature()
+            point = QgsPointXY(row[pos_x], row[pos_y])
+            geometry = QgsGeometry.fromPointXY(point)
+            feature.setGeometry(geometry)
+            feature.setAttributes([int(row[2])])
+            point_layer.addFeature(feature)
+           
+        point_layer.commitChanges()
+        iface.setActiveLayer(point_layer)
+        iface.zoomToActiveLayer()
+
+        # apply style
+        if type == "map_ew":
+            type = "ew"
+        elif type == "map_ns":
+            type = "ns"
+        symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, f"structures_points_{type}.qml")
+        point_layer.loadNamedStyle(symbology_path)
+        point_layer.triggerRepaint()
+
+        return point_layer
+
+
+    # def create_structures_polygon(self, name, rows):
+    #     """ make vector layer with points """
+
+    #     polygon_layer_uri = "Polygon?crs=epsg:25831&field=id:integer"
+    #     polygon_layer = QgsVectorLayer(polygon_layer_uri, name, "memory")
+
+    #     QgsProject.instance().addMapLayer(polygon_layer)
+    #     polygon_layer.startEditing()
+
+    #     #for i in range(rows):
+    #     point_list = []
+    #     pos_x = 3
+    #     pos_y = 4
+    #     first_point = QgsPointXY(rows[0][pos_x], rows[0][pos_y])
+    #     for row in rows:
+    #         point_list.append(QgsPointXY(row[pos_x], row[pos_y]))
+    #     point_list.append(first_point)
+           
+    #     geometry = QgsGeometry.fromPolygonXY([point_list])
+    #     feature = QgsFeature()
+    #     feature.setGeometry(geometry)
+    #     feature.setAttributes([row[2]])
+    #     polygon_layer.addFeature(feature)
+    #     polygon_layer.commitChanges()
+    #     iface.setActiveLayer(polygon_layer)
+    #     iface.zoomToActiveLayer()
+
+
     def process(self):
         """ execute actions when ok clicked """
 
-        active_tab = self.dlg.tabWidget.currentWidget().objectName()
+        main_tab = self.dlg.tabWidgetMain.currentWidget().objectName()
+        active_tab = self.dlg.tabWidgetSections.currentWidget().objectName()
 
-        if active_tab == "tabImport":
-            self.import_files(active_tab)
-        elif active_tab == "tabLayout":
-            self.load_layout(active_tab)
+        if main_tab == "tabSections":
+            if active_tab == "tabImport":
+                self.import_files(active_tab)
+            elif active_tab == "tabLayout":
+                self.load_layout(active_tab)
+        elif main_tab == "tabStructures":
+            self.process_structures()
 
 
     def run(self):
@@ -1071,6 +1301,10 @@ class SugarTools:
         #self.fill_layer()
         #self.fill_layout()
         self.dlg.show()
+
+        # structures
+        self.read_database_config()
+        self.fill_db()
 
         # Run the dialog event loop
         result = self.dlg.exec_()

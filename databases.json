@@ -1,0 +1,10 @@
+{
+    "CT": {
+        "name": "Cova Tabac",
+        "host": "",
+        "port": 3306,
+        "db": "",
+        "user": "",
+        "passwd": ""
+    }
+}
