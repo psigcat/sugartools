@@ -844,7 +844,8 @@ class SugarTools:
         result['OUTPUT'].loadNamedStyle(symbology_path)
         result['OUTPUT'].triggerRepaint()
 
-        self.make_permanent(result['OUTPUT'])
+        path = os.path.join(self.secciones_path, "sections")
+        self.make_permanent(result['OUTPUT'], path)
 
         # delete point layer
         if self.dlg.option_polygons.isChecked(): #and self.dlg.radioPointsBlocks.isChecked() and layer.name().find(BLOCK_PATTERN) > -1:
@@ -853,16 +854,9 @@ class SugarTools:
         return result['OUTPUT']
 
 
-    def make_permanent(self, layer):
+    def make_permanent(self, layer, path):
         """ save temporary layer to gpkg """
 
-        # Get destination file path
-        #print(layer.name(), layer.crs())
-        # path = QgsProject.instance().homePath()
-        # if not path:
-        #     path = tempfile.gettempdir()
-
-        path = os.path.join(self.secciones_path, "sections")
         if not os.path.exists(path):
             os.makedirs(path)
         path = os.path.join(path, layer.name() + ".gpkg")
@@ -1283,6 +1277,9 @@ class SugarTools:
         symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, f"structures_points_{type}.qml")
         point_layer.loadNamedStyle(symbology_path)
         point_layer.triggerRepaint()
+
+        path = os.path.join(self.dlg.structures_workspace.filePath(), "structures")
+        self.make_permanent(point_layer, path)
 
         return point_layer
 
