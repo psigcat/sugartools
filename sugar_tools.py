@@ -26,7 +26,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsPointXY, QgsGeometry, QgsPolygon, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsPointXY, QgsGeometry, QgsPolygon, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap
 from qgis.utils import iface
 
 from .sugar_tools_dialog import SugarToolsDialog
@@ -242,6 +242,7 @@ class SugarTools:
         self.dlg.symbology_folder.fileChanged.connect(self.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.fill_symbology_overlay)
         iface.layerTreeView().currentLayerChanged.connect(self.select_layer)
+        iface.layoutDesignerOpened.connect(self.onLayoutLoaded)
 
         self.fill_layer()
         self.fill_layout()
@@ -956,6 +957,19 @@ class SugarTools:
         self.dlg.close()
 
 
+    def onLayoutLoaded(self):
+        """ load spatial bookmarks when layout designer is opened """
+
+        bookmark_manager = QgsProject.instance().bookmarkManager()
+        bookmark_map = bookmark_manager.bookmarkById("map")
+        bookmark_ns = bookmark_manager.bookmarkById("ns")
+        bookmark_ew = bookmark_manager.bookmarkById("ew")
+
+        if bookmark_map and bookmark_ns and bookmark_ew:
+            layout = QgsProject.instance().layoutManager().layoutByName("structures")
+            self.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
+
+
     def open_expr_builder(self):
         """ open QGIS Query Builder"""
 
@@ -1118,7 +1132,10 @@ class SugarTools:
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName("structures")
         QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_db", db["name"])
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)        
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
+
+        # create group
+        group = self.create_group(name)
 
         # get view formas EW
         sql_ew = f"SELECT * FROM formas WHERE nom_nivel='{name}ew'"
@@ -1126,10 +1143,10 @@ class SugarTools:
         if not rows_ew or len(rows_ew) == 0:
             self.dlg.messageBar.pushMessage(f"No structures found with name '{name}ew' in db '{db['name']}'", level=Qgis.Warning)
             return
-        self.create_structures_points(name, rows_ew, "label", "ew")
-        layer_ew = self.create_structures_points(name, rows_ew, "ew")
+        self.create_structures_points(name, group, rows_ew, "label", "ew")
+        layer_ew = self.create_structures_points(name, group, rows_ew, "ew")
         self.create_map_theme(name, "ew")
-        self.create_spatial_bookmark("ew", layer_ew)
+        bookmark_ew = self.create_spatial_bookmark("ew", layer_ew)
 
         # get view formas NS
         sql_ns = f"SELECT * FROM formas WHERE nom_nivel='{name}ns'"
@@ -1137,16 +1154,16 @@ class SugarTools:
         if not rows_ns or len(rows_ns) == 0:
             self.dlg.messageBar.pushMessage(f"No structures found with name '{name}ns' in db '{db['name']}'", level=Qgis.Warning)
             return
-        self.create_structures_points(name, rows_ns, "label", "ns")
-        layer_ns = self.create_structures_points(name, rows_ns, "ns")
+        self.create_structures_points(name, group, rows_ns, "label", "ns")
+        layer_ns = self.create_structures_points(name, group, rows_ns, "ns")
         self.create_map_theme(name, "ns")
-        self.create_spatial_bookmark("ns", layer_ns)
+        bookmark_ns = self.create_spatial_bookmark("ns", layer_ns)
 
         # draw ns and ew for map
-        self.create_structures_points(name, rows_ew, "label", "map_ew")
-        self.create_structures_points(name, rows_ew, "map_ew")
-        self.create_structures_points(name, rows_ns, "label", "map_ns")
-        self.create_structures_points(name, rows_ns, "map_ns")
+        self.create_structures_points(name, group, rows_ew, "label", "map_ew")
+        self.create_structures_points(name, group, rows_ew, "map_ew")
+        self.create_structures_points(name, group, rows_ns, "label", "map_ns")
+        self.create_structures_points(name, group, rows_ns, "map_ns")
 
         # get view formas map
         sql = f"SELECT * FROM formas WHERE nom_nivel='{name}'"
@@ -1154,11 +1171,11 @@ class SugarTools:
         if not rows or len(rows) == 0:
             self.dlg.messageBar.pushMessage(f"No structures found with name '{name}' in db '{db['name']}'", level=Qgis.Warning)
             return
-        self.create_structures_points(name, rows, "label", "map")
-        layer_map = self.create_structures_points(name, rows, "map")
+        self.create_structures_points(name, group, rows, "label", "map")
+        layer_map = self.create_structures_points(name, group, rows, "map")
         self.create_map_theme(name, "map")
-        bookmark = self.create_spatial_bookmark("map", layer_map)
-        iface.mapCanvas().setExtent(bookmark.extent())
+        bookmark_map = self.create_spatial_bookmark("map", layer_map)
+        iface.mapCanvas().setExtent(bookmark_map.extent())
 
 
     def create_map_theme(self, name, type):
@@ -1173,11 +1190,12 @@ class SugarTools:
             layersToChanges.append(f"{name}_map_ew")
             layersToChanges.append(f"{name}_map_ew_label")
 
-        for child in QgsProject.instance().layerTreeRoot().children():
-            if isinstance(child, QgsLayerTreeLayer):
-                child.setItemVisibilityChecked(child.name() in layersToChanges)
-            else:
-                child.setItemVisibilityChecked(False)
+        for group in QgsProject.instance().layerTreeRoot().children():
+            for subgroup in group.children():
+                if isinstance(subgroup, QgsLayerTreeLayer):
+                    subgroup.setItemVisibilityChecked(subgroup.name() in layersToChanges)
+                else:
+                    subgroup.setItemVisibilityChecked(False)
         
         mapThemeRecord = QgsMapThemeCollection.createThemeFromCurrentState(
             QgsProject.instance().layerTreeRoot(),
@@ -1200,16 +1218,38 @@ class SugarTools:
         return bookmark
 
 
-    def create_structures_points(self, name, rows, type, label_type=None):
+    def apply_spatial_bookmarks(self, layout, bookmarks):
+        """ create map theme from given layers """
+
+        for bookmark in bookmarks:
+            for item in layout.items():
+                if isinstance(item, QgsLayoutItemMap) and item.id() == bookmark.name():
+                    item.setExtent(bookmark.extent())
+                    item.refresh()
+                    break
+
+
+    def create_structures_points(self, name, group, rows, type, label_type=None):
         """ make vector layer with points """
 
+        # invert NS or EW
+        invert = 1
+        invert_label = ""
+        if self.dlg.structures_ns_invert.isChecked() or self.dlg.structures_ew_invert.isChecked():
+            invert = -1
+            invert_label = "_inverted"
+
         point_layer_uri = "Point?crs=epsg:25831&field=id:integer"
-        name_type = type
+        name_type = f"{type}"
+        if type != "map":
+            name_type = f"{type}{invert_label}"
         if label_type:
             name_type = f"{label_type}_label"
         point_layer = QgsVectorLayer(point_layer_uri, f"{name}_{name_type}", "memory")
 
-        QgsProject.instance().addMapLayer(point_layer)
+        QgsProject.instance().addMapLayer(point_layer, False)
+        group.addChildNode(QgsLayerTreeLayer(point_layer))
+
         point_layer.startEditing()
 
         # coordinates
@@ -1225,7 +1265,7 @@ class SugarTools:
         #for i in range(rows):
         for row in rows:
             feature = QgsFeature()
-            point = QgsPointXY(row[pos_x], row[pos_y])
+            point = QgsPointXY(row[pos_x] * invert, row[pos_y])
             geometry = QgsGeometry.fromPointXY(point)
             feature.setGeometry(geometry)
             feature.setAttributes([int(row[2])])
