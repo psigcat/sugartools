@@ -26,11 +26,12 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.gui import QgsFileWidget, QgsSpinBox, QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsPointXY, QgsGeometry, QgsPolygon, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsPrintLayout, QgsReadWriteContext
 from qgis.utils import iface
 
+from .utils import utils
 from .sugar_tools_dialog import SugarToolsDialog
-from .utils_database import utils_database
+from .tool2_structures import StructuresTool
 
 import os
 import datetime
@@ -112,6 +113,8 @@ class SugarTools:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+
+        self.utils = utils(self.plugin_dir)
 
 
     # noinspection PyMethodMayBeStatic
@@ -473,7 +476,7 @@ class SugarTools:
         # check if group already does exist
         layer_group = self.get_layer_group("Sec" + layer_name, group)
         if not layer_group:
-            layer_group = self.create_group("Sec" + layer_name, group)
+            layer_group = self.utils.create_group("Sec" + layer_name, group)
         # insert as first element in group to assure that it does appear before blocks
         layer_group.insertChildNode(0, QgsLayerTreeLayer(csv_layer))
 
@@ -584,7 +587,7 @@ class SugarTools:
             file_list = self.get_file_list(SECTION_EW_PATTERN)
             if file_list:
                 success = True
-                group = self.create_group(label + SECTION_EW_PATTERN[1:] + " cross-sections")
+                group = self.utils.create_group(label + SECTION_EW_PATTERN[1:] + " cross-sections")
                 for file in file_list:
                     self.load_file(file, group, CSV_PARAMS_COORDS_EW, SECTION_EW_PATTERN)
 
@@ -592,7 +595,7 @@ class SugarTools:
             file_list = self.get_file_list(SECTION_NS_PATTERN)
             if file_list:
                 success = True
-                group = self.create_group(label + SECTION_NS_PATTERN[1:] + " cross-sections")
+                group = self.utils.create_group(label + SECTION_NS_PATTERN[1:] + " cross-sections")
                 for file in file_list:
                     self.load_file(file, group, CSV_PARAMS_COORDS_NS, SECTION_NS_PATTERN)
 
@@ -600,7 +603,7 @@ class SugarTools:
             file_list = self.get_file_list(SECTION_EW_PATTERN)
             if file_list:
                 success = True
-                group = self.create_group(label + SECTION_EW_PATTERN[1:] + " cross-sections")
+                group = self.utils.create_group(label + SECTION_EW_PATTERN[1:] + " cross-sections")
                 for file in file_list:
                     self.load_file(file, group, CSV_PARAMS_COORDS_EW_NEG, SECTION_EW_PATTERN, True)
 
@@ -608,7 +611,7 @@ class SugarTools:
             file_list = self.get_file_list(SECTION_NS_PATTERN)
             if file_list:
                 success = True
-                group = self.create_group(label + SECTION_NS_PATTERN[1:] + " cross-sections")
+                group = self.utils.create_group(label + SECTION_NS_PATTERN[1:] + " cross-sections")
                 for file in file_list:
                     self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
 
@@ -845,38 +848,13 @@ class SugarTools:
         result['OUTPUT'].triggerRepaint()
 
         path = os.path.join(self.secciones_path, "sections")
-        self.make_permanent(result['OUTPUT'], path)
+        self.utils.make_permanent(result['OUTPUT'], path)
 
         # delete point layer
         if self.dlg.option_polygons.isChecked(): #and self.dlg.radioPointsBlocks.isChecked() and layer.name().find(BLOCK_PATTERN) > -1:
             QgsProject.instance().removeMapLayer(layer)
 
         return result['OUTPUT']
-
-
-    def make_permanent(self, layer, path):
-        """ save temporary layer to gpkg """
-
-        if not os.path.exists(path):
-            os.makedirs(path)
-        path = os.path.join(path, layer.name() + ".gpkg")
-            
-        #error = QgsVectorFileWriter.writeAsVectorFormat(layer, path, "UTF-8")
-
-        options = QgsVectorFileWriter.SaveVectorOptions()
-        options.driverName = "GPKG"
-        options.fileEncoding = "UTF-8"
-        options.layerName = layer.name()            
-        options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(25831), QgsProject.instance())
-
-        QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
-
-        block_layer = QgsVectorLayer(path, 'Layer geopackage')
-        QgsProject.instance().addMapLayer(block_layer, False)
-
-        # change the data source
-        layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')
-        #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
 
     def filter_layer_points(self, layer, group):
@@ -961,7 +939,7 @@ class SugarTools:
 
         if bookmark_map and bookmark_ns and bookmark_ew:
             layout = QgsProject.instance().layoutManager().layoutByName("structures")
-            self.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
+            self.structures_tool.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
 
 
     def open_expr_builder(self):
@@ -1049,7 +1027,7 @@ class SugarTools:
         if not self.check_mandatory_fields(FIELDS_MANDATORY_SHAPEFILES):
             return False
 
-        shp_group = self.create_group("Map")
+        shp_group = self.utils.create_group("Map")
         shp_path = self.dlg.shapefiles_folder.filePath()
         for file in os.listdir(shp_path):
             if file.endswith(".shp"):
@@ -1061,257 +1039,6 @@ class SugarTools:
                 shp_group.addChildNode(QgsLayerTreeLayer(shp_layer))
 
 
-    def read_database_config(self):
-        """ read params from databases.json """
-
-        self.databases = {}
-        try:
-            with open(os.path.join(self.plugin_dir, "databases.json")) as f:
-                self.databases = json.load(f)
-
-        except Exception as e:
-            print(e)
-
-
-    def fill_db(self):
-        """ fill databases combobox """
-
-        for database in self.databases:
-            self.dlg.structures_db.addItem(self.databases[database]["name"], {"value": database})
-
-
-    def process_structures_bck(self):
-        """ get structures from database """
-
-        if not self.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
-            return False
-
-        # connect to database
-        db = self.databases[self.dlg.structures_db.currentData()["value"]]
-        self.structures_db_obj = utils_database(self.plugin_dir, db)
-        #self.structures_db.read_config()
-        self.structures_db = self.structures_db_obj.open_database()
-
-        # get table niveles
-        name = self.dlg.structures_name.text()
-        sql = f"SELECT * FROM niveles WHERE cod_tnivel='FO' AND nom_nivel='{name}'"
-        rows = self.structures_db_obj.get_rows(sql)
-        cod_nivel = rows[0][0]
-        #cod_nivel = self.structures_db_obj.get_field(sql, "cod_nivel")
-
-        # get table inventari
-        sql = f"SELECT * FROM inventario WHERE cod_nivel='{cod_nivel}'"
-        rows = self.structures_db_obj.get_rows(sql)
-        coord_x = rows[0][10]
-        coord_y = rows[0][11]
-        coord_z = rows[0][12]
-
-        self.create_structures_points(name, rows)
-        #self.create_structures_polygon(name, rows)
-
-
-    def process_structures(self):
-        """ get structures from database """
-
-        if not self.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
-            return False
-
-        # connect to database
-        db = self.databases[self.dlg.structures_db.currentData()["value"]]
-        self.structures_db_obj = utils_database(self.plugin_dir, db)
-        self.structures_db = self.structures_db_obj.open_database()
-
-        # save layout vars
-        name = self.dlg.structures_name.text()
-        layout_manager = QgsProject.instance().layoutManager()
-        layout = layout_manager.layoutByName("structures")
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_db", db["name"])
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
-
-        # create group
-        group = self.create_group(name)
-
-        # get view formas EW
-        sql_ew = f"SELECT * FROM formas WHERE nom_nivel='{name}ew'"
-        rows_ew = self.structures_db_obj.get_rows(sql_ew)
-        if not rows_ew or len(rows_ew) == 0:
-            self.dlg.messageBar.pushMessage(f"No structures found with name '{name}ew' in db '{db['name']}'", level=Qgis.Warning)
-            return
-        self.create_structures_points(name, group, rows_ew, "label", "ew")
-        layer_ew = self.create_structures_points(name, group, rows_ew, "ew")
-        self.create_map_theme(name, "ew")
-        bookmark_ew = self.create_spatial_bookmark("ew", layer_ew)
-
-        # get view formas NS
-        sql_ns = f"SELECT * FROM formas WHERE nom_nivel='{name}ns'"
-        rows_ns = self.structures_db_obj.get_rows(sql_ns)
-        if not rows_ns or len(rows_ns) == 0:
-            self.dlg.messageBar.pushMessage(f"No structures found with name '{name}ns' in db '{db['name']}'", level=Qgis.Warning)
-            return
-        self.create_structures_points(name, group, rows_ns, "label", "ns")
-        layer_ns = self.create_structures_points(name, group, rows_ns, "ns")
-        self.create_map_theme(name, "ns")
-        bookmark_ns = self.create_spatial_bookmark("ns", layer_ns)
-
-        # draw ns and ew for map
-        self.create_structures_points(name, group, rows_ew, "label", "map_ew")
-        self.create_structures_points(name, group, rows_ew, "map_ew")
-        self.create_structures_points(name, group, rows_ns, "label", "map_ns")
-        self.create_structures_points(name, group, rows_ns, "map_ns")
-
-        # get view formas map
-        sql = f"SELECT * FROM formas WHERE nom_nivel='{name}'"
-        rows = self.structures_db_obj.get_rows(sql)
-        if not rows or len(rows) == 0:
-            self.dlg.messageBar.pushMessage(f"No structures found with name '{name}' in db '{db['name']}'", level=Qgis.Warning)
-            return
-        self.create_structures_points(name, group, rows, "label", "map")
-        layer_map = self.create_structures_points(name, group, rows, "map")
-        self.create_map_theme(name, "map")
-        bookmark_map = self.create_spatial_bookmark("map", layer_map)
-        iface.mapCanvas().setExtent(bookmark_map.extent())
-
-
-    def create_map_theme(self, name, type):
-        """ create map theme from given layers """
-
-        mapThemesCollection = QgsProject.instance().mapThemeCollection()
-        mapThemes = mapThemesCollection.mapThemes()
-        layersToChanges = [f"{name}_{type}", f"{name}_{type}_label"]
-        if type == "map":
-            layersToChanges.append(f"{name}_map_ns")
-            layersToChanges.append(f"{name}_map_ns_label")
-            layersToChanges.append(f"{name}_map_ew")
-            layersToChanges.append(f"{name}_map_ew_label")
-
-        for group in QgsProject.instance().layerTreeRoot().children():
-            for subgroup in group.children():
-                if isinstance(subgroup, QgsLayerTreeLayer):
-                    subgroup.setItemVisibilityChecked(subgroup.name() in layersToChanges)
-                else:
-                    subgroup.setItemVisibilityChecked(False)
-        
-        mapThemeRecord = QgsMapThemeCollection.createThemeFromCurrentState(
-            QgsProject.instance().layerTreeRoot(),
-            iface.layerTreeView().layerTreeModel()
-        )
-        mapThemesCollection.insert(type, mapThemeRecord)
-
-
-    def create_spatial_bookmark(self, name, layer):
-        """ create map theme from given layers """
-
-        bookmark = QgsBookmark()
-        bookmark.setId(name)
-        bookmark.setName(name)
-        referenced_extent = QgsReferencedRectangle(layer.extent(), layer.crs())
-        bookmark.setExtent(referenced_extent)
-        bookmark_manager = QgsProject.instance().bookmarkManager()
-        bookmark_manager.addBookmark(bookmark)
-
-        return bookmark
-
-
-    def apply_spatial_bookmarks(self, layout, bookmarks):
-        """ create map theme from given layers """
-
-        for bookmark in bookmarks:
-            for item in layout.items():
-                if isinstance(item, QgsLayoutItemMap) and item.id() == bookmark.name():
-                    item.setExtent(bookmark.extent())
-                    item.refresh()
-                    break
-
-
-    def create_structures_points(self, name, group, rows, type, label_type=None):
-        """ make vector layer with points """
-
-        # invert NS or EW
-        invert = 1
-        invert_label = ""
-        if self.dlg.structures_ns_invert.isChecked() or self.dlg.structures_ew_invert.isChecked():
-            invert = -1
-            invert_label = "_inverted"
-
-        point_layer_uri = "Point?crs=epsg:25831&field=id:integer"
-        name_type = f"{type}"
-        if type != "map":
-            name_type = f"{type}{invert_label}"
-        if label_type:
-            name_type = f"{label_type}_label"
-        point_layer = QgsVectorLayer(point_layer_uri, f"{name}_{name_type}", "memory")
-
-        QgsProject.instance().addMapLayer(point_layer, False)
-        group.addChildNode(QgsLayerTreeLayer(point_layer))
-
-        point_layer.startEditing()
-
-        # coordinates
-        pos_x = 3 # x
-        pos_y = 4 # y
-        if type == "ns" or label_type == "ns":
-            pos_x = 4 # y
-            pos_y = 5 # z
-        elif type == "ew" or label_type == "ew":
-            pos_x = 3 # x
-            pos_y = 5 # z
-
-        #for i in range(rows):
-        for row in rows:
-            feature = QgsFeature()
-            point = QgsPointXY(row[pos_x] * invert, row[pos_y])
-            geometry = QgsGeometry.fromPointXY(point)
-            feature.setGeometry(geometry)
-            feature.setAttributes([int(row[2])])
-            point_layer.addFeature(feature)
-           
-        point_layer.commitChanges()
-        iface.setActiveLayer(point_layer)
-        iface.zoomToActiveLayer()
-
-        # apply style
-        if type == "map_ew":
-            type = "ew"
-        elif type == "map_ns":
-            type = "ns"
-        symbology_path = os.path.join(self.plugin_dir, SYMBOLOGY_DIR, f"structures_points_{type}.qml")
-        point_layer.loadNamedStyle(symbology_path)
-        point_layer.triggerRepaint()
-
-        path = os.path.join(self.dlg.structures_workspace.filePath(), "structures")
-        self.make_permanent(point_layer, path)
-
-        return point_layer
-
-
-    # def create_structures_polygon(self, name, rows):
-    #     """ make vector layer with points """
-
-    #     polygon_layer_uri = "Polygon?crs=epsg:25831&field=id:integer"
-    #     polygon_layer = QgsVectorLayer(polygon_layer_uri, name, "memory")
-
-    #     QgsProject.instance().addMapLayer(polygon_layer)
-    #     polygon_layer.startEditing()
-
-    #     #for i in range(rows):
-    #     point_list = []
-    #     pos_x = 3
-    #     pos_y = 4
-    #     first_point = QgsPointXY(rows[0][pos_x], rows[0][pos_y])
-    #     for row in rows:
-    #         point_list.append(QgsPointXY(row[pos_x], row[pos_y]))
-    #     point_list.append(first_point)
-           
-    #     geometry = QgsGeometry.fromPolygonXY([point_list])
-    #     feature = QgsFeature()
-    #     feature.setGeometry(geometry)
-    #     feature.setAttributes([row[2]])
-    #     polygon_layer.addFeature(feature)
-    #     polygon_layer.commitChanges()
-    #     iface.setActiveLayer(polygon_layer)
-    #     iface.zoomToActiveLayer()
-
-
     def process(self):
         """ execute actions when ok clicked """
 
@@ -1321,10 +1048,14 @@ class SugarTools:
         if main_tab == "tabSections":
             if active_tab == "tabImport":
                 self.import_files(active_tab)
+
             elif active_tab == "tabLayout":
                 self.load_layout(active_tab)
+
         elif main_tab == "tabStructures":
-            self.process_structures()
+            if not self.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
+                return False
+            self.structures_tool.process_structures()
 
 
     def run(self):
@@ -1340,8 +1071,9 @@ class SugarTools:
         self.dlg.show()
 
         # structures
-        self.read_database_config()
-        self.fill_db()
+        self.structures_tool = StructuresTool(self)
+        self.structures_tool.read_database_config()
+        self.structures_tool.fill_db()
 
         # Run the dialog event loop
         result = self.dlg.exec_()
