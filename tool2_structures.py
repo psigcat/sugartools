@@ -1,13 +1,14 @@
 from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature
 
-from .utils_database import utils_database
-from .utils import utils
-
 import os
 import json
 
+from .utils_database import utils_database
+from .utils import utils
+
 
 SYMBOLOGY_DIR = "qml"
+FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
 
 
 class StructuresTool():
@@ -17,7 +18,7 @@ class StructuresTool():
         self.parent = parent
         self.databases = {}
 
-        self.utils = utils(self.parent.plugin_dir)
+        self.utils = utils(self.parent)
 
 
     def read_database_config(self):
@@ -39,6 +40,10 @@ class StructuresTool():
 
     def process_structures(self):
         """ get structures from database """
+
+        if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
+            return False
+
 
         # connect to database
         db = self.databases[self.parent.dlg.structures_db.currentData()["value"]]
@@ -232,7 +237,7 @@ class StructuresTool():
         point_layer.loadNamedStyle(symbology_path)
         point_layer.triggerRepaint()
 
-        path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures")
+        path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
         self.utils.make_permanent(point_layer, path)
 
         return point_layer
