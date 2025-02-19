@@ -32,6 +32,7 @@ from .utils import utils
 from .sugar_tools_dialog import SugarToolsDialog
 from .tool1_sections import SectionsTool
 from .tool2_structures import StructuresTool
+from .tool3_remounting import RemountingTool
 
 
 class SugarTools:
@@ -232,6 +233,9 @@ class SugarTools:
         elif main_tab == "tabStructures":
             self.structures_tool.process_structures()
 
+        elif main_tab == "tabRemounting":
+            self.remounting_tool.process_remounting()
+
 
     def run(self):
         """Run method that performs all the real work"""
@@ -247,6 +251,10 @@ class SugarTools:
         self.structures_tool = StructuresTool(self)
         self.structures_tool.read_database_config()
         self.structures_tool.fill_db()
+
+        # remounting
+        self.remounting_tool = RemountingTool(self)
+        self.remounting_tool.setup()
 
         # Run the dialog event loop
         result = self.dlg.exec_()

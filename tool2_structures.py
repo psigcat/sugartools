@@ -44,7 +44,6 @@ class StructuresTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
             return False
 
-
         # connect to database
         db = self.databases[self.parent.dlg.structures_db.currentData()["value"]]
         self.structures_db_obj = utils_database(self.parent.plugin_dir, db)
