@@ -33,6 +33,9 @@ from .sugar_tools_dialog import SugarToolsDialog
 from .tool1_sections import SectionsTool
 from .tool2_structures import StructuresTool
 from .tool3_remounting import RemountingTool
+from .tool4_blocks import BlocksTool
+from .tool5_relblocks import RelblocksTool
+from .tool6_extractblocks import ExtractblocksTool
 
 
 class SugarTools:
@@ -182,6 +185,7 @@ class SugarTools:
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         self.first_start = False
+        self.utils = utils(self)
         self.sections_tool = SectionsTool(self)
 
         self.dlg = SugarToolsDialog()
@@ -197,7 +201,7 @@ class SugarTools:
         self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.sections_tool.import_layout("layout_sections.qpt"))
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.sections_tool.import_layout("layout_map.qpt"))
         self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.sections_tool.import_layout("layout_structures.qpt"))
-        self.dlg.import_shapefiles_btn.clicked.connect(self.sections_tool.import_shapefiles)
+        self.dlg.import_shapefiles_btn.clicked.connect(self.utils.import_shapefiles)
         self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
         iface.layerTreeView().currentLayerChanged.connect(self.sections_tool.select_layer)
@@ -255,6 +259,15 @@ class SugarTools:
         # remounting
         self.remounting_tool = RemountingTool(self)
         self.remounting_tool.setup()
+
+        # blocks
+        self.blocks_tool = BlocksTool(self)
+
+        # relate blocks
+        self.relblocks_tool = RelblocksTool(self)
+
+        # relate blocks
+        self.extractblocks_tool = ExtractblocksTool(self)
 
         # Run the dialog event loop
         result = self.dlg.exec_()

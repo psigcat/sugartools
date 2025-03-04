@@ -726,21 +726,3 @@ class SectionsTool():
 
         # add to combo box
         self.parent.dlg.layout.addItem(layout.name())
-
-
-    def import_shapefiles(self):
-        """ import all shapefiles from a folder """
-
-        if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_SHAPEFILES):
-            return False
-
-        shp_group = self.utils.create_group("Map")
-        shp_path = self.parent.dlg.shapefiles_folder.filePath()
-        for file in os.listdir(shp_path):
-            if file.endswith(".shp"):
-                file_path = os.path.join(shp_path, file)
-                print(file_path, file)
-                shp_layer = QgsVectorLayer(file_path, file, "ogr")
-                QgsProject.instance().addMapLayer(shp_layer, False)
-                #shp_group.insertChildNode(1, QgsLayerTreeLayer(shp_layer))
-                shp_group.addChildNode(QgsLayerTreeLayer(shp_layer))

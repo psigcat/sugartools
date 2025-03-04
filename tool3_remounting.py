@@ -16,7 +16,8 @@ FIELDS_DEFAULT = {
     "remounting_origen": "origen",
     "remounting_destiny": "destino",
     "remounting_remounting": "Clase Rem",
-    "remounting_labels": "num_pieza"
+    "remounting_labels": "num_pieza",
+    "remounting_colors": "color_tremon"
 }
 FIELDS_MANDATORY_REMOUNTING = ["remounting_excel", "remounting_sheet", "remounting_part", "remounting_coordx", "remounting_coordy", "remounting_origen", "remounting_destiny", "remounting_remounting", "remounting_labels"]
 
@@ -55,6 +56,7 @@ class RemountingTool():
 
         self.parent.dlg.remounting_sheet.clear()
         self.parent.dlg.remounting_sheet.addItem(COMBO_SELECT)
+        self.clear_parts()
 
         file_path = self.parent.dlg.remounting_excel.filePath()
         self.book = xlrd.open_workbook(file_path)
@@ -71,13 +73,14 @@ class RemountingTool():
     def load_excel_sheet(self):
         """ load columns from excel sheet """
 
-        index = self.parent.dlg.remounting_sheet.currentIndex()
+        index = self.parent.dlg.remounting_sheet.currentIndex() - 1
         self.sheet = self.book.sheet_by_index(index)
+        print("Sheet '{0}' has {1} rows and {2} columns".format(self.sheet.name, self.sheet.nrows, self.sheet.ncols))
 
-        self.clear_parts()
         for column_index in range(self.sheet.ncols):
             name = self.sheet.cell_value(0, column_index)
             self.fill_parts(name)
+            print(name)
 
         self.select_default()
 
