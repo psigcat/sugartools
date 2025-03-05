@@ -44,7 +44,7 @@ class utils:
         options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(25831), QgsProject.instance())
 
         if _3d:
-            options.overrideGeometryType = QgsWkbTypes.PolygonZ
+            options.overrideGeometryType = QgsWkbTypes.PointZ
             options.includeZ = True
 
         QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)

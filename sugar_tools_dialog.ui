@@ -527,7 +527,7 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QComboBox" name="remounting_origen"/>
+           <widget class="QComboBox" name="remounting_origin"/>
           </item>
           <item row="4" column="0">
            <widget class="QLabel" name="label_19">
@@ -537,7 +537,7 @@
            </widget>
           </item>
           <item row="4" column="1">
-           <widget class="QComboBox" name="remounting_destiny"/>
+           <widget class="QComboBox" name="remounting_target"/>
           </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_20">
