@@ -173,7 +173,10 @@ class RemountingTool():
         num_pieza = part["part_num"]
         str_pieza = "num"+str(num_pieza)
         if not str_pieza in self.points:
-            self.points[str_pieza] = QgsPointXY(part["coordx"], part["coordy"])
+            self.points[str_pieza] = {
+                "point": QgsPointXY(part["coordx"], part["coordy"]),
+                "color": str(part["color"])
+            }
 
         self.lines.append([origin_point, target_point])
         self.lines_attr.append({
@@ -332,17 +335,21 @@ class RemountingTool():
     def create_point_layer(self, file, group):
         """ create line layer """
 
-        layer = self.utils.create_vector_layer("points", "point", group)
+        layer = self.utils.create_vector_layer("points", "point", group, "&field=color:string(7)")
 
         layer.startEditing()
         i=0
-        for point in self.points:
+        for str_pieza in self.points:
             fields = QgsFields()
             fields.append(QgsField("id", QVariant.Int))
+            fields.append(QgsField("color", QVariant.String))
             feature = QgsFeature(fields)
-            geometry = QgsGeometry.fromPointXY(self.points[point])
+            attr = self.points[str_pieza]
+            num_pieza = str_pieza[3:]
+            print(num_pieza, attr)
+            geometry = QgsGeometry.fromPointXY(attr["point"])
             feature.setGeometry(geometry)
-            feature.setAttributes([point[3:]])
+            feature.setAttributes([num_pieza, attr["color"]])
             layer.addFeature(feature)
             i+=1
         layer.commitChanges()

@@ -14,7 +14,7 @@
           <Option type="Map">
             <Option value="0" type="QString" name="angle"/>
             <Option value="square" type="QString" name="cap_style"/>
-            <Option value="0,0,0,0" type="QString" name="color"/>
+            <Option value="0,0,0,255" type="QString" name="color"/>
             <Option value="1" type="QString" name="horizontal_anchor_point"/>
             <Option value="bevel" type="QString" name="joinstyle"/>
             <Option value="circle" type="QString" name="name"/>
@@ -22,7 +22,7 @@
             <Option value="3x:0,0,0,0,0,0" type="QString" name="offset_map_unit_scale"/>
             <Option value="MM" type="QString" name="offset_unit"/>
             <Option value="35,35,35,255" type="QString" name="outline_color"/>
-            <Option value="solid" type="QString" name="outline_style"/>
+            <Option value="no" type="QString" name="outline_style"/>
             <Option value="0" type="QString" name="outline_width"/>
             <Option value="3x:0,0,0,0,0,0" type="QString" name="outline_width_map_unit_scale"/>
             <Option value="MM" type="QString" name="outline_width_unit"/>
@@ -35,7 +35,13 @@
           <data_defined_properties>
             <Option type="Map">
               <Option value="" type="QString" name="name"/>
-              <Option name="properties"/>
+              <Option type="Map" name="properties">
+                <Option type="Map" name="fillColor">
+                  <Option value="true" type="bool" name="active"/>
+                  <Option value="&quot;color&quot;" type="QString" name="expression"/>
+                  <Option value="3" type="int" name="type"/>
+                </Option>
+              </Option>
               <Option value="collection" type="QString" name="type"/>
             </Option>
           </data_defined_properties>
