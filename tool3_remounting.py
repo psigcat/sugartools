@@ -38,8 +38,9 @@ class RemountingTool():
         self.tablekeys = None
         self.col_indexes = {}
         self.parts = {}
+        self.points = {}
         self.lines = []
-        self.linecolors = []
+        self.lines_attr = []
 
         self.utils = utils(self.parent)
 
@@ -63,7 +64,8 @@ class RemountingTool():
         file = self.write_csv()
 
         group = self.utils.create_group("Remounting")
-        self.load_csv_layer(file, group)
+        #self.load_csv_layer(file, group)
+        self.create_point_layer(file, group)
         self.create_line_layer(file, group)
 
 
@@ -89,7 +91,7 @@ class RemountingTool():
             target = int(self.sheet.cell_value(rx, target_index))
             remounting = int(self.sheet.cell_value(rx, remounting_index))
             labels = int(self.sheet.cell_value(rx, labels_index))
-            colors = self.sheet.cell_value(rx, colors_index)
+            color = self.sheet.cell_value(rx, colors_index)
 
             #print(rx, part, coordx, coordy, origin, target, remounting, labels)
             self.parts[part] = {
@@ -101,7 +103,7 @@ class RemountingTool():
                 "target": target,
                 "remounting": remounting,
                 "labels": labels,
-                "colors": colors
+                "color": color
             }
 
 
@@ -131,8 +133,6 @@ class RemountingTool():
 
         origin_point = QgsPointXY(origin["coordx"], origin["coordy"])
         target_point = QgsPointXY(target["coordx"], target["coordy"])
-        self.lines.append([origin_point, target_point])
-        self.linecolors.append(str(part["colors"]))
 
         disthorizontal = QgsDistanceArea().measureLine(origin_point, target_point)
         azimut = self.calculate_azimut(incx, incy, incxmo, incymo)
@@ -162,6 +162,25 @@ class RemountingTool():
         self.table[row]["eje"] = eje
         self.table[row]["distvertical"] = distvertical
         self.table[row]["inclinacion"] = inclinacion
+
+        # save points for later making points layer
+        self.save_points_lines(part, origin_point, target_point)
+
+
+    def save_points_lines(self, part, origin_point, target_point):
+        """ save points and lines """
+
+        num_pieza = part["part_num"]
+        str_pieza = "num"+str(num_pieza)
+        if not str_pieza in self.points:
+            self.points[str_pieza] = QgsPointXY(part["coordx"], part["coordy"])
+
+        self.lines.append([origin_point, target_point])
+        self.lines_attr.append({
+            "origin": int(part["origin"]),
+            "target": int(part["target"]),
+            "color": str(part["color"])
+        })
 
 
     def calculate_azimut(self, incx, incy, incxmo, incymo):
@@ -295,38 +314,68 @@ class RemountingTool():
             return file
 
 
-    def load_csv_layer(self, file, group):
-        """ load data from csv file as layer """
+    # def load_csv_layer(self, file, group):
+    #     """ load data from csv file as layer """
 
-        file = os.path.abspath(file)
-        uri = f"file:///{file}{CSV_PARAMS}&xField=coord_x&yField=coord_y"
-        layer = QgsVectorLayer(uri, "points", "delimitedtext")
+    #     file = os.path.abspath(file)
+    #     uri = f"file:///{file}{CSV_PARAMS}&xField=coord_x&yField=coord_y"
+    #     layer = QgsVectorLayer(uri, "points", "delimitedtext")
+
+    #     symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "remounting_points.qml")
+    #     layer.loadNamedStyle(symbology_path)
+    #     #layer.triggerRepaint()
+
+    #     QgsProject.instance().addMapLayer(layer, False)
+    #     group.addChildNode(QgsLayerTreeLayer(layer))
+
+
+    def create_point_layer(self, file, group):
+        """ create line layer """
+
+        layer = self.utils.create_vector_layer("points", "point", group)
+
+        layer.startEditing()
+        i=0
+        for point in self.points:
+            fields = QgsFields()
+            fields.append(QgsField("id", QVariant.Int))
+            feature = QgsFeature(fields)
+            geometry = QgsGeometry.fromPointXY(self.points[point])
+            feature.setGeometry(geometry)
+            feature.setAttributes([point[3:]])
+            layer.addFeature(feature)
+            i+=1
+        layer.commitChanges()
 
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "remounting_points.qml")
         layer.loadNamedStyle(symbology_path)
         #layer.triggerRepaint()
 
-        QgsProject.instance().addMapLayer(layer, False)
-        group.addChildNode(QgsLayerTreeLayer(layer))
+        path = file.split(".")[0] + ".gpkg"
+        self.utils.make_permanent(layer, path)
 
 
     def create_line_layer(self, file, group):
-        """ load data from csv file as layer """
+        """ create point layer """
 
         layer = self.utils.create_vector_layer("lines", "linestring", group, "&field=color:string(7)")
+
         layer.startEditing()
         i=0
         for line in self.lines:
             fields = QgsFields()
             fields.append(QgsField("id", QVariant.Int))
+            # fields.append(QgsField("origin", QVariant.Int))
+            # fields.append(QgsField("target", QVariant.Int))
             fields.append(QgsField("color", QVariant.String))
             feature = QgsFeature(fields)
             geometry = QgsGeometry.fromPolylineXY(line)
             feature.setGeometry(geometry)
-            feature.setAttributes([i, self.linecolors[i]])
+            attr = self.lines_attr[i]
+            feature.setAttributes([i, attr["color"]])
+            # feature.setAttributes([i, attr["origin"], attr["target"], attr["color"]])
             layer.addFeature(feature)
             i+=1
-
         layer.commitChanges()
 
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "remounting_lines.qml")
