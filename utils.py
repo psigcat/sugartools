@@ -57,10 +57,10 @@ class utils:
         #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
 
-    def create_vector_layer(self, name, geom_type, group=False):
+    def create_vector_layer(self, name, geom_type, group=False, fields=""):
         """ Create empty vector layer with given geometry type """
 
-        uri = f"{geom_type}?crs=epsg:25831&field=id:integer"
+        uri = f"{geom_type}?crs=epsg:25831&field=id:integer" + fields
         layer = QgsVectorLayer(uri, name, 'memory')
 
         # Add layer to TOC or group and canvas

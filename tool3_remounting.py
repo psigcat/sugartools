@@ -1,5 +1,6 @@
 from qgis.PyQt.QtWidgets import QComboBox
-from qgis.core import Qgis, QgsProject, QgsPointXY, QgsDistanceArea, QgsVectorLayer, QgsFeature, QgsGeometry, QgsLayerTreeLayer
+from qgis.core import Qgis, QgsProject, QgsPointXY, QgsDistanceArea, QgsVectorLayer, QgsFeature, QgsGeometry, QgsLayerTreeLayer, QgsFields, QgsField
+from qgis.PyQt.QtCore import QVariant
 
 import os
 import xlrd
@@ -38,6 +39,7 @@ class RemountingTool():
         self.col_indexes = {}
         self.parts = {}
         self.lines = []
+        self.linecolors = []
 
         self.utils = utils(self.parent)
 
@@ -130,6 +132,7 @@ class RemountingTool():
         origin_point = QgsPointXY(origin["coordx"], origin["coordy"])
         target_point = QgsPointXY(target["coordx"], target["coordy"])
         self.lines.append([origin_point, target_point])
+        self.linecolors.append(str(part["colors"]))
 
         disthorizontal = QgsDistanceArea().measureLine(origin_point, target_point)
         azimut = self.calculate_azimut(incx, incy, incxmo, incymo)
@@ -310,14 +313,17 @@ class RemountingTool():
     def create_line_layer(self, file, group):
         """ load data from csv file as layer """
 
-        layer = self.utils.create_vector_layer("lines", "linestring", group)
+        layer = self.utils.create_vector_layer("lines", "linestring", group, "&field=color:string(7)")
         layer.startEditing()
         i=0
         for line in self.lines:
-            feature = QgsFeature()
+            fields = QgsFields()
+            fields.append(QgsField("id", QVariant.Int))
+            fields.append(QgsField("color", QVariant.String))
+            feature = QgsFeature(fields)
             geometry = QgsGeometry.fromPolylineXY(line)
             feature.setGeometry(geometry)
-            feature.setAttributes([i])
+            feature.setAttributes([i, self.linecolors[i]])
             layer.addFeature(feature)
             i+=1
 
