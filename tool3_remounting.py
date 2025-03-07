@@ -346,7 +346,6 @@ class RemountingTool():
             feature = QgsFeature(fields)
             attr = self.points[str_pieza]
             num_pieza = str_pieza[3:]
-            print(num_pieza, attr)
             geometry = QgsGeometry.fromPointXY(attr["point"])
             feature.setGeometry(geometry)
             feature.setAttributes([num_pieza, attr["color"]])

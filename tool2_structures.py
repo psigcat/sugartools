@@ -88,10 +88,12 @@ class StructuresTool():
         db_type = type
         if type == "map":
             db_type = ""
-        sql = f"SELECT * FROM formas WHERE nom_nivel='{name}{db_type}'"
+
+        sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}{db_type}'"
         rows = self.structures_db_obj.get_rows(sql)
-        if not rows or len(rows) == 0:
-            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}' in db '{db['name']}'", level=Qgis.Warning)
+        if not rows or rows == None or len(rows) == 0:
+            #self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}' in db '{self.databases[database]["name"]}'", level=Qgis.Warning)
+            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}'", level=Qgis.Warning)
             return
         self.create_structures_points(name, group_labels, rows, "label", type)
         layer = self.create_structures_points(name, group, rows, type)
@@ -159,7 +161,6 @@ class StructuresTool():
             pos_x = 3 # x
             pos_y = 5 # z
 
-        #for i in range(rows):
         for row in rows:
             feature = QgsFeature()
             point = QgsPointXY(row[pos_x] * invert, row[pos_y])
