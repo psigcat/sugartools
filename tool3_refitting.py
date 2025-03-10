@@ -146,12 +146,10 @@ class RefittingTool():
             eje = azimut - 180
 
         distvertical = target["coordz"] - origin["coordz"]
-        distvertical = round(distvertical, 2)
         distvertical = abs(distvertical)
 
         inclinacion = math.atan2(distvertical, disthorizontal)
         inclinacion = 180 * (inclinacion / math.pi)
-        inclinacion = round(inclinacion, 2)
         inclinacion = abs(inclinacion)
 
         #print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
@@ -159,13 +157,13 @@ class RefittingTool():
         row = part["row_num"]
         self.table[row]["incx"] = incx
         self.table[row]["incy"] = incy
-        self.table[row]["incxmo"] = incxmo
-        self.table[row]["incymo"] = incymo
-        self.table[row]["disthorizontal"] = disthorizontal
-        self.table[row]["azimut"] = azimut
-        self.table[row]["eje"] = eje
-        self.table[row]["distvertical"] = distvertical
-        self.table[row]["inclinacion"] = inclinacion
+        self.table[row]["incxmo"] = round(incxmo)
+        self.table[row]["incymo"] = round(incymo)
+        self.table[row]["disthorizontal"] = round(disthorizontal)
+        self.table[row]["azimut"] = round(azimut)
+        self.table[row]["eje"] = round(eje)
+        self.table[row]["distvertical"] = round(distvertical)
+        self.table[row]["inclinacion"] = round(inclinacion)
 
         # save points for later making points layer
         self.save_points_lines(part, origin_point, target_point, origin_num, target_num)
@@ -189,7 +187,7 @@ class RefittingTool():
         elif incx < 0 and incy >= 0:
             vazimut = 270 + (math.atan(incymo / incxmo) * (180 / math.pi))
 
-        return round(vazimut, 2)
+        return vazimut
 
 
     def save_points_lines(self, part, origin_point, target_point, origin_num, target_num):

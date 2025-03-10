@@ -100,7 +100,7 @@ class StructuresTool():
 
         self.create_structures_empty(name, type, "polygon", group, group_labels)
         self.create_structures_empty(name, type, "linestring", group, group_labels)
-        self.create_structures_empty(name, type, "point", group, group_labels, True)
+        self.create_structures_empty(name, type, "multilinestring", group, group_labels)
 
         self.create_map_theme(name, type)
         bookmark = self.create_spatial_bookmark(type, layer)
@@ -111,15 +111,12 @@ class StructuresTool():
         return rows
 
 
-    def create_structures_empty(self, name, type, geom_type, group, group_labels, _3d=False):
+    def create_structures_empty(self, name, type, geom_type, group, group_labels):
         """ create empty vector layer with given geom type """
 
-        threed = ""
-        if _3d:
-            threed = "3d"
-        layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}{threed}", geom_type, group, "&field=id:integer")
+        layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}", geom_type, group, "&field=id:integer")
         layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
-        self.utils.make_permanent(layer, layer_path, _3d)
+        self.utils.make_permanent(layer, layer_path)
 
         # clone layer for labels
         clone = layer.clone()
@@ -197,7 +194,7 @@ class StructuresTool():
             f"{name}_{type}", f"{name}_{type}_label", 
             f"{name}_{type}_polygon", f"{name}_{type}_polygon_label",
             f"{name}_{type}_linestring", f"{name}_{type}_linestring_label",
-            f"{name}_{type}_point3d", f"{name}_{type}_point3d_label",
+            f"{name}_{type}_multilinestring", f"{name}_{type}_multilinestring_label",
         ]
         if type == "map":
             layersToChanges.append(f"{name}_map_ns")
@@ -206,10 +203,10 @@ class StructuresTool():
             layersToChanges.append(f"{name}_map_ew_label")
             layersToChanges.append(f"{name}_map_polygon")
             layersToChanges.append(f"{name}_map_polygon_label")
-            layersToChanges.append(f"{name}_map_linestring")
-            layersToChanges.append(f"{name}_map_linestring_label")
-            layersToChanges.append(f"{name}_map_point3d")
-            layersToChanges.append(f"{name}_map_point3d_label")
+            layersToChanges.append(f"{name}_map_line")
+            layersToChanges.append(f"{name}_map_line_label")
+            layersToChanges.append(f"{name}_map_multiline")
+            layersToChanges.append(f"{name}_map_multiline_label")
 
         for group in QgsProject.instance().layerTreeRoot().children():
             for subgroup in group.children():
