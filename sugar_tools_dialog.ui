@@ -448,7 +448,7 @@
        <item row="7" column="0">
         <widget class="QCheckBox" name="structures_ew_invert">
          <property name="text">
-          <string>Projectar ES invertida</string>
+          <string>Projectar EW invertida</string>
          </property>
         </widget>
        </item>
@@ -461,9 +461,9 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabRemounting">
+     <widget class="QWidget" name="tabRefitting">
       <attribute name="title">
-       <string>Remounting</string>
+       <string>Refitting</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_14">
        <item row="2" column="0">
@@ -481,7 +481,7 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QgsFileWidget" name="remounting_excel"/>
+        <widget class="QgsFileWidget" name="refitting_excel"/>
        </item>
        <item row="4" column="0">
         <widget class="QGroupBox" name="groupBox_8">
@@ -497,7 +497,7 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QComboBox" name="remounting_part"/>
+           <widget class="QComboBox" name="refitting_part"/>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_16">
@@ -507,7 +507,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QComboBox" name="remounting_coordx"/>
+           <widget class="QComboBox" name="refitting_coordx"/>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="label_17">
@@ -517,55 +517,65 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QComboBox" name="remounting_coordy"/>
+           <widget class="QComboBox" name="refitting_coordy"/>
           </item>
-          <item row="3" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="label_18">
             <property name="text">
              <string>Origin:</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QComboBox" name="remounting_origin"/>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="refitting_origin"/>
           </item>
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_19">
             <property name="text">
              <string>Target:</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QComboBox" name="remounting_target"/>
+          <item row="5" column="1">
+           <widget class="QComboBox" name="refitting_target"/>
           </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_20">
             <property name="text">
-             <string>Remounting:</string>
+             <string>Refitting</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
-           <widget class="QComboBox" name="remounting_remounting"/>
-          </item>
           <item row="6" column="1">
-           <widget class="QComboBox" name="remounting_labels"/>
+           <widget class="QComboBox" name="refitting_class"/>
           </item>
-          <item row="7" column="1">
-           <widget class="QComboBox" name="remounting_colors"/>
-          </item>
-          <item row="6" column="0">
+          <item row="7" column="0">
            <widget class="QLabel" name="label_21">
             <property name="text">
              <string>Labels:</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
+          <item row="7" column="1">
+           <widget class="QComboBox" name="refitting_labels"/>
+          </item>
+          <item row="8" column="0">
            <widget class="QLabel" name="label_22">
             <property name="text">
              <string>Color codification:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QComboBox" name="refitting_colors"/>
+          </item>
+          <item row="3" column="1">
+           <widget class="QComboBox" name="refitting_coordz"/>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_32">
+            <property name="text">
+             <string>Coord Z:</string>
             </property>
            </widget>
           </item>
@@ -586,7 +596,7 @@
         </spacer>
        </item>
        <item row="3" column="0">
-        <widget class="QComboBox" name="remounting_sheet"/>
+        <widget class="QComboBox" name="refitting_sheet"/>
        </item>
       </layout>
      </widget>

@@ -117,7 +117,7 @@ class StructuresTool():
         threed = ""
         if _3d:
             threed = "3d"
-        layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}{threed}", geom_type, group)
+        layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}{threed}", geom_type, group, "&field=id:integer")
         layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
         self.utils.make_permanent(layer, layer_path, _3d)
 

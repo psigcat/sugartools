@@ -32,7 +32,7 @@ from .utils import utils
 from .sugar_tools_dialog import SugarToolsDialog
 from .tool1_sections import SectionsTool
 from .tool2_structures import StructuresTool
-from .tool3_remounting import RemountingTool
+from .tool3_refitting import RefittingTool
 from .tool4_blocks import BlocksTool
 from .tool5_relblocks import RelblocksTool
 from .tool6_extractblocks import ExtractblocksTool
@@ -237,8 +237,8 @@ class SugarTools:
         elif main_tab == "tabStructures":
             self.structures_tool.process_structures()
 
-        elif main_tab == "tabRemounting":
-            self.remounting_tool.process_remounting()
+        elif main_tab == "tabRefitting":
+            self.refitting_tool.process_refitting()
 
 
     def run(self):
@@ -256,9 +256,9 @@ class SugarTools:
         self.structures_tool.read_database_config()
         self.structures_tool.fill_db()
 
-        # remounting
-        self.remounting_tool = RemountingTool(self)
-        self.remounting_tool.setup()
+        # refitting
+        self.refitting_tool = RefittingTool(self)
+        self.refitting_tool.setup()
 
         # blocks
         self.blocks_tool = BlocksTool(self)

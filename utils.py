@@ -60,7 +60,7 @@ class utils:
     def create_vector_layer(self, name, geom_type, group=False, fields=""):
         """ Create empty vector layer with given geometry type """
 
-        uri = f"{geom_type}?crs=epsg:25831&field=id:integer" + fields
+        uri = f"{geom_type}?crs=epsg:25831" + fields
         layer = QgsVectorLayer(uri, name, 'memory')
 
         # Add layer to TOC or group and canvas
