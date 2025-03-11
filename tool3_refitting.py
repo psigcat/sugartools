@@ -3,9 +3,10 @@ from qgis.core import Qgis, QgsProject, QgsPointXY, QgsDistanceArea, QgsVectorLa
 from qgis.PyQt.QtCore import QVariant
 
 import os
-import xlrd
 import math
 import csv
+import xlrd
+import openpyxl
 
 
 from .utils import utils
@@ -33,8 +34,11 @@ class RefittingTool():
         """Constructor."""
 
         self.parent = parent
+        self.extension = None
         self.book = None
         self.sheet = None
+        self.sheet_name = None
+        self.sheetrows = 0
         self.table = []
         self.tablekeys = None
         self.col_indexes = {}
@@ -52,6 +56,126 @@ class RefittingTool():
         self.parent.dlg.refitting_excel.fileChanged.connect(self.load_excel)
 
 
+    def load_excel(self):
+        """ load sheets from excel """
+
+        if self.book:
+            if self.extension == "xls":
+                self.parent.dlg.refitting_sheet.currentIndexChanged.disconnect(self.load_xls_sheet)
+            elif self.extension == "xlsx":
+                self.parent.dlg.refitting_sheet.currentIndexChanged.disconnect(self.load_xlsx_sheet)
+
+        self.parent.dlg.refitting_sheet.clear()
+        self.parent.dlg.refitting_sheet.addItem(COMBO_SELECT)
+        self.clear_parts()
+
+        file_path = self.parent.dlg.refitting_excel.filePath()
+        self.extension = os.path.basename(file_path).split(".")[1]
+
+        if self.extension == "xls":
+            self.load_xls(file_path)
+        elif self.extension == "xlsx":
+            self.load_xlsx(file_path)
+        else:
+            self.parent.dlg.messageBar.pushMessage(f"Only .xls and .xlsx files are supported, {self.extension} selected.", level=Qgis.Warning)
+            return
+
+
+    def load_xls(self, file_path):
+        """ load sheets from XLS """
+
+        self.book = xlrd.open_workbook(file_path)
+        print("The number of worksheets is {0}".format(self.book.nsheets))
+        print("Worksheet name(s): {0}".format(self.book.sheet_names()))
+
+        for index in range(self.book.nsheets):
+            sheet = self.book.sheet_by_index(index)
+            self.parent.dlg.refitting_sheet.addItem(sheet.name)
+
+        self.parent.dlg.refitting_sheet.currentIndexChanged.connect(self.load_xls_sheet)
+
+
+    def load_xls_sheet(self):
+        """ load data from excel sheet """
+
+        index = self.parent.dlg.refitting_sheet.currentIndex() - 1
+        self.sheet = self.book.sheet_by_index(index)
+        self.sheet_name = self.sheet.name
+        self.sheetrows = self.sheet.nrows
+        print("Sheet '{0}' has {1} rows and {2} columns".format(self.sheet_name, self.sheet.nrows, self.sheet.ncols))
+
+        # load column indexes
+        for column_index in range(self.sheet.ncols):
+            name = self.sheet.cell_value(0, column_index)
+            self.col_indexes[name] = column_index
+            self.fill_parts(name)
+        #print(self.col_indexes)
+
+        self.select_default()
+
+        # load all data into dict in order to save it later to csv file
+        self.tablekeys = list(self.col_indexes.keys())
+        for rx in range(1, self.sheet.nrows):
+            row = {}
+            for ry in range(self.sheet.ncols):
+                col = self.tablekeys[ry]
+                val = self.sheet.cell_value(rx, ry)
+                type = self.sheet.cell_type(rx, ry)
+                if type == 2: #number
+                    val = int(val)
+                row[col] = val
+            self.table.append(row)
+        #print(self.table)
+
+
+    def load_xlsx(self, file_path):
+        """ load sheets from XLS """
+
+        self.book = openpyxl.load_workbook(file_path)
+        print("The number of worksheets is {0}".format(len(self.book.sheetnames)))
+        print("Worksheet name(s): {0}".format(self.book.sheetnames))
+
+        for sheet in self.book.sheetnames:
+            self.parent.dlg.refitting_sheet.addItem(sheet)
+
+        self.parent.dlg.refitting_sheet.currentIndexChanged.connect(self.load_xlsx_sheet)
+
+
+    def load_xlsx_sheet(self):
+        """ load data from excel sheet """
+
+        index = self.parent.dlg.refitting_sheet.currentIndex() - 1
+        self.sheet = self.book.worksheets[index]
+        self.sheet_name = self.book.sheetnames[index]
+        self.sheetrows = self.sheet.max_row
+        print("Sheet '{0}' has {1} rows and {2} columns".format(self.sheet_name, self.sheet.max_row, self.sheet.max_column))
+
+        # load column indexes
+        for column_index in range(self.sheet.max_column):
+            cell_obj = self.sheet.cell(1, column_index + 1)
+            name = cell_obj.value
+            self.col_indexes[name] = column_index
+            self.fill_parts(name)
+        print(self.col_indexes)
+
+        self.select_default()
+
+        # load all data into dict in order to save it later to csv file
+        self.tablekeys = list(self.col_indexes.keys())
+        for rx in range(1, self.sheet.max_row + 1):
+            row = {}
+            for ry in range(1, self.sheet.max_column + 1):
+                col = self.tablekeys[ry-1]
+                cell_obj = self.sheet.cell(rx, ry)
+                val = cell_obj.value
+                type = cell_obj.data_type
+                if type == 2: #number
+                    val = int(val)
+                row[col] = val
+            self.table.append(row)
+        print(self.table)
+
+
     def process_refitting(self):
         """ process """
 
@@ -64,7 +188,7 @@ class RefittingTool():
         self.process_parts()
         path = self.write_csv()
 
-        group = self.utils.create_group(self.sheet.name)
+        group = self.utils.create_group(self.sheet_name)
         self.create_point_layer(path, group)
         self.create_line_layer(path, group)
 
@@ -72,7 +196,7 @@ class RefittingTool():
     def read_parts(self):
         """ read parts row by row """
 
-        for rx in range(1, self.sheet.nrows):
+        for rx in range(1, self.sheetrows):
             #print(rx, self.sheet.row(rx))
             
             part_index = self.col_indexes[self.parent.dlg.refitting_part.currentText()]
@@ -85,19 +209,33 @@ class RefittingTool():
             labels_index = self.col_indexes[self.parent.dlg.refitting_labels.currentText()]
             colors_index = self.col_indexes[self.parent.dlg.refitting_colors.currentText()]
 
-            part = int(self.sheet.cell_value(rx, part_index))
-            coordx = int(self.sheet.cell_value(rx, coordx_index))
-            coordy = int(self.sheet.cell_value(rx, coordy_index))
-            coordz = int(self.sheet.cell_value(rx, coordz_index))
-            origin = int(self.sheet.cell_value(rx, origin_index))
-            target = int(self.sheet.cell_value(rx, target_index))
-            rclass = int(self.sheet.cell_value(rx, class_index))
-            labels = int(self.sheet.cell_value(rx, labels_index))
-            color = self.sheet.cell_value(rx, colors_index)
+            if self.extension == "xls":
+                part = int(self.sheet.cell_value(rx, part_index))
+                coordx = int(self.sheet.cell_value(rx, coordx_index))
+                coordy = int(self.sheet.cell_value(rx, coordy_index))
+                coordz = int(self.sheet.cell_value(rx, coordz_index))
+                origin = int(self.sheet.cell_value(rx, origin_index))
+                target = int(self.sheet.cell_value(rx, target_index))
+                rclass = int(self.sheet.cell_value(rx, class_index))
+                labels = int(self.sheet.cell_value(rx, labels_index))
+                color = self.sheet.cell_value(rx, colors_index)
+                rx = rx-1
 
-            #print(rx, part, coordx, coordy, coordz, origin, target, rclass, labels)
+            elif self.extension == "xlsx":
+                rx = rx+1
+                part = int(self.sheet.cell(rx, part_index+1).value)
+                coordx = int(self.sheet.cell(rx, coordx_index+1).value)
+                coordy = int(self.sheet.cell(rx, coordy_index+1).value)
+                coordz = int(self.sheet.cell(rx, coordz_index+1).value)
+                origin = int(self.sheet.cell(rx, origin_index+1).value)
+                target = int(self.sheet.cell(rx, target_index+1).value)
+                rclass = int(self.sheet.cell(rx, class_index+1).value)
+                labels = int(self.sheet.cell(rx, labels_index+1).value)
+                color = self.sheet.cell(rx, colors_index+1).value
+
+            print(rx, part, coordx, coordy, coordz, origin, target, rclass, labels)
             self.parts[part] = {
-                "row_num": rx-1,
+                "row_num": rx,
                 "part_num": part,
                 "coordx": coordx,
                 "coordy": coordy,
@@ -154,7 +292,11 @@ class RefittingTool():
 
         #print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
 
-        row = part["row_num"]
+        if self.extension == "xls":
+            row = part["row_num"]
+        elif self.extension == "xlsx":
+            row = part["row_num"]-1
+
         self.table[row]["incx"] = incx
         self.table[row]["incy"] = incy
         self.table[row]["incxmo"] = round(incxmo)
@@ -216,59 +358,6 @@ class RefittingTool():
         })
 
 
-    def load_excel(self):
-        """ load sheets from excel """
-
-        if self.book:
-            self.parent.dlg.refitting_sheet.currentIndexChanged.disconnect(self.load_excel_sheet)
-
-        self.parent.dlg.refitting_sheet.clear()
-        self.parent.dlg.refitting_sheet.addItem(COMBO_SELECT)
-        self.clear_parts()
-
-        file_path = self.parent.dlg.refitting_excel.filePath()
-        self.book = xlrd.open_workbook(file_path)
-        print("The number of worksheets is {0}".format(self.book.nsheets))
-        print("Worksheet name(s): {0}".format(self.book.sheet_names()))
-
-        for index in range(self.book.nsheets):
-            sheet = self.book.sheet_by_index(index)
-            self.parent.dlg.refitting_sheet.addItem(sheet.name)
-
-        self.parent.dlg.refitting_sheet.currentIndexChanged.connect(self.load_excel_sheet)
-
-
-    def load_excel_sheet(self):
-        """ load data from excel sheet """
-
-        index = self.parent.dlg.refitting_sheet.currentIndex() - 1
-        self.sheet = self.book.sheet_by_index(index)
-        print("Sheet '{0}' has {1} rows and {2} columns".format(self.sheet.name, self.sheet.nrows, self.sheet.ncols))
-
-        # load column indexes
-        for column_index in range(self.sheet.ncols):
-            name = self.sheet.cell_value(0, column_index)
-            self.col_indexes[name] = column_index
-            self.fill_parts(name)
-        #print(self.col_indexes)
-
-        self.select_default()
-
-        # load all data into dict in order to save it later to csv file
-        self.tablekeys = list(self.col_indexes.keys())
-        for rx in range(1, self.sheet.nrows):
-            row = {}
-            for ry in range(self.sheet.ncols):
-                col = self.tablekeys[ry]
-                val = self.sheet.cell_value(rx, ry)
-                type = self.sheet.cell_type(rx, ry)
-                if type == 2: #number
-                    val = int(val)
-                row[col] = val
-            self.table.append(row)
-        #print(self.table)
-
-
     def clear_parts(self):
         """ empty column combo boxes """
 
@@ -319,11 +408,11 @@ class RefittingTool():
         dir_name = os.path.dirname(self.parent.dlg.refitting_excel.filePath())
         base_path = os.path.basename(self.parent.dlg.refitting_excel.filePath())
         file_path = base_path.split(".")[0]
-        path = os.path.join(dir_name, file_path + " - " + self.sheet.name)
+        path = os.path.join(dir_name, file_path + " - " + self.sheet_name)
 
         if not os.path.exists(path):
             os.makedirs(path)
-        file = os.path.join(path, file_path + " - " + self.sheet.name + ".csv")
+        file = os.path.join(path, file_path + " - " + self.sheet_name + ".csv")
 
         with open(file, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.tablekeys)
