@@ -42,7 +42,7 @@ class RefittingTool():
         self.table = []
         self.tablekeys = None
         self.col_indexes = {}
-        self.parts = {}
+        self.parts = []
         self.points = {}
         self.lines = []
         self.lines_attr = []
@@ -234,7 +234,7 @@ class RefittingTool():
                 color = self.sheet.cell(rx, colors_index+1).value
 
             print(rx, part, coordx, coordy, coordz, origin, target, rclass, labels)
-            self.parts[part] = {
+            self.parts.append({
                 "row_num": rx,
                 "part_num": part,
                 "coordx": coordx,
@@ -245,15 +245,13 @@ class RefittingTool():
                 "rclass": rclass,
                 "labels": labels,
                 "color": color
-            }
+            })
 
 
     def process_parts(self):
         """ calculate parts """
 
-        for i in self.parts:
-            part = self.parts[i]
-            #print(part)
+        for part in self.parts:
             if part["origin"] != 0 and part["target"] != 0:
                 self.calculate_refitting(part)
 
@@ -265,8 +263,8 @@ class RefittingTool():
         origin_num = part["target"]
         target_num = part["origin"]
 
-        origin = self.parts[origin_num]
-        target = self.parts[target_num]
+        origin = self.get_part_by_num(origin_num)
+        target = self.get_part_by_num(target_num)
 
         incx = origin["coordx"] - target["coordx"]
         incy = origin["coordy"] - target["coordy"]
@@ -290,7 +288,7 @@ class RefittingTool():
         inclinacion = 180 * (inclinacion / math.pi)
         inclinacion = abs(inclinacion)
 
-        #print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
+        print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
 
         if self.extension == "xls":
             row = part["row_num"]
@@ -332,8 +330,20 @@ class RefittingTool():
         return vazimut
 
 
+    def get_part_by_num(self, num):
+        """ calculate azimut """
+
+        for part in self.parts:
+            if part["part_num"] == num:
+                return part
+
+        return None
+
+
     def save_points_lines(self, part, origin_point, target_point, origin_num, target_num):
         """ save points and lines """
+
+        print(part, origin_point, target_point, origin_num, target_num)
 
         str_pieza_origin = "num"+str(origin_num)
         if not str_pieza_origin in self.points:
@@ -349,6 +359,7 @@ class RefittingTool():
                 "color": str(part["color"])
             }
 
+        print("line", part["row_num"], part["part_num"], part["origin"], part["target"])
         self.lines.append([origin_point, target_point])
         self.lines_attr.append({
             "origin": int(part["origin"]),
