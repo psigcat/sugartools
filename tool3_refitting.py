@@ -26,6 +26,7 @@ FIELDS_DEFAULT = {
     "refitting_colors": "color_tremon"
 }
 FIELDS_MANDATORY_REMOUNTING = ["refitting_excel", "refitting_sheet", "refitting_part", "refitting_coordx", "refitting_coordy", "refitting_coordz", "refitting_origin", "refitting_target", "refitting_class", "refitting_labels"]
+FIELDS_MANDATORY_REMOUNTING_CSV = ["refitting_excel", "refitting_part", "refitting_coordx", "refitting_coordy", "refitting_coordz", "refitting_origin", "refitting_target", "refitting_class", "refitting_labels"]
 CSV_PARAMS = '?maxFields=20000&detectTypes=yes&crs=EPSG:25831&spatialIndex=no&subsetIndex=no&watchFile=no'
 
 
@@ -40,7 +41,7 @@ class RefittingTool():
         self.sheet_name = None
         self.sheetrows = 0
         self.table = []
-        self.tablekeys = None
+        self.tablekeys = []
         self.col_indexes = {}
         self.parts = []
         self.points = {}
@@ -64,6 +65,8 @@ class RefittingTool():
                 self.parent.dlg.refitting_sheet.currentIndexChanged.disconnect(self.load_xls_sheet)
             elif self.extension == "xlsx":
                 self.parent.dlg.refitting_sheet.currentIndexChanged.disconnect(self.load_xlsx_sheet)
+            elif self.extension == "csv":
+                self.parent.dlg.refitting_sheet.currentIndexChanged.disconnect(self.load_csv_sheet)
 
         self.parent.dlg.refitting_sheet.clear()
         self.parent.dlg.refitting_sheet.addItem(COMBO_SELECT)
@@ -76,8 +79,10 @@ class RefittingTool():
             self.load_xls(file_path)
         elif self.extension == "xlsx":
             self.load_xlsx(file_path)
+        elif self.extension == "csv":
+            self.load_csv(file_path)
         else:
-            self.parent.dlg.messageBar.pushMessage(f"Only .xls and .xlsx files are supported, {self.extension} selected.", level=Qgis.Warning)
+            self.parent.dlg.messageBar.pushMessage(f"Only .xls, .xlsx and .csv files are supported, {self.extension} selected.", level=Qgis.Warning)
             return
 
 
@@ -109,7 +114,6 @@ class RefittingTool():
             name = self.sheet.cell_value(0, column_index)
             self.col_indexes[name] = column_index
             self.fill_parts(name)
-        #print(self.col_indexes)
 
         self.select_default()
 
@@ -156,7 +160,7 @@ class RefittingTool():
             name = cell_obj.value
             self.col_indexes[name] = column_index
             self.fill_parts(name)
-        print(self.col_indexes)
+        #print(self.col_indexes)
 
         self.select_default()
 
@@ -173,14 +177,61 @@ class RefittingTool():
                     val = int(val)
                 row[col] = val
             self.table.append(row)
-        print(self.table)
+        #print(self.table)
+
+
+    def load_csv(self, file_path):
+        """ load sheets from CSV """
+
+        self.load_csv_sheet(file_path)
+
+
+    def load_csv_sheet(self, file_path):
+        """ load data from CSV sheet """
+
+        with open(file_path, 'r') as csvfile:
+            csvreader = csv.reader(csvfile)
+
+            # load column indexes
+            self.tablekeys = next(csvreader)
+            #print(self.tablekeys)
+
+            i = 0
+            for key in self.tablekeys:
+                self.fill_parts(key)
+                self.col_indexes[key] = i
+                i+=1
+            #print(self.col_indexes)
+
+            for row in csvreader:
+                row_obj = {}
+                ry = 0
+                for val in row:
+                    col = self.tablekeys[ry]
+                    if type(val) == int:
+                        val = int(val)
+                    row_obj[col] = val
+                    ry += 1
+                self.table.append(row_obj)
+            #print(self.table)
+
+            self.sheetrows = csvreader.line_num
+
+        self.sheet_name = ""
+        print("Sheet has {0} rows and {1} columns".format(self.sheetrows, len(self.tablekeys)))
+
+        self.select_default()
 
 
     def process_refitting(self):
         """ process """
 
-        if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_REMOUNTING):
-            return False
+        if self.extension == "csv":
+            if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_REMOUNTING_CSV):
+                return False
+        else:
+            if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_REMOUNTING):
+                return False
 
         print("process")
 
@@ -188,7 +239,10 @@ class RefittingTool():
         self.process_parts()
         path = self.write_csv()
 
-        group = self.utils.create_group(self.sheet_name)
+        group_name = self.sheet_name
+        if group_name == "":
+            group_name = os.path.basename(self.parent.dlg.refitting_excel.filePath()).split(".")[0]
+        group = self.utils.create_group(group_name)
         self.create_point_layer(path, group)
         self.create_line_layer(path, group)
 
@@ -233,7 +287,20 @@ class RefittingTool():
                 labels = int(self.sheet.cell(rx, labels_index+1).value)
                 color = self.sheet.cell(rx, colors_index+1).value
 
-            print(rx, part, coordx, coordy, coordz, origin, target, rclass, labels)
+            elif self.extension == "csv":
+                rx -= 1
+                cell = self.table[rx]
+                part = int(cell[self.parent.dlg.refitting_part.currentText()])
+                coordx = int(cell[self.parent.dlg.refitting_coordx.currentText()])
+                coordy = int(cell[self.parent.dlg.refitting_coordy.currentText()])
+                coordz = int(cell[self.parent.dlg.refitting_coordz.currentText()])
+                origin = int(cell[self.parent.dlg.refitting_origin.currentText()])
+                target = int(cell[self.parent.dlg.refitting_target.currentText()])
+                rclass = int(cell[self.parent.dlg.refitting_class.currentText()])
+                labels = int(cell[self.parent.dlg.refitting_labels.currentText()])
+                color = cell[self.parent.dlg.refitting_colors.currentText()]
+
+            #print(rx, part, coordx, coordy, coordz, origin, target, rclass, labels)
             self.parts.append({
                 "row_num": rx,
                 "part_num": part,
@@ -288,9 +355,9 @@ class RefittingTool():
         inclinacion = 180 * (inclinacion / math.pi)
         inclinacion = abs(inclinacion)
 
-        print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
+        # print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
 
-        if self.extension == "xls":
+        if self.extension == "xls" or self.extension == "csv":
             row = part["row_num"]
         elif self.extension == "xlsx":
             row = part["row_num"]-1
@@ -343,8 +410,6 @@ class RefittingTool():
     def save_points_lines(self, part, origin_point, target_point, origin_num, target_num):
         """ save points and lines """
 
-        print(part, origin_point, target_point, origin_num, target_num)
-
         str_pieza_origin = "num"+str(origin_num)
         if not str_pieza_origin in self.points:
             self.points[str_pieza_origin] = {
@@ -359,7 +424,6 @@ class RefittingTool():
                 "color": str(part["color"])
             }
 
-        print("line", part["row_num"], part["part_num"], part["origin"], part["target"])
         self.lines.append([origin_point, target_point])
         self.lines_attr.append({
             "origin": int(part["origin"]),
@@ -419,15 +483,19 @@ class RefittingTool():
         dir_name = os.path.dirname(self.parent.dlg.refitting_excel.filePath())
         base_path = os.path.basename(self.parent.dlg.refitting_excel.filePath())
         file_path = base_path.split(".")[0]
-        path = os.path.join(dir_name, file_path + " - " + self.sheet_name)
+        file_name = file_path
+        if self.sheet_name != "":
+            file_name += " - " + self.sheet_name
+        path = os.path.join(dir_name, file_name)
 
         if not os.path.exists(path):
             os.makedirs(path)
-        file = os.path.join(path, file_path + " - " + self.sheet_name + ".csv")
+        file = os.path.join(path, file_name + ".csv")
 
         with open(file, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.tablekeys)
-            writer.writeheader()
+            if self.extension != "xlsx":
+                writer.writeheader()
             writer.writerows(self.table)
 
             self.parent.dlg.messageBar.pushMessage(f"Refittings done successfully, results saved to file '{file}'", level=Qgis.Success)
