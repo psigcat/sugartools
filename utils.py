@@ -30,6 +30,12 @@ class utils:
         return group
 
 
+    def remove_group(self, group):
+        """ remove layer group """
+
+        QgsProject.instance().layerTreeRoot().removeChildNode(group)
+
+
     def make_permanent(self, layer, path, _3d=False):
         """ save temporary layer to gpkg """
 

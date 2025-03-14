@@ -253,8 +253,7 @@ class SugarTools:
 
         # structures
         self.structures_tool = StructuresTool(self)
-        self.structures_tool.read_database_config()
-        self.structures_tool.fill_db()
+        self.structures_tool.setup()
 
         # refitting
         self.refitting_tool = RefittingTool(self)

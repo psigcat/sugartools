@@ -1,4 +1,4 @@
-from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature
+from qgis.core import Qgis, QgsSettings, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature
 
 import os
 import json
@@ -21,14 +21,37 @@ class StructuresTool():
         self.utils = utils(self.parent)
 
 
-    def read_database_config(self):
-        """ read params from databases.json """
+    def setup(self):
+        """ load initial parameters """
 
-        try:
-            with open(os.path.join(self.parent.plugin_dir, "databases.json")) as f:
-                self.databases = json.load(f)
-        except Exception as e:
-            print(e)
+        self.read_database_config()
+        self.fill_db()
+
+
+    def read_database_config(self):
+        """ read params from QGIS3.ini """
+
+        s = QgsSettings()
+        s.beginGroup("MySQL/connections")
+
+        for key in s.childGroups():
+            host = s.value(key + "/host")
+            port = s.value(key + "/port")
+            database = s.value(key + "/database")
+            username = s.value(key + "/username")
+            password = s.value(key + "/password")
+            
+            if not port:
+                port = 3306
+
+            self.databases[key] = {
+                "name": key,
+                "host": host,
+                "port": int(port),
+                "db": database,
+                "user": username,
+                "passwd": password
+            }
 
 
     def fill_db(self):
@@ -73,7 +96,9 @@ class StructuresTool():
         rows_ns = self.create_structure(name, "ns", group, group_labels)
 
         if not rows_ew and not rows_ns:
-            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning)
+            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning, duration=3)
+            self.utils.remove_group(group)
+            self.utils.remove_group(group_labels)
             return
 
         # draw ns and ew for map
@@ -95,10 +120,7 @@ class StructuresTool():
 
         sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}{db_type}'"
         rows = self.structures_db_obj.get_rows(sql)
-        print(rows)
         if not rows or rows == None or len(rows) == 0:
-            #self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}' in db '{self.databases[database]["name"]}'", level=Qgis.Warning)
-            #self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}'", level=Qgis.Warning)
             return False
         self.create_structures_points(name, group_labels, rows, "label", type)
         layer = self.create_structures_points(name, group, rows, type)
