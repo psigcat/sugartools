@@ -72,6 +72,10 @@ class StructuresTool():
         # get view formas NS
         rows_ns = self.create_structure(name, "ns", group, group_labels)
 
+        if not rows_ew and not rows_ns:
+            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning)
+            return
+
         # draw ns and ew for map
         self.create_structures_points(name, group_labels, rows_ew, "label", "map_ew")
         self.create_structures_points(name, group, rows_ew, "map_ew")
@@ -91,10 +95,11 @@ class StructuresTool():
 
         sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}{db_type}'"
         rows = self.structures_db_obj.get_rows(sql)
+        print(rows)
         if not rows or rows == None or len(rows) == 0:
             #self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}' in db '{self.databases[database]["name"]}'", level=Qgis.Warning)
-            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}'", level=Qgis.Warning)
-            return
+            #self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{db_type}'", level=Qgis.Warning)
+            return False
         self.create_structures_points(name, group_labels, rows, "label", type)
         layer = self.create_structures_points(name, group, rows, type)
 
@@ -103,7 +108,7 @@ class StructuresTool():
         self.create_structures_empty(name, type, "multilinestring", group, group_labels)
 
         self.create_map_theme(name, type)
-        bookmark = self.create_spatial_bookmark(type, layer)
+        bookmark = self.create_spatial_bookmark(name, type, layer)
 
         if type == "map":
             self.parent.iface.mapCanvas().setExtent(bookmark.extent())
@@ -219,15 +224,15 @@ class StructuresTool():
             QgsProject.instance().layerTreeRoot(),
             self.parent.iface.layerTreeView().layerTreeModel()
         )
-        mapThemesCollection.insert(type, mapThemeRecord)
+        mapThemesCollection.insert(f"{name}_{type}", mapThemeRecord)
 
 
-    def create_spatial_bookmark(self, name, layer):
+    def create_spatial_bookmark(self, name, type, layer):
         """ create map theme from given layers """
 
         bookmark = QgsBookmark()
-        bookmark.setId(name)
-        bookmark.setName(name)
+        bookmark.setId(f"{name}_{type}")
+        bookmark.setName(f"{name}_{type}")
         referenced_extent = QgsReferencedRectangle(layer.extent(), layer.crs())
         bookmark.setExtent(referenced_extent)
         bookmark_manager = QgsProject.instance().bookmarkManager()
