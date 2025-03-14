@@ -185,8 +185,10 @@ class SugarTools:
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         self.first_start = False
+
         self.utils = utils(self)
         self.sections_tool = SectionsTool(self)
+        self.structures_tool = StructuresTool(self)
 
         self.dlg = SugarToolsDialog()
         self.dlg.buttonBox.accepted.disconnect()
@@ -198,14 +200,14 @@ class SugarTools:
         self.dlg.radioPoints.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioBlocks.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioPointsBlocks.toggled.connect(self.sections_tool.point_or_block)
-        self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.sections_tool.import_layout("layout_sections.qpt"))
-        self.dlg.import_layout_map_btn.clicked.connect(lambda:self.sections_tool.import_layout("layout_map.qpt"))
-        self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.sections_tool.import_layout("layout_structures.qpt"))
+        self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.utils.import_layout("layout_sections.qpt"))
+        self.dlg.import_layout_map_btn.clicked.connect(lambda:self.utils.import_layout("layout_map.qpt"))
+        self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures.qpt"))
         self.dlg.import_shapefiles_btn.clicked.connect(self.utils.import_shapefiles)
         self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
         iface.layerTreeView().currentLayerChanged.connect(self.sections_tool.select_layer)
-        iface.layoutDesignerOpened.connect(self.sections_tool.onLayoutLoaded)
+        iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
 
         self.sections_tool.fill_layer()
         self.sections_tool.fill_layout()
@@ -252,7 +254,6 @@ class SugarTools:
         self.dlg.show()
 
         # structures
-        self.structures_tool = StructuresTool(self)
         self.structures_tool.setup()
 
         # refitting

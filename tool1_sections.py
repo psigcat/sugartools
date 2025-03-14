@@ -636,19 +636,6 @@ class SectionsTool():
         self.parent.dlg.close()
 
 
-    def onLayoutLoaded(self):
-        """ load spatial bookmarks when layout designer is opened """
-
-        bookmark_manager = QgsProject.instance().bookmarkManager()
-        bookmark_map = bookmark_manager.bookmarkById("map")
-        bookmark_ns = bookmark_manager.bookmarkById("ns")
-        bookmark_ew = bookmark_manager.bookmarkById("ew")
-
-        if bookmark_map and bookmark_ns and bookmark_ew:
-            layout = QgsProject.instance().layoutManager().layoutByName("structures")
-            self.parent.structures_tool.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
-
-
     def open_expr_builder(self):
         """ open QGIS Query Builder"""
 
@@ -696,33 +683,3 @@ class SectionsTool():
         active_layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
         self.parent.iface.setActiveLayer(active_layer)
         self.parent.iface.zoomToActiveLayer()
-
-
-    def import_layout(self, template):
-        """ create layout from template shipped with plugin """
-
-        project = QgsProject.instance()
-        qpt_file_path = os.path.join(self.parent.plugin_dir, "qpt", template)
-
-        # Create a new layout
-        layout = QgsPrintLayout(project)
-        layout.initializeDefaults()
-        #layout.setName("Sections")
-        qpt_file = QFile(qpt_file_path)
-
-        if qpt_file.open(QFile.ReadOnly | QFile.Text):
-            document = QDomDocument()
-            if document.setContent(qpt_file):
-                context = QgsReadWriteContext()
-                if not layout.loadFromTemplate(document, context):
-                    self.parent.dlg.messageBar.pushMessage(f"Failed to load {qpt_file_path} template from plugin folder.", level=Qgis.Warning)
-                else:
-                    self.parent.dlg.messageBar.pushMessage(f"QPT template {layout.name()} loaded successfully.", level=Qgis.Success)
-            qpt_file.close()
-        # else:
-        #     print("Failed to open QPT file.")
-
-        project.layoutManager().addLayout(layout)
-
-        # add to combo box
-        self.parent.dlg.layout.addItem(layout.name())

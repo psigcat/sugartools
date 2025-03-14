@@ -181,4 +181,34 @@ class utils:
         mapThemesCollection.insert("Map", mapThemeRecord)
         
         # apply spatial bookmark once layout "map" is opened
-        
+
+
+    def import_layout(self, template):
+        """ create layout from template shipped with plugin """
+
+        project = QgsProject.instance()
+        qpt_file_path = os.path.join(self.parent.plugin_dir, "qpt", template)
+
+        # Create a new layout
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+        #layout.setName("Sections")
+        qpt_file = QFile(qpt_file_path)
+
+        if qpt_file.open(QFile.ReadOnly | QFile.Text):
+            document = QDomDocument()
+            if document.setContent(qpt_file):
+                context = QgsReadWriteContext()
+                if not layout.loadFromTemplate(document, context):
+                    self.parent.dlg.messageBar.pushMessage(f"Failed to load {qpt_file_path} template from plugin folder.", level=Qgis.Warning)
+                else:
+                    self.parent.dlg.messageBar.pushMessage(f"QPT template {layout.name()} loaded successfully.", level=Qgis.Success)
+            qpt_file.close()
+        # else:
+        #     print("Failed to open QPT file.")
+
+        layout_added = project.layoutManager().addLayout(layout)
+
+        # add to combo box
+        if layout_added:
+            self.parent.dlg.layout.addItem(layout.name())

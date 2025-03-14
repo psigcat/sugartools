@@ -17,6 +17,7 @@ class StructuresTool():
 
         self.parent = parent
         self.databases = {}
+        self.active_structure = None
 
         self.utils = utils(self.parent)
 
@@ -40,7 +41,7 @@ class StructuresTool():
             database = s.value(key + "/database")
             username = s.value(key + "/username")
             password = s.value(key + "/password")
-            
+
             if not port:
                 port = 3306
 
@@ -109,6 +110,7 @@ class StructuresTool():
 
         # get view formas map
         self.create_structure(name, "map", group, group_labels)
+        self.active_structure = name
 
 
     def create_structure(self, name, type, group, group_labels):
@@ -145,11 +147,17 @@ class StructuresTool():
         layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
         self.utils.make_permanent(layer, layer_path)
 
+        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_{geom_type}.qml")
+        layer.loadNamedStyle(symbology_path)
+
         # clone layer for labels
         clone = layer.clone()
         clone.setName(f"{layer.name()}_label")
         QgsProject.instance().addMapLayer(clone, False)
         group_labels.addChildNode(QgsLayerTreeLayer(clone))
+
+        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_empty_label.qml")
+        clone.loadNamedStyle(symbology_path)
 
 
     def create_structures_points(self, name, group, rows, type, label_type=None):
@@ -268,10 +276,28 @@ class StructuresTool():
 
         for bookmark in bookmarks:
             for item in layout.items():
-                if isinstance(item, QgsLayoutItemMap) and item.id() == bookmark.name():
+                bookmark_extent = bookmark.name().split("_")[1]
+                if isinstance(item, QgsLayoutItemMap) and item.id() == bookmark_extent:
+                    print("set extent", bookmark.name())
                     item.setExtent(bookmark.extent())
                     item.refresh()
                     break
+
+
+    def onLayoutLoaded(self):
+        """ load spatial bookmarks when layout designer is opened """
+
+        print("active", self.active_structure)
+
+        if self.active_structure:
+            bookmark_manager = QgsProject.instance().bookmarkManager()
+            bookmark_map = bookmark_manager.bookmarkById(f"{self.active_structure}_map")
+            bookmark_ns = bookmark_manager.bookmarkById(f"{self.active_structure}_ns")
+            bookmark_ew = bookmark_manager.bookmarkById(f"{self.active_structure}_ew")
+
+            if bookmark_map and bookmark_ns and bookmark_ew:
+                layout = QgsProject.instance().layoutManager().layoutByName("structures")
+                self.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
 
 
     # def create_structures_polygon(self, name, rows):
