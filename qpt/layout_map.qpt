@@ -816,7 +816,7 @@
    </layer>
   </symbol>
  </LayoutItem>
- <LayoutItem size="62.7122,35.3976,mm" frame="true" keepLayerSet="false" excludeFromExports="0" mapFlags="0" background="true" blendMode="0" positionOnPage="225.159,165.204,mm" opacity="1" mapRotation="0" groupUuid="" visibility="1" zValue="2" followPresetName="" isTemporal="0" frameJoinStyle="miter" templateUuid="{8ae0d239-f436-48a9-ba66-a71236c8a521}" id="Mapa 2" position="225.159,165.204,mm" positionLock="true" referencePoint="0" type="65639" labelMargin="0,mm" uuid="{8ae0d239-f436-48a9-ba66-a71236c8a521}" itemRotation="0" followPreset="false" drawCanvasItems="true" outlineWidthM="0.3,mm">
+ <LayoutItem size="62.7122,35.3976,mm" frame="true" keepLayerSet="false" excludeFromExports="0" mapFlags="0" background="true" blendMode="0" positionOnPage="225.159,165.204,mm" opacity="1" mapRotation="0" groupUuid="" visibility="1" zValue="2" followPresetName="Map" isTemporal="0" frameJoinStyle="miter" templateUuid="{8ae0d239-f436-48a9-ba66-a71236c8a521}" id="Mapa 2" position="225.159,165.204,mm" positionLock="true" referencePoint="0" type="65639" labelMargin="0,mm" uuid="{8ae0d239-f436-48a9-ba66-a71236c8a521}" itemRotation="0" followPreset="true" drawCanvasItems="true" outlineWidthM="0.3,mm">
   <FrameColor red="0" green="0" blue="0" alpha="255"/>
   <BackgroundColor red="255" green="255" blue="255" alpha="255"/>
   <LayoutObject>

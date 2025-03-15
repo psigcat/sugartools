@@ -9,6 +9,8 @@ from .utils import utils
 
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
+FIELDS_NS_EW = "&field=cod_est:integer&field=nom_nivel:string(10)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
+FIELDS_MAP = "&field=cod_est:integer&field=nom_nivel:string(10)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
 
 
 class StructuresTool():
@@ -143,7 +145,12 @@ class StructuresTool():
     def create_structures_empty(self, name, type, geom_type, group, group_labels):
         """ create empty vector layer with given geom type """
 
-        layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}", geom_type, group, "&field=id:integer")
+        if type == "ns" or type == "ew":
+            field_names = FIELDS_NS_EW
+        elif type == "map":
+            field_names = FIELDS_MAP
+
+        layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}", geom_type, group, field_names)
         layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
         self.utils.make_permanent(layer, layer_path)
 
@@ -171,6 +178,15 @@ class StructuresTool():
             invert_label = "_inverted"
 
         point_layer_uri = "Point?crs=epsg:25831&field=id:integer"
+        num_fields = 1
+        if not label_type:
+            if type == "ns" or type == "ew":
+                num_fields = 8
+                point_layer_uri += FIELDS_NS_EW
+            elif type == "map" or type == "map_ns" or type == "map_ew":
+                num_fields = 9
+                point_layer_uri += FIELDS_MAP
+
         name_type = f"{type}"
         if type != "map":
             name_type = f"{type}{invert_label}"
@@ -198,7 +214,12 @@ class StructuresTool():
             point = QgsPointXY(row[pos_x] * invert, row[pos_y])
             geometry = QgsGeometry.fromPointXY(point)
             feature.setGeometry(geometry)
-            feature.setAttributes([int(row[2])])
+
+            field_values = [int(row[2])]
+            for i in range(num_fields-1):
+                field_values.append(None)
+            feature.setAttributes(field_values)
+
             point_layer.addFeature(feature)
            
         point_layer.commitChanges()
