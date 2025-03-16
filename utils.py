@@ -1,6 +1,8 @@
+from qgis.PyQt.QtCore import Qt, QFile
+from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsMapThemeCollection, QgsWkbTypes
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
 
 import os
 
