@@ -9,8 +9,10 @@ from .utils import utils
 
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
-FIELDS_NS_EW = "&field=cod_est:integer&field=nom_nivel:string(10)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
-FIELDS_MAP = "&field=cod_est:integer&field=nom_nivel:string(10)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
+
+FIELDS = "&field=nom_nivel:string(8)&field=des_nivel:string(50)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
+FIELDS_MAP_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
+FIELDS_NS_EW_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
 
 
 class StructuresTool():
@@ -89,33 +91,40 @@ class StructuresTool():
         """ create structures and visualize """
 
         # create group
-        group = self.utils.create_group(name)
-        group_labels = self.utils.create_group(name + "_labels")
+        group_map = self.utils.create_group(name + "_map")
+        group_ew = self.utils.create_group(name + "_ew")
+        group_ns = self.utils.create_group(name + "_ns")
 
         # get view formas EW
-        rows_ew = self.create_structure(name, "ew", group, group_labels)
+        rows_ew = self.create_structure(name, "ew", group_ew)
+        self.create_structure_empty(name, "ew", group_ew)
 
         # get view formas NS
-        rows_ns = self.create_structure(name, "ns", group, group_labels)
+        rows_ns = self.create_structure(name, "ns", group_ns)
+        self.create_structure_empty(name, "ns", group_ns)
 
         if not rows_ew and not rows_ns:
             self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning, duration=3)
-            self.utils.remove_group(group)
-            self.utils.remove_group(group_labels)
+            self.utils.remove_group(group_map)
+            self.utils.remove_group(group_ew)
+            self.utils.remove_group(group_ns)
             return
 
-        # draw ns and ew for map
-        self.create_structures_points(name, group_labels, rows_ew, "label", "map_ew")
-        self.create_structures_points(name, group, rows_ew, "map_ew")
-        self.create_structures_points(name, group_labels, rows_ns, "label", "map_ns")
-        self.create_structures_points(name, group, rows_ns, "map_ns")
-
         # get view formas map
-        self.create_structure(name, "map", group, group_labels)
+        self.create_structure(name, "map", group_map)
         self.active_structure = name
 
+        # draw ns and ew for map
+        self.create_structures_points(name, group_map, rows_ew, "map_ew")
+        self.create_structures_points(name, group_map, rows_ew, "label", "map_ew")
+        self.create_structures_points(name, group_map, rows_ns, "map_ns")
+        self.create_structures_points(name, group_map, rows_ns, "label", "map_ns")
 
-    def create_structure(self, name, type, group, group_labels):
+        # add empty layers
+        self.create_structure_empty(name, "map", group_map)
+
+
+    def create_structure(self, name, type, group):
         """ get structure from db and create as layer """
 
         db_type = type
@@ -126,45 +135,38 @@ class StructuresTool():
         rows = self.structures_db_obj.get_rows(sql)
         if not rows or rows == None or len(rows) == 0:
             return False
-        self.create_structures_points(name, group_labels, rows, "label", type)
         layer = self.create_structures_points(name, group, rows, type)
-
-        self.create_structures_empty(name, type, "polygon", group, group_labels)
-        self.create_structures_empty(name, type, "linestring", group, group_labels)
-        self.create_structures_empty(name, type, "multilinestring", group, group_labels)
-
-        self.create_map_theme(name, type)
+        self.create_structures_points(name, group, rows, "label", type)
         bookmark = self.create_spatial_bookmark(name, type, layer)
-
         if type == "map":
             self.parent.iface.mapCanvas().setExtent(bookmark.extent())
 
         return rows
 
 
-    def create_structures_empty(self, name, type, geom_type, group, group_labels):
+    def create_structure_empty(self, name, type, group):
+        """ get empty structures """
+
+        self.create_structures_empty(name, type, "polygon", group)
+        self.create_structures_empty(name, type, "linestring", group)
+        self.create_structures_empty(name, type, "multilinestring", group)
+        self.create_map_theme(name, type)
+
+
+    def create_structures_empty(self, name, type, geom_type, group):
         """ create empty vector layer with given geom type """
 
         if type == "ns" or type == "ew":
-            field_names = FIELDS_NS_EW
+            field_names = FIELDS_NS_EW_EMPTY
         elif type == "map":
-            field_names = FIELDS_MAP
+            field_names = FIELDS_MAP_EMPTY
 
         layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}", geom_type, group, field_names)
-        layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
+        layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name, "layers_" + name)
         self.utils.make_permanent(layer, layer_path)
 
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_{geom_type}.qml")
         layer.loadNamedStyle(symbology_path)
-
-        # clone layer for labels
-        clone = layer.clone()
-        clone.setName(f"{layer.name()}_label")
-        QgsProject.instance().addMapLayer(clone, False)
-        group_labels.addChildNode(QgsLayerTreeLayer(clone))
-
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_empty_label.qml")
-        clone.loadNamedStyle(symbology_path)
 
 
     def create_structures_points(self, name, group, rows, type, label_type=None):
@@ -177,15 +179,7 @@ class StructuresTool():
             invert = -1
             invert_label = "_inverted"
 
-        point_layer_uri = "Point?crs=epsg:25831&field=id:integer"
-        num_fields = 1
-        if not label_type:
-            if type == "ns" or type == "ew":
-                num_fields = 8
-                point_layer_uri += FIELDS_NS_EW
-            elif type == "map" or type == "map_ns" or type == "map_ew":
-                num_fields = 9
-                point_layer_uri += FIELDS_MAP
+        point_layer_uri = "Point?crs=epsg:25831&field=id:integer" + FIELDS
 
         name_type = f"{type}"
         if type != "map":
@@ -215,9 +209,15 @@ class StructuresTool():
             geometry = QgsGeometry.fromPointXY(point)
             feature.setGeometry(geometry)
 
-            field_values = [int(row[2])]
-            for i in range(num_fields-1):
-                field_values.append(None)
+            field_values = [
+                int(row[2]),    # id = num_pieza
+                row[0],         # nom_nivel
+                row[1],         # des_nivel
+                int(row[2]),    # id = num_pieza
+                row[3],         # coord_x
+                row[4],         # coord_y
+                row[5]          # coord_z
+            ]
             feature.setAttributes(field_values)
 
             point_layer.addFeature(feature)
@@ -235,7 +235,7 @@ class StructuresTool():
         point_layer.loadNamedStyle(symbology_path)
         point_layer.triggerRepaint()
 
-        path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name)
+        path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name, "layers_" + name)
         self.utils.make_permanent(point_layer, path)
 
         return point_layer
