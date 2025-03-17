@@ -299,7 +299,7 @@ class StructuresTool():
             for item in layout.items():
                 bookmark_extent = bookmark.name().split("_")[1]
                 if isinstance(item, QgsLayoutItemMap) and item.id() == bookmark_extent:
-                    print("set extent", bookmark.name())
+                    #print("set extent", bookmark.name())
                     item.setExtent(bookmark.extent())
                     item.refresh()
                     break
@@ -309,6 +309,8 @@ class StructuresTool():
         """ load spatial bookmarks when layout designer is opened """
 
         print("active", self.active_structure)
+        layout_manager = QgsProject.instance().layoutManager()
+        layout = layout_manager.layoutByName("structures")
 
         if self.active_structure:
             bookmark_manager = QgsProject.instance().bookmarkManager()
@@ -319,6 +321,18 @@ class StructuresTool():
             if bookmark_map and bookmark_ns and bookmark_ew:
                 layout = QgsProject.instance().layoutManager().layoutByName("structures")
                 self.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
+
+            # set active structure to layout variable
+            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", self.active_structure)
+
+        else:
+            # set active structure to name extracted from first selected layer
+            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", self.active_structure)
+
+            if self.parent.iface.activeLayer():
+                name = self.parent.iface.activeLayer().name()
+                name = name.split("_")[0]
+                QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
 
 
     # def create_structures_polygon(self, name, rows):
