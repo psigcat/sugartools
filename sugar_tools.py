@@ -242,6 +242,9 @@ class SugarTools:
         elif main_tab == "tabRefitting":
             self.refitting_tool.process_refitting()
 
+        elif main_tab == "tabBlocks":
+            self.blocks_tool.process_blocks()
+
 
     def run(self):
         """Run method that performs all the real work"""
@@ -262,6 +265,7 @@ class SugarTools:
 
         # blocks
         self.blocks_tool = BlocksTool(self)
+        self.blocks_tool.setup()
 
         # relate blocks
         self.relblocks_tool = RelblocksTool(self)

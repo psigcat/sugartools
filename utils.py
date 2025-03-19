@@ -1,8 +1,8 @@
 from qgis.PyQt.QtCore import Qt, QFile
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
-from qgis.gui import QgsFileWidget
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
+from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
 
 import os
 
@@ -99,6 +99,8 @@ class utils:
             data = widget.currentText()
         elif type(widget) == QCheckBox:
             data = widget.isChecked()
+        elif type(widget) == QgsMapLayerComboBox:
+            data = widget.currentText()
         else:
             self.parent.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}", level=Qgis.Warning)
         return widget, data
@@ -214,3 +216,32 @@ class utils:
         # add to combo box
         if layout_added:
             self.parent.dlg.layout.addItem(layout.name())
+
+
+    def read_database_config(self):
+        """ read params from QGIS3.ini """
+
+        databases = {}
+        s = QgsSettings()
+        s.beginGroup("MySQL/connections")
+
+        for key in s.childGroups():
+            host = s.value(key + "/host")
+            port = s.value(key + "/port")
+            database = s.value(key + "/database")
+            username = s.value(key + "/username")
+            password = s.value(key + "/password")
+
+            if not port:
+                port = 3306
+
+            databases[key] = {
+                "name": key,
+                "host": host,
+                "port": int(port),
+                "db": database,
+                "user": username,
+                "passwd": password
+            }
+
+        return databases

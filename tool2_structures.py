@@ -1,4 +1,4 @@
-from qgis.core import Qgis, QgsSettings, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature
+from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature
 
 import os
 import json
@@ -29,34 +29,8 @@ class StructuresTool():
     def setup(self):
         """ load initial parameters """
 
-        self.read_database_config()
+        self.databases = self.utils.read_database_config()
         self.fill_db()
-
-
-    def read_database_config(self):
-        """ read params from QGIS3.ini """
-
-        s = QgsSettings()
-        s.beginGroup("MySQL/connections")
-
-        for key in s.childGroups():
-            host = s.value(key + "/host")
-            port = s.value(key + "/port")
-            database = s.value(key + "/database")
-            username = s.value(key + "/username")
-            password = s.value(key + "/password")
-
-            if not port:
-                port = 3306
-
-            self.databases[key] = {
-                "name": key,
-                "host": host,
-                "port": int(port),
-                "db": database,
-                "user": username,
-                "passwd": password
-            }
 
 
     def fill_db(self):
