@@ -156,19 +156,27 @@ class BlocksTool():
             'TYPE': 3,
             'OUTPUT': 'TEMPORARY_OUTPUT'
         }
-
         result = processing.run("qgis:minimumboundinggeometry", params)
-        QgsProject.instance().addMapLayer(result['OUTPUT'])
 
-        self.parent.iface.setActiveLayer(result['OUTPUT'])
-        self.parent.iface.zoomToActiveLayer()
+        #QgsProject.instance().addMapLayer(result['OUTPUT'])
+        #self.parent.iface.setActiveLayer(result['OUTPUT'])
+        #self.parent.iface.zoomToActiveLayer()
 
-        result['OUTPUT'].setName("polygon")
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_polygon.qml")
-        result['OUTPUT'].loadNamedStyle(symbology_path)
+        # result['OUTPUT'].setName("polygon")
+        # symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_polygon.qml")
+        # result['OUTPUT'].loadNamedStyle(symbology_path)
 
-        path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
-        self.utils.make_permanent(result['OUTPUT'], path)
+        #path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
+        #self.utils.make_permanent(result['OUTPUT'], path)
+
+        params = {
+            'SOURCE_LAYER': result['OUTPUT'],
+            'SOURCE_FIELD': '',
+            'TARGET_LAYER': self.parent.dlg.blocks_polygon_layer.currentText(),
+            'TARGET_FIELD': '',
+            'ACTION_ON_DUPLICATE': 0
+        }
+        processing.run("etl_load:appendfeaturestolayer", params)
 
 
     def get_points_2d(self):
