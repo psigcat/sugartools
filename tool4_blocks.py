@@ -3,7 +3,7 @@ from qgis.gui import QgsExpressionBuilderDialog
 from qgis.PyQt.QtCore import QVariant
 
 import os
-
+import processing
 
 from .utils_database import utils_database
 from .utils import utils
@@ -146,6 +146,31 @@ class BlocksTool():
         self.draw_polygon3d()
 
 
+    def draw_polygon(self):
+        """ draw polygon from convex hull """
+
+        # apply geoprocess convex hull
+        params = {
+            'INPUT': self.points_layer,
+            'FIELD': 'dib_pieza',
+            'TYPE': 3,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+
+        result = processing.run("qgis:minimumboundinggeometry", params)
+        QgsProject.instance().addMapLayer(result['OUTPUT'])
+
+        self.parent.iface.setActiveLayer(result['OUTPUT'])
+        self.parent.iface.zoomToActiveLayer()
+
+        result['OUTPUT'].setName("polygon")
+        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_polygon.qml")
+        result['OUTPUT'].loadNamedStyle(symbology_path)
+
+        path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
+        self.utils.make_permanent(result['OUTPUT'], path)
+
+
     def get_points_2d(self):
         """ get all points from PointZ vector layer """
 
@@ -162,7 +187,7 @@ class BlocksTool():
         return points_2d
 
 
-    def draw_polygon(self):
+    def draw_polygon_complete(self):
         """ draw polygon from given points """
 
         points_2d = self.get_points_2d()
