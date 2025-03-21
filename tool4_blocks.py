@@ -1,9 +1,12 @@
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsField, QgsPoint, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsField, QgsPoint, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes, QgsPointXY
 from qgis.gui import QgsExpressionBuilderDialog
 from qgis.PyQt.QtCore import QVariant
 
 import os
 import processing
+import numpy as np
+from scipy.spatial import ConvexHull
+
 
 from .utils_database import utils_database
 from .utils import utils
@@ -11,7 +14,7 @@ from .utils import utils
 
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_BLOCKS = ["blocks_db", "blocks_workspace"]
-FIELDS_MANDATORY_PROCESS = ["blocks_dib_pieza", "blocks_polygon_layer", "blocks_lines_layer", "blocks_3d_layer"]
+FIELDS_MANDATORY_PROCESS = ["blocks_workspace", "blocks_dib_pieza", "blocks_polygon_layer", "blocks_lines_layer", "blocks_3d_layer"]
 
 
 class BlocksTool():
@@ -121,8 +124,7 @@ class BlocksTool():
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_points.qml")
         blocks_layer.loadNamedStyle(symbology_path)
 
-        path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
-        self.utils.make_permanent(blocks_layer, path)
+        self.utils.make_permanent(blocks_layer, self.parent.dlg.blocks_workspace.filePath())
 
         self.points_layer = blocks_layer
 
@@ -152,23 +154,22 @@ class BlocksTool():
         # apply geoprocess convex hull
         params = {
             'INPUT': self.points_layer,
-            'FIELD': 'dib_pieza',
+            #'FIELD': 'dib_pieza',
             'TYPE': 3,
             'OUTPUT': 'TEMPORARY_OUTPUT'
         }
         result = processing.run("qgis:minimumboundinggeometry", params)
 
-        #QgsProject.instance().addMapLayer(result['OUTPUT'])
-        #self.parent.iface.setActiveLayer(result['OUTPUT'])
-        #self.parent.iface.zoomToActiveLayer()
+        # insert field dib_pieza as id_bloque
+        result['OUTPUT'].startEditing()
+        new_field = QgsField("id_bloque", QVariant.Int)
+        result['OUTPUT'].addAttribute(new_field)
+        result['OUTPUT'].updateFields()
+        convex_hull = list(result['OUTPUT'].getFeatures())[0]
+        convex_hull.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+        result['OUTPUT'].commitChanges()
 
-        # result['OUTPUT'].setName("polygon")
-        # symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_polygon.qml")
-        # result['OUTPUT'].loadNamedStyle(symbology_path)
-
-        #path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
-        #self.utils.make_permanent(result['OUTPUT'], path)
-
+        # write output to selected layer
         params = {
             'SOURCE_LAYER': result['OUTPUT'],
             'SOURCE_FIELD': '',
@@ -179,59 +180,8 @@ class BlocksTool():
         processing.run("etl_load:appendfeaturestolayer", params)
 
 
-    def get_points_2d(self):
-        """ get all points from PointZ vector layer """
-
-        points_2d = []
-        for feature in self.points_layer.getFeatures():
-            attr = feature.attributes()
-            
-            if attr[5] == self.parent.dlg.blocks_dib_pieza.text():
-                geom = feature.geometry()
-                points = [geom.asPoint()]
-                for pt in points:
-                    points_2d.append(QgsGeometry.fromPointXY(pt))  # Removes Z dimension
-
-        return points_2d
-
-
-    def draw_polygon_complete(self):
-        """ draw polygon from given points """
-
-        points_2d = self.get_points_2d()
-
-        # Ensure we have enough points to form a polygon
-        if len(points_2d) <= 2:
-            self.parent.dlg.messageBar.pushMessage(f"Not enought points to draw a polygon.", level=Qgis.Warning, duration=3)
-            return
-
-        # create polygon layer
-        polygon_layer_uri = "Polygon?crs=epsg:25831&field=dib_pieza:string(10)"
-        polygon_layer = QgsVectorLayer(polygon_layer_uri, "polygon", "memory")
-
-        QgsProject.instance().addMapLayer(polygon_layer)
-        polygon_layer.startEditing()
-
-        # Close the polygon by repeating the first point at the end
-        geom = QgsGeometry.fromPolygonXY([[p.asPoint() for p in points_2d] + [points_2d[0].asPoint()]])
-        feature = QgsFeature()
-        feature.setGeometry(geom)
-        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
-        polygon_layer.addFeature(feature)
-        polygon_layer.commitChanges()
-
-        self.parent.iface.setActiveLayer(polygon_layer)
-        self.parent.iface.zoomToActiveLayer()
-
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_polygon.qml")
-        polygon_layer.loadNamedStyle(symbology_path)
-
-        path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
-        self.utils.make_permanent(polygon_layer, path)
-
-
     def draw_line(self):
-        """ draw line from given points """
+        """ draw line """
 
         points_2d = self.get_points_2d()
 
@@ -240,18 +190,32 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"Not enought points to draw a line.", level=Qgis.Warning, duration=3)
             return
 
+        # get minimum x and maximum x point
+        min_x = 1000000000
+        max_x = 0
+        for p in points_2d:
+            if p.asPoint().x() < min_x:
+                min_x = p.asPoint().x()
+                min_x_y = p.asPoint().y()
+            if p.asPoint().x() > max_x:
+                max_x = p.asPoint().x()
+                max_x_y = p.asPoint().y()
+
+        min_point = QgsPointXY(min_x, min_x_y)
+        max_point = QgsPointXY(max_x, max_x_y)
+
         # create line layer
-        line_layer_uri = "LineString?crs=epsg:25831&field=dib_pieza:string(10)"
+        line_layer_uri = "LineString?crs=epsg:25831&field=id_bloque:integer"
         line_layer = QgsVectorLayer(line_layer_uri, "linestring", "memory")
 
         QgsProject.instance().addMapLayer(line_layer)
         line_layer.startEditing()
 
-        # not necessary to repeat the last point 
-        geom = QgsGeometry.fromPolylineXY([p.asPoint() for p in points_2d])
+        # draw line from minimum x to maximum x point
+        geom = QgsGeometry.fromPolylineXY([min_point, max_point])
         feature = QgsFeature()
         feature.setGeometry(geom)
-        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
+        feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
         line_layer.addFeature(feature)
         line_layer.commitChanges()
 
@@ -261,46 +225,117 @@ class BlocksTool():
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_linestring.qml")
         line_layer.loadNamedStyle(symbology_path)
 
-        path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
-        self.utils.make_permanent(line_layer, path)
+        #self.utils.make_permanent(line_layer, self.parent.dlg.blocks_workspace.filePath())
+
+        # write output to selected layer
+        params = {
+            'SOURCE_LAYER': line_layer,
+            'SOURCE_FIELD': '',
+            'TARGET_LAYER': self.parent.dlg.blocks_lines_layer.currentText(),
+            'TARGET_FIELD': '',
+            'ACTION_ON_DUPLICATE': 0
+        }
+        processing.run("etl_load:appendfeaturestolayer", params)
+
+        QgsProject.instance().removeMapLayer(line_layer)
 
 
     def draw_polygon3d(self):
-        """ draw line from given points """
+        """ draw 3d convex hull """
 
-        points_3d = []
+        layer = self.points_layer
+
+        if not layer or layer.wkbType() not in [QgsWkbTypes.PointZ, QgsWkbTypes.MultiPointZ]:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.: '{layer.name()}'", level=Qgis.Warning, duration=3)
+            return
+
+        points = []
+
+        for feature in layer.getFeatures():
+            geom = feature.geometry()
+            
+            # Extract Z values properly
+            if geom.isMultipart():
+                for pt in geom.asMultiPoint():
+                    if isinstance(pt, QgsPoint) and pt.is3D():
+                        points.append((pt.x(), pt.y(), pt.z()))
+            else:
+                pt = geom.constGet()
+                points.append((pt.x(), pt.y(), pt.z()))
+
+        if not points or len(points) < 4:
+            self.parent.dlg.messageBar.pushMessage("A 3D convex hull requires at least 4 unique points.", level=Qgis.Warning, duration=3)
+            return
+
+        # Convert list to NumPy array for SciPy processing
+        points_array = np.array(points)
+
+        # Compute 3D convex hull
+        hull = ConvexHull(points_array)
+
+        # Create new PolygonZ layer
+        crs = layer.crs().authid()
+        hull_layer = QgsVectorLayer("PolygonZ?crs=" + crs + "&field=id_bloque:integer", "3D Convex Hull", "memory")
+        provider = hull_layer.dataProvider()
+
+        merged_polygons = []  # Store all faces to merge later
+
+        # Create polygon faces from convex hull simplices
+        for simplex in hull.simplices:
+            hull_points = [f"{points_array[i, 0]} {points_array[i, 1]} {points_array[i, 2]}" for i in simplex]
+            
+            # Convert to WKT (Well-Known Text) format to keep Z values
+            wkt_polygon = f"POLYGONZ(({', '.join(hull_points)}, {hull_points[0]}))"  # Close the ring
+            
+            merged_polygons.append(wkt_polygon)  # Collect for merging
+
+        # Merge all polygons into a single geometry
+        merged_wkt = f"MULTIPOLYGONZ({', '.join(merged_polygons)})"
+        merged_geom = QgsGeometry.fromWkt(merged_wkt)
+
+        # Add the merged feature to the new layer
+        feature = QgsFeature()
+        feature.setGeometry(merged_geom)
+        feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+        provider.addFeature(feature)
+
+        hull_layer.updateExtents()
+
+        # Add the layer to the project
+        QgsProject.instance().addMapLayer(hull_layer)
+
+        # fix geometries
+        params = {
+            'INPUT': hull_layer,
+            'METHOD': 1,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+        result = processing.run("native:fixgeometries", params)
+
+        # write output to selected layer
+        params = {
+            'SOURCE_LAYER': result['OUTPUT'],
+            'SOURCE_FIELD': '',
+            'TARGET_LAYER': self.parent.dlg.blocks_3d_layer.currentText(),
+            'TARGET_FIELD': '',
+            'ACTION_ON_DUPLICATE': 0
+        }
+        processing.run("etl_load:appendfeaturestolayer", params)
+
+        QgsProject.instance().removeMapLayer(hull_layer)
+
+
+    def get_points_2d(self):
+        """ get all points from PointZ vector layer """
+
+        points_2d = []
         for feature in self.points_layer.getFeatures():
+            attr = feature.attributes()
+            
+            #if attr[5] == self.parent.dlg.blocks_dib_pieza.text():
             geom = feature.geometry()
             points = [geom.asPoint()]
             for pt in points:
-                points_3d.append(pt)  # Keep X, Y, and Z
+                points_2d.append(QgsGeometry.fromPointXY(pt))  # Removes Z dimension
 
-        # Ensure we have enough points to form a points
-        if len(points_3d) <= 2:
-            self.parent.dlg.messageBar.pushMessage(f"Not enought points to draw a line.", level=Qgis.Warning, duration=3)
-            return
-
-        # create line layer
-        polygon3d_layer_uri = "PolygonZ?crs=epsg:25831&field=dib_pieza:string(10)"
-        polygon3d_layer = QgsVectorLayer(polygon3d_layer_uri, "polygon3d", "memory")
-
-        QgsProject.instance().addMapLayer(polygon3d_layer)
-        polygon3d_layer.startEditing()
-
-        # Close the polygon by repeating the first point at the end
-        geom = QgsGeometry.fromPolygonXY([[p for p in points_3d] + [points_3d[0]]])
-        print(geom)
-        feature = QgsFeature()
-        feature.setGeometry(geom)
-        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
-        polygon3d_layer.addFeature(feature)
-        polygon3d_layer.commitChanges()
-
-        self.parent.iface.setActiveLayer(polygon3d_layer)
-        self.parent.iface.zoomToActiveLayer()
-
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_polygon3d.qml")
-        polygon3d_layer.loadNamedStyle(symbology_path)
-
-        path = os.path.join(self.parent.dlg.blocks_workspace.filePath(), "blocks")
-        self.utils.make_permanent(polygon3d_layer, path)
+        return points_2d
