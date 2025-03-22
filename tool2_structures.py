@@ -36,6 +36,7 @@ class StructuresTool():
     def fill_db(self):
         """ fill databases combobox """
 
+        self.parent.dlg.structures_db.clear()
         for database in self.databases:
             self.parent.dlg.structures_db.addItem(self.databases[database]["name"], {"value": database})
 

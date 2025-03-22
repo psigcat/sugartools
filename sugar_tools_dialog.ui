@@ -27,7 +27,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidgetMain">
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabSections">
       <attribute name="title">
@@ -645,7 +645,7 @@
           <item row="0" column="0">
            <widget class="QLineEdit" name="blocks_filter_expr">
             <property name="text">
-             <string>&quot;dib_pieza&quot; = 'r2e4'</string>
+             <string>&quot;dib_pieza&quot; = '102'</string>
             </property>
            </widget>
           </item>
@@ -827,6 +827,13 @@
        </item>
        <item>
         <widget class="QLineEdit" name="lineEdit"/>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="checkBox">
+         <property name="text">
+          <string>ALL</string>
+         </property>
+        </widget>
        </item>
        <item>
         <spacer name="verticalSpacer_10">

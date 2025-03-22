@@ -1,4 +1,4 @@
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsField, QgsPoint, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes, QgsPointXY
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsPoint, QgsPointXY, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes, QgsLayerTreeLayer
 from qgis.gui import QgsExpressionBuilderDialog
 from qgis.PyQt.QtCore import QVariant
 
@@ -15,6 +15,9 @@ from .utils import utils
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_BLOCKS = ["blocks_db", "blocks_workspace"]
 FIELDS_MANDATORY_PROCESS = ["blocks_workspace", "blocks_dib_pieza", "blocks_polygon_layer", "blocks_lines_layer", "blocks_3d_layer"]
+POLYGON_LAYER_ID = "_2D"
+LINE_LAYER_ID = "_lin2D"
+THREED_LAYER_ID = "_3D"
 
 
 class BlocksTool():
@@ -33,6 +36,7 @@ class BlocksTool():
 
         self.databases = self.utils.read_database_config()
         self.fill_db()
+        self.preselect_layers()
 
         #self.parent.dlg.blocks_polygon_layer.setFilters(QgsMapLayerProxyModel.VectorLayer)
         #print(self.parent.dlg.blocks_polygon_layer.filters())
@@ -43,6 +47,7 @@ class BlocksTool():
     def fill_db(self):
         """ fill databases combobox """
 
+        self.parent.dlg.blocks_db.clear()
         for database in self.databases:
             self.parent.dlg.blocks_db.addItem(self.databases[database]["name"], {"value": database})
 
@@ -57,6 +62,24 @@ class BlocksTool():
         db = self.databases[self.parent.dlg.blocks_db.currentData()["value"]]
         self.blocks_db_obj = utils_database(self.parent.plugin_dir, db)
         self.blocks_db = self.blocks_db_obj.open_database()
+
+
+    def preselect_layers(self):
+        """ preselect layers """
+
+        for layer in QgsProject.instance().layerTreeRoot().children():
+            if isinstance(layer, QgsLayerTreeLayer):
+                layer_name = layer.layer().name()
+                print(layer_name, POLYGON_LAYER_ID in layer_name)
+                if POLYGON_LAYER_ID in layer_name:
+                    polygon_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
+                    self.parent.dlg.blocks_polygon_layer.setLayer(polygon_layer)
+                elif LINE_LAYER_ID in layer_name:
+                    line_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
+                    self.parent.dlg.blocks_lines_layer.setLayer(line_layer)
+                elif THREED_LAYER_ID in layer_name:
+                    threed_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
+                    self.parent.dlg.blocks_3d_layer.setLayer(threed_layer)
 
 
     def load_blocks(self):
@@ -81,6 +104,7 @@ class BlocksTool():
             return
 
         self.draw_blocks(rows)
+        self.preselect_layers()
 
 
     def open_expr_builder(self):
@@ -160,18 +184,25 @@ class BlocksTool():
         }
         result = processing.run("qgis:minimumboundinggeometry", params)
 
+        layer = result['OUTPUT']
+
         # insert field dib_pieza as id_bloque
-        result['OUTPUT'].startEditing()
+        layer.startEditing()
         new_field = QgsField("id_bloque", QVariant.Int)
-        result['OUTPUT'].addAttribute(new_field)
-        result['OUTPUT'].updateFields()
-        convex_hull = list(result['OUTPUT'].getFeatures())[0]
-        convex_hull.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
-        result['OUTPUT'].commitChanges()
+        layer.dataProvider().addAttributes([new_field])
+        layer.updateFields()
+
+        field_index = layer.fields().indexFromName("id_bloque")
+        feature = list(layer.getFeatures())[0]
+        layer.changeAttributeValue(feature.id(), field_index, int(self.parent.dlg.blocks_dib_pieza.text()))
+        layer.commitChanges()
+
+        # QgsProject.instance().addMapLayer(layer)
+        # self.utils.make_permanent(layer, self.parent.dlg.blocks_workspace.filePath())
 
         # write output to selected layer
         params = {
-            'SOURCE_LAYER': result['OUTPUT'],
+            'SOURCE_LAYER': layer,
             'SOURCE_FIELD': '',
             'TARGET_LAYER': self.parent.dlg.blocks_polygon_layer.currentText(),
             'TARGET_FIELD': '',
@@ -205,10 +236,10 @@ class BlocksTool():
         max_point = QgsPointXY(max_x, max_x_y)
 
         # create line layer
-        line_layer_uri = "LineString?crs=epsg:25831&field=id_bloque:integer"
+        line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:integer"
         line_layer = QgsVectorLayer(line_layer_uri, "linestring", "memory")
 
-        QgsProject.instance().addMapLayer(line_layer)
+        #QgsProject.instance().addMapLayer(line_layer)
         line_layer.startEditing()
 
         # draw line from minimum x to maximum x point
@@ -219,11 +250,11 @@ class BlocksTool():
         line_layer.addFeature(feature)
         line_layer.commitChanges()
 
-        self.parent.iface.setActiveLayer(line_layer)
-        self.parent.iface.zoomToActiveLayer()
+        # self.parent.iface.setActiveLayer(line_layer)
+        # self.parent.iface.zoomToActiveLayer()
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_linestring.qml")
-        line_layer.loadNamedStyle(symbology_path)
+        # symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_linestring.qml")
+        # line_layer.loadNamedStyle(symbology_path)
 
         #self.utils.make_permanent(line_layer, self.parent.dlg.blocks_workspace.filePath())
 
@@ -298,11 +329,10 @@ class BlocksTool():
         feature.setGeometry(merged_geom)
         feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
         provider.addFeature(feature)
-
         hull_layer.updateExtents()
 
-        # Add the layer to the project
-        QgsProject.instance().addMapLayer(hull_layer)
+        #QgsProject.instance().addMapLayer(hull_layer)
+        #self.utils.make_permanent(hull_layer, self.parent.dlg.blocks_workspace.filePath())
 
         # fix geometries
         params = {
