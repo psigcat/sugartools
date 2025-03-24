@@ -70,7 +70,6 @@ class BlocksTool():
         for layer in QgsProject.instance().layerTreeRoot().children():
             if isinstance(layer, QgsLayerTreeLayer):
                 layer_name = layer.layer().name()
-                print(layer_name, POLYGON_LAYER_ID in layer_name)
                 if POLYGON_LAYER_ID in layer_name:
                     polygon_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
                     self.parent.dlg.blocks_polygon_layer.setLayer(polygon_layer)

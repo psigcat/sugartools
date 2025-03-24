@@ -245,6 +245,9 @@ class SugarTools:
         elif main_tab == "tabBlocks":
             self.blocks_tool.process_blocks()
 
+        elif main_tab == "tabRelateBlocks":
+            self.relblocks_tool.process_relblocks()
+
 
     def run(self):
         """Run method that performs all the real work"""
