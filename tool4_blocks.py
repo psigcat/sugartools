@@ -70,15 +70,13 @@ class BlocksTool():
         for layer in QgsProject.instance().layerTreeRoot().children():
             if isinstance(layer, QgsLayerTreeLayer):
                 layer_name = layer.layer().name()
+                layer = QgsProject.instance().mapLayersByName(layer_name)[0]
                 if POLYGON_LAYER_ID in layer_name:
-                    polygon_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
-                    self.parent.dlg.blocks_polygon_layer.setLayer(polygon_layer)
+                    self.parent.dlg.blocks_polygon_layer.setLayer(layer)
                 elif LINE_LAYER_ID in layer_name:
-                    line_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
-                    self.parent.dlg.blocks_lines_layer.setLayer(line_layer)
+                    self.parent.dlg.blocks_lines_layer.setLayer(layer)
                 elif THREED_LAYER_ID in layer_name:
-                    threed_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
-                    self.parent.dlg.blocks_3d_layer.setLayer(threed_layer)
+                    self.parent.dlg.blocks_3d_layer.setLayer(layer)
 
 
     def load_blocks(self):
@@ -104,6 +102,8 @@ class BlocksTool():
 
         self.draw_blocks(rows)
         self.preselect_layers()
+
+        self.parent.dlg.messageBar.pushMessage(f"Blocks selected", level=Qgis.Success)
 
 
     def open_expr_builder(self):
@@ -169,6 +169,8 @@ class BlocksTool():
         self.draw_polygon()
         self.draw_line()
         self.draw_polygon3d()
+
+        self.parent.dlg.messageBar.pushMessage(f"Polygons, lines and polygons3d written to selected layers", level=Qgis.Success)
 
 
     def draw_polygon(self):

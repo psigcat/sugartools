@@ -242,11 +242,14 @@ class SugarTools:
         elif main_tab == "tabRefitting":
             self.refitting_tool.process_refitting()
 
-        elif main_tab == "tabBlocks":
+        elif main_tab == "tabForms":
             self.blocks_tool.process_blocks()
 
-        elif main_tab == "tabRelateBlocks":
+        elif main_tab == "tabRelateForms":
             self.relblocks_tool.process_relblocks()
+
+        elif main_tab == "tabExtractForms":
+            self.extractblocks_tool.process_extractforms()
 
 
     def run(self):

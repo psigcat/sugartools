@@ -600,7 +600,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabBlocks">
+     <widget class="QWidget" name="tabForms">
       <attribute name="title">
        <string>Forms</string>
       </attribute>
@@ -723,7 +723,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabRelateBlocks">
+     <widget class="QWidget" name="tabRelateForms">
       <attribute name="title">
        <string>Relate Forms</string>
       </attribute>
@@ -779,7 +779,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabExtractBlocks">
+     <widget class="QWidget" name="tabExtractForms">
       <attribute name="title">
        <string>Extract Forms</string>
       </attribute>
@@ -792,7 +792,11 @@
         </widget>
        </item>
        <item>
-        <widget class="QgsFileWidget" name="extractblocks_folder"/>
+        <widget class="QgsFileWidget" name="extractblocks_folder">
+         <property name="storageMode">
+          <enum>QgsFileWidget::GetDirectory</enum>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="QGroupBox" name="groupBox_9">
@@ -808,7 +812,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox"/>
+           <widget class="QgsMapLayerComboBox" name="extract_polygon_layer"/>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="label_35">
@@ -825,13 +829,13 @@
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox_2"/>
+           <widget class="QgsMapLayerComboBox" name="extract_lines_layer"/>
           </item>
           <item row="3" column="1">
-           <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox_3"/>
+           <widget class="QgsMapLayerComboBox" name="extract_3d_layer"/>
           </item>
           <item row="0" column="1">
-           <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox_4"/>
+           <widget class="QgsMapLayerComboBox" name="extract_table"/>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_37">
