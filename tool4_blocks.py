@@ -1,4 +1,4 @@
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsPoint, QgsPointXY, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes, QgsLayerTreeLayer
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsPoint, QgsPointXY, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes, QgsLayerTreeLayer, QgsGeometryValidator, QgsProviderRegistry
 from qgis.gui import QgsExpressionBuilderDialog
 from qgis.PyQt.QtCore import QVariant
 
@@ -6,6 +6,8 @@ import os
 import processing
 import numpy as np
 from scipy.spatial import ConvexHull
+import sqlite3
+import math
 
 
 from .utils_database import utils_database
@@ -160,14 +162,19 @@ class BlocksTool():
 
         if not self.points_layer:
             active_layer = self.parent.iface.activeLayer()
-            if active_layer and active_layer.name() == "points":
-                self.points_layer = active_layer
-            else:
-                self.parent.dlg.messageBar.pushMessage(f"No block points available, select blocks first in order to draw a polygon.", level=Qgis.Warning, duration=3)
+
+            if not active_layer or active_layer.name() != "points":
+                self.parent.dlg.messageBar.pushMessage(f"No block points available, select blocks first in order to draw a polygon.", level=Qgis.Critical, duration=3)
                 return
 
-        self.draw_polygon()
-        self.draw_line()
+            self.points_layer = active_layer
+
+        if self.points_layer.wkbType() not in [QgsWkbTypes.PointZ, QgsWkbTypes.MultiPointZ]:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.", level=Qgis.Critical, duration=3)
+            return
+
+        convex_hull = self.draw_polygon()
+        self.draw_line(convex_hull)
         self.draw_polygon3d()
 
         self.parent.dlg.messageBar.pushMessage(f"Polygons, lines and polygons3d written to selected layers", level=Qgis.Success)
@@ -175,6 +182,13 @@ class BlocksTool():
 
     def draw_polygon(self):
         """ draw polygon from convex hull """
+
+        polygon_layer_name = self.parent.dlg.blocks_polygon_layer.currentText()
+        polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
+
+        if not polygon_layer or polygon_layer.wkbType() != QgsWkbTypes.MultiPolygon:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygon layer.", level=Qgis.Critical, duration=3)
+            return
 
         # apply geoprocess convex hull
         params = {
@@ -211,53 +225,46 @@ class BlocksTool():
         }
         processing.run("etl_load:appendfeaturestolayer", params)
 
+        return layer
 
-    def draw_line(self):
+
+    def draw_line(self, convex_hull):
         """ draw line """
 
-        points_2d = self.get_points_2d()
+        line_layer_name = self.parent.dlg.blocks_lines_layer.currentText()
+        line_layer = QgsProject.instance().mapLayersByName(line_layer_name)[0]
 
-        # Ensure we have enough points to form a points
-        if len(points_2d) < 2:
-            self.parent.dlg.messageBar.pushMessage(f"Not enought points to draw a line.", level=Qgis.Warning, duration=3)
+        if not line_layer or line_layer.wkbType() != QgsWkbTypes.MultiLineString:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiLineString layer.", level=Qgis.Critical, duration=3)
             return
 
-        # get minimum x and maximum x point
-        min_x = 1000000000
-        max_x = 0
-        for p in points_2d:
-            if p.asPoint().x() < min_x:
-                min_x = p.asPoint().x()
-                min_x_y = p.asPoint().y()
-            if p.asPoint().x() > max_x:
-                max_x = p.asPoint().x()
-                max_x_y = p.asPoint().y()
+        top_points = self.get_points_top_3d()
+        line_features = self.get_points_random_3d(convex_hull, top_points)
 
-        min_point = QgsPointXY(min_x, min_x_y)
-        max_point = QgsPointXY(max_x, max_x_y)
+        if not top_points:
+            return
 
         # create line layer
         line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:integer"
         line_layer = QgsVectorLayer(line_layer_uri, "linestring", "memory")
 
-        #QgsProject.instance().addMapLayer(line_layer)
         line_layer.startEditing()
 
-        # draw line from minimum x to maximum x point
-        geom = QgsGeometry.fromPolylineXY([min_point, max_point])
+        # Create a line connecting the 3 highest Z points
         feature = QgsFeature()
+        geom = QgsGeometry.fromPolyline([top_points[1], top_points[0], top_points[2]])
         feature.setGeometry(geom)
         feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
         line_layer.addFeature(feature)
+
+        # Add lines from each of this points to closest points on convex hull
+        for line_feature in line_features:
+            line_layer.addFeature(line_feature)
+
         line_layer.commitChanges()
-
-        # self.parent.iface.setActiveLayer(line_layer)
-        # self.parent.iface.zoomToActiveLayer()
-
-        # symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_linestring.qml")
-        # line_layer.loadNamedStyle(symbology_path)
-
-        #self.utils.make_permanent(line_layer, self.parent.dlg.blocks_workspace.filePath())
+        
+        # Add the new layer to the project
+        #QgsProject.instance().addMapLayer(line_layer)
 
         # write output to selected layer
         params = {
@@ -269,31 +276,99 @@ class BlocksTool():
         }
         processing.run("etl_load:appendfeaturestolayer", params)
 
-        QgsProject.instance().removeMapLayer(line_layer)
+        #QgsProject.instance().removeMapLayer(line_layer)
+
+
+    def get_points_top_3d(self):
+        """ get 3 points with highest Z values """
+
+        # Extract features and sort by Z value
+        features = [f for f in self.points_layer.getFeatures()]
+
+        # Sort features by Z values in descending order
+        features.sort(key=lambda f: f.geometry().constGet().z(), reverse=True)
+
+        # Get the top 3 points with Z values
+        top_points = [f.geometry().vertexAt(0) for f in features[:3]]
+
+        if len(top_points) < 3:
+            self.parent.dlg.messageBar.pushMessage(f"Not enough points in the layer, minimum 3.", level=Qgis.Critical, duration=3)
+            return None
+
+        return top_points
+
+
+    def get_points_random_3d(self, convex_hull, top_points):
+        """ get 3 points from convex hull closest to top_points """
+
+        hull_features = [f.geometry() for f in convex_hull.getFeatures()]
+
+        # Extract convex hull points
+        convex_hull_points = []
+        for geom in hull_features:
+              # Extract outer ring
+            if geom.isMultipart():
+                convex_hull_points.extend(geom.asMultiPolygon()[0][0])
+            else:
+                convex_hull_points.extend(geom.asPolygon()[0])
+
+        # Convert convex hull points to QgsPoint to match Z-enabled points
+        convex_hull_points = [QgsPoint(hp.x(), hp.y(), 0) for hp in convex_hull_points]
+
+        # Compute convex hull centroid
+        sum_x = sum(p.x() for p in convex_hull_points)
+        sum_y = sum(p.y() for p in convex_hull_points)
+        centroid = QgsPoint(sum_x / len(convex_hull_points), sum_y / len(convex_hull_points), 0)
+
+        # Function to compute angle from centroid
+        def compute_angle(p):
+            return math.degrees(math.atan2(p.y() - centroid.y(), p.x() - centroid.x())) % 360
+        
+        # Assign hull points to 3 angle groups (0-120, 120-240, 240-360)
+        hull_sections = {0: [], 1: [], 2: []}
+        for p in convex_hull_points:
+            angle = compute_angle(p)
+            section = int(angle // 120)  # Determine which third it belongs to
+            hull_sections[section].append(p)
+
+        if not all(hull_sections.values()):
+            print("Not enough convex hull points in each section!")
+            return None
+
+        used_sections = set()
+        line_features = []
+        for idx, p in enumerate(top_points):
+            # Select a section not already used
+            available_sections = [s for s in [0, 1, 2] if s not in used_sections]
+            if not available_sections:
+                self.parent.dlg.messageBar.pushMessage(f"Not enough distinct hull sections!", level=Qgis.Critical, duration=3)
+                break
+
+            # Choose the closest hull point from an available section
+            best_section = min(available_sections, key=lambda s: min(p.distance(hp) for hp in hull_sections[s]))
+            closest_hull_point = min(hull_sections[best_section], key=lambda hp: p.distance(hp))
+            used_sections.add(best_section)  # Mark this section as used
+
+            # Create a line feature
+            line_feature = QgsFeature()
+            line_feature.setGeometry(QgsGeometry.fromPolyline([p, closest_hull_point]))
+            line_feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+            line_features.append(line_feature)
+
+        return line_features
 
 
     def draw_polygon3d(self):
         """ draw 3d convex hull """
 
-        layer = self.points_layer
+        threed_layer_name = self.parent.dlg.blocks_3d_layer.currentText()
+        threed_layer = QgsProject.instance().mapLayersByName(threed_layer_name)[0]
 
-        if not layer or layer.wkbType() not in [QgsWkbTypes.PointZ, QgsWkbTypes.MultiPointZ]:
-            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.: '{layer.name()}'", level=Qgis.Warning, duration=3)
+        if not threed_layer or threed_layer.wkbType() != QgsWkbTypes.MultiPolygonZ:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
             return
 
-        points = []
-
-        for feature in layer.getFeatures():
-            geom = feature.geometry()
-            
-            # Extract Z values properly
-            if geom.isMultipart():
-                for pt in geom.asMultiPoint():
-                    if isinstance(pt, QgsPoint) and pt.is3D():
-                        points.append((pt.x(), pt.y(), pt.z()))
-            else:
-                pt = geom.constGet()
-                points.append((pt.x(), pt.y(), pt.z()))
+        points = self.get_points_3d()
 
         if not points or len(points) < 4:
             self.parent.dlg.messageBar.pushMessage("A 3D convex hull requires at least 4 unique points.", level=Qgis.Warning, duration=3)
@@ -306,54 +381,206 @@ class BlocksTool():
         hull = ConvexHull(points_array)
 
         # Create new PolygonZ layer
-        crs = layer.crs().authid()
-        hull_layer = QgsVectorLayer("PolygonZ?crs=" + crs + "&field=id_bloque:integer", "3D Convex Hull", "memory")
+        crs = self.points_layer.crs().authid()
+        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=id_bloque:integer&field=fid:integer", "3D Convex Hull", "memory")
         provider = hull_layer.dataProvider()
 
-        merged_polygons = []  # Store all faces to merge later
+        hull_faces = []  # Store triangular faces
 
-        # Create polygon faces from convex hull simplices
+        # Iterate through hull simplices (triangular faces)
         for simplex in hull.simplices:
             hull_points = [f"{points_array[i, 0]} {points_array[i, 1]} {points_array[i, 2]}" for i in simplex]
-            
-            # Convert to WKT (Well-Known Text) format to keep Z values
-            wkt_polygon = f"POLYGONZ(({', '.join(hull_points)}, {hull_points[0]}))"  # Close the ring
-            
-            merged_polygons.append(wkt_polygon)  # Collect for merging
 
-        # Merge all polygons into a single geometry
-        merged_wkt = f"MULTIPOLYGONZ({', '.join(merged_polygons)})"
+            # Convert to WKT (Well-Known Text) for 3D surface representation
+            wkt_triangle = f"POLYGONZ(({', '.join(hull_points)}, {hull_points[0]}))"  # Close the ring
+
+            hull_faces.append(wkt_triangle)
+
+        # Create a MultiPolygonZ to hold all faces
+        merged_wkt = f"MULTIPOLYGONZ({', '.join(hull_faces)})"
         merged_geom = QgsGeometry.fromWkt(merged_wkt)
+
+        if not merged_geom or merged_geom.isEmpty():
+            print("Merged geometry is empty!")
+
+        # validator = QgsGeometryValidator(merged_geom)
+        # errors = validator.validateGeometry(merged_geom)
+
+        # if errors:
+        #     print("Geometry errors found:")
+        #     for error in errors:
+        #         print(error.what())
+
+        # if merged_geom and not merged_geom.isEmpty() and merged_geom.isGeosValid():
+        #     fixed_geom = merged_geom
+        # else:
+        #     print("Geometry is empty or invalid, attempting to fix...")
+        #     fixed_geom = merged_geom.makeValid()
+        #     if not fixed_geom or not fixed_geom.isGeosValid():
+        #         print("Failed to fix the geometry.")
+        #         return
 
         # Add the merged feature to the new layer
         feature = QgsFeature()
-        feature.setGeometry(merged_geom)
-        feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
-        provider.addFeature(feature)
-        hull_layer.updateExtents()
+
+        # Ensure the geometry is not empty before adding
+        if merged_geom and not merged_geom.isEmpty():
+            # Check the validity of the geometry
+            if not merged_geom.isGeosValid():
+                print("Invalid geometry detected. Forcing valid MultiPolygonZ...")
+
+                # Reconstruct as MultiPolygonZ without losing Z values
+                merged_geom = QgsGeometry.fromWkt(merged_geom.asWkt())  # Force re-parsing
+
+                # Optional: Convert it explicitly to MultiPolygonZ
+                if merged_geom.isMultipart():
+                    merged_geom.convertToMultiType()
+
+            # Double-check that the geometry is still MultiPolygonZ
+            if merged_geom.wkbType() == QgsWkbTypes.MultiPolygonZ:
+                print("Geometry is now valid MultiPolygonZ, adding to layer...")
+                feature.setGeometry(merged_geom)
+                feature.setAttributes([
+                    int(self.parent.dlg.blocks_dib_pieza.text()),
+                    len(list(threed_layer.getFeatures())) + 1
+                ])
+                hull_layer.startEditing()
+                hull_layer.addFeature(feature)
+                hull_layer.commitChanges()
+            else:
+                print("Failed to ensure MultiPolygonZ format, skipping feature.")
+
+        else:
+            print("Merged geometry is empty, skipping.")
+            return
 
         #QgsProject.instance().addMapLayer(hull_layer)
-        #self.utils.make_permanent(hull_layer, self.parent.dlg.blocks_workspace.filePath())
 
-        # fix geometries
-        params = {
-            'INPUT': hull_layer,
-            'METHOD': 1,
+        result = processing.run("native:mergevectorlayers", {
+            'LAYERS': [hull_layer, threed_layer],
             'OUTPUT': 'TEMPORARY_OUTPUT'
+            #'INVALID_FEATURES': 'IGNORE'
+        })
+
+        merged_layer = result['OUTPUT']
+        merged_layer.setName(self.parent.dlg.blocks_3d_layer.currentText())
+
+        #QgsProject.instance().addMapLayer(result['OUTPUT'])
+
+        # delete fields
+        fid_field = merged_layer.fields().indexFromName('fid')
+        layer_field = merged_layer.fields().indexFromName('layer')
+        path_field = merged_layer.fields().indexFromName('path')
+        merged_layer.startEditing()
+        merged_layer.dataProvider().deleteAttributes([fid_field, layer_field, path_field])
+        merged_layer.commitChanges()
+        merged_layer.updateFields()
+
+        threed_layer_path = QgsProviderRegistry.instance().decodeUri(threed_layer.dataProvider().name(), threed_layer.publicSource())['path'];
+        layer_name = self.parent.dlg.blocks_3d_layer.currentText()
+
+        #Save the new layer to the GeoPackage
+        params = {
+            'INPUT': merged_layer,
+            'OUTPUT': threed_layer_path,
+            'LAYER_NAME': layer_name,
+            #'ACTION_ON_EXISTING_FILE':1
         }
-        result = processing.run("native:fixgeometries", params)
+        processing.run("native:savefeatures", params)
+
+        #threed_layer.dataProvider().setDataSourceUri(threed_layer_path)
+        threed_layer.dataProvider().reloadData()
+        threed_layer.triggerRepaint()
+        threed_layer.reload()
+
+        #self.refresh_datasources(new_layer_path)
+
+
+        # unsuccessfull test in order to write merged layer in existing multilayer gpkg
+
+        # Delete existing layer using GDAL's ogr2ogr
+        # try:
+        #     conn = sqlite3.connect(threed_layer_path)
+        #     cursor = conn.cursor()
+        #     cursor.execute(f"DROP TABLE IF EXISTS \"{layer_name}\"") 
+        #     cursor.execute(f"DELETE FROM gpkg_contents WHERE table_name = \"{layer_name}\"")
+        #     cursor.execute(f"DELETE FROM gpkg_geometry_columns WHERE table_name = \"{layer_name}\"")
+        #     conn.commit()
+        #     conn.close()
+        #     print(f"Deleted existing layer: {layer_name}")
+        # except Exception as e:
+        #     print(f"Error deleting existing layer: {e}")
+
+        # saved_layer = QgsVectorLayer(threed_layer_path + f"|layername={layer_name}", layer_name, "ogr")
+
+        #Save the new layer to the GeoPackage
+        # params = {'INPUT': saved_layer,
+        #           'OUTPUT': f"{threed_layer_path}|layername={layer_name}",
+        #           #'OUTPUT': threed_layer_path,
+        #           #'LAYER_NAME': layer_name,
+        #           'ACTION_ON_EXISTING_FILE':1
+        # }
+        # processing.run("native:savefeatures", params)
+
+        # params = {'INPUT': merged_layer,
+        #           'OPTIONS': '-update -nln ' + layer_name,
+        #           'OUTPUT': threed_layer_path,
+        #           'DRIVER_NAME': 'GPKG'
+        # }
+        # processing.run("gdal:convertformat", params)
 
         # write output to selected layer
-        params = {
-            'SOURCE_LAYER': result['OUTPUT'],
-            'SOURCE_FIELD': '',
-            'TARGET_LAYER': self.parent.dlg.blocks_3d_layer.currentText(),
-            'TARGET_FIELD': '',
-            'ACTION_ON_DUPLICATE': 0
-        }
-        processing.run("etl_load:appendfeaturestolayer", params)
+        # params = {
+        #     'SOURCE_LAYER': merged_layer,
+        #     'TARGET_LAYER': threed_layer_path,
+        #     'ACTION_ON_DUPLICATE': 0,
+        #     'INVALID_FEATURES': 'IGNORE'
+        # }
+        # processing.run("etl_load:appendfeaturestolayer", params)
 
-        QgsProject.instance().removeMapLayer(hull_layer)
+        #QgsProject.instance().removeMapLayer(hull_layer)
+
+
+    # def refresh_datasources(self, file_path):
+    #     """ refresh data sources of loaded layers """
+
+    #     #self.refresh_datasource(file_path, self.parent.dlg.blocks_polygon_layer.currentText())
+    #     #self.refresh_datasource(file_path, self.parent.dlg.blocks_lines_layer.currentText())
+    #     self.refresh_datasource(file_path, self.parent.dlg.blocks_3d_layer.currentText())
+
+
+    # def refresh_datasource(self, file_path, layer_name):
+    #     """ refresh data sources of loaded layers """
+
+    #     print(layer_name, file_path)
+    #     refresh_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
+    #     print(refresh_layer)
+
+    #     refresh_layer.dataProvider().setDataSourceUri(file_path)
+    #     refresh_layer.dataProvider().reloadData()
+    #     refresh_layer.triggerRepaint()
+    #     refresh_layer.reload()
+
+    #     self.parent.iface.mapCanvas().refresh()
+
+
+    def get_points_3d(self):
+        """ get all points from PointZ vector layer """
+
+        points = []
+        for feature in self.points_layer.getFeatures():
+            geom = feature.geometry()
+            
+            # Extract Z values properly
+            if geom.isMultipart():
+                for pt in geom.asMultiPoint():
+                    if isinstance(pt, QgsPoint) and pt.is3D():
+                        points.append((pt.x(), pt.y(), pt.z()))
+            else:
+                pt = geom.constGet()
+                points.append((pt.x(), pt.y(), pt.z()))
+
+        return points
 
 
     def get_points_2d(self):
