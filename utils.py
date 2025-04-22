@@ -245,3 +245,15 @@ class utils:
             }
 
         return databases
+
+
+    def get_layer_from_tree(self, name):
+        """ parse whole layer tree and return first layer matching name """
+
+        for group in QgsProject.instance().layerTreeRoot().children():
+            if name == group.name():
+                layers = QgsProject.instance().mapLayersByName(name)
+                if len(layers) > 0:
+                    return layers[0]
+
+        return None

@@ -119,8 +119,15 @@ class BlocksTool():
     def draw_blocks(self, rows):
         """ draw blocks from given database rows """
 
+        layer_name = "points"
+
+        # remove previously imported points layer if exists
+        points_layer = self.utils.get_layer_from_tree(layer_name)
+        if points_layer:
+            QgsProject.instance().removeMapLayer(points_layer)
+        
         blocks_layer_uri = "PointZ?crs=epsg:25831&field=cod_pieza:integer&field=num_pieza:integer&field=nom_nivel:string(10)&field=cod_tnivel:string(2)&field=dib_pieza:string(10)"
-        blocks_layer = QgsVectorLayer(blocks_layer_uri, "points", "memory")
+        blocks_layer = QgsVectorLayer(blocks_layer_uri, layer_name, "memory")
 
         QgsProject.instance().addMapLayer(blocks_layer)
         #group.addChildNode(QgsLayerTreeLayer(blocks_layer))
@@ -299,7 +306,7 @@ class BlocksTool():
 
 
     def get_points_random_3d(self, convex_hull, top_points):
-        """ get 3 points from convex hull closest to top_points """
+        """ get 3 points from convex hull closest to top_points and make line """
 
         hull_features = [f.geometry() for f in convex_hull.getFeatures()]
 
@@ -349,11 +356,14 @@ class BlocksTool():
             closest_hull_point = min(hull_sections[best_section], key=lambda hp: p.distance(hp))
             used_sections.add(best_section)  # Mark this section as used
 
-            # Create a line feature
-            line_feature = QgsFeature()
-            line_feature.setGeometry(QgsGeometry.fromPolyline([p, closest_hull_point]))
-            line_feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
-            line_features.append(line_feature)
+            # avoid making line between two identical points
+            if p.x() != closest_hull_point.x() and p.y() != closest_hull_point.y():
+
+                # Create a line feature
+                line_feature = QgsFeature()
+                line_feature.setGeometry(QgsGeometry.fromPolyline([p, closest_hull_point]))
+                line_feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+                line_features.append(line_feature)
 
         return line_features
 
@@ -476,29 +486,35 @@ class BlocksTool():
         merged_layer.commitChanges()
         merged_layer.updateFields()
 
-        threed_layer_path = QgsProviderRegistry.instance().decodeUri(threed_layer.dataProvider().name(), threed_layer.publicSource())['path'];
+        threed_layer_path = QgsProviderRegistry.instance().decodeUri(threed_layer.dataProvider().name(), threed_layer.publicSource())['path']
         layer_name = self.parent.dlg.blocks_3d_layer.currentText()
 
-        #Save the new layer to the GeoPackage
+        # temporary remove 3d layer before loading new one with additional feature again
+        QgsProject.instance().removeMapLayer(threed_layer)
+
+        #Save the new layer to the GeoPackage (mandatory has to be a separate gpkg file with only that layer with a Multipolygon3D geometry)
         params = {
             'INPUT': merged_layer,
+            #'LAYER_NAME': layer_name,
             'OUTPUT': threed_layer_path,
-            'LAYER_NAME': layer_name,
-            #'ACTION_ON_EXISTING_FILE':1
+            'ACTION_ON_EXISTING_FILE': 0
         }
         processing.run("native:savefeatures", params)
 
+        new_layer = QgsVectorLayer(threed_layer_path, layer_name, "ogr")
+        QgsProject.instance().addMapLayer(new_layer)
+
         #threed_layer.dataProvider().setDataSourceUri(threed_layer_path)
-        threed_layer.dataProvider().reloadData()
-        threed_layer.triggerRepaint()
-        threed_layer.reload()
+        #threed_layer.dataProvider().reloadData()
+        #threed_layer.triggerRepaint()
+        #threed_layer.reload()
 
         #self.refresh_datasources(new_layer_path)
 
 
         # unsuccessfull test in order to write merged layer in existing multilayer gpkg
 
-        # Delete existing layer using GDAL's ogr2ogr
+        #Delete existing layer using GDAL's ogr2ogr (not necessary because overwriting file)
         # try:
         #     conn = sqlite3.connect(threed_layer_path)
         #     cursor = conn.cursor()
