@@ -48,7 +48,8 @@ class utils:
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = "GPKG"
         options.fileEncoding = "UTF-8"
-        options.layerName = layer.name()            
+        options.layerName = layer.name()
+        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
         options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(25831), QgsProject.instance())
 
         if _3d:
