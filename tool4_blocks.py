@@ -475,7 +475,7 @@ class BlocksTool():
         merged_layer = result['OUTPUT']
         merged_layer.setName(self.parent.dlg.blocks_3d_layer.currentText())
 
-        #QgsProject.instance().addMapLayer(result['OUTPUT'])
+        QgsProject.instance().addMapLayer(merged_layer)
 
         # delete fields
         fid_field = merged_layer.fields().indexFromName('fid')
@@ -493,16 +493,18 @@ class BlocksTool():
         QgsProject.instance().removeMapLayer(threed_layer)
 
         #Save the new layer to the GeoPackage (mandatory has to be a separate gpkg file with only that layer with a Multipolygon3D geometry)
-        params = {
-            'INPUT': merged_layer,
-            #'LAYER_NAME': layer_name,
-            'OUTPUT': threed_layer_path,
-            'ACTION_ON_EXISTING_FILE': 0
-        }
-        processing.run("native:savefeatures", params)
+        # params = {
+        #     'INPUT': merged_layer,
+        #     #'OUTPUT': threed_layer_path,
+        #     'ACTION_ON_EXISTING_FILE': 0
+        # }
+        # processing.run("native:savefeatures", params)
 
-        new_layer = QgsVectorLayer(threed_layer_path, layer_name, "ogr")
-        QgsProject.instance().addMapLayer(new_layer)
+        # new_layer = QgsVectorLayer(threed_layer_path, layer_name, "ogr")
+
+        path = os.path.dirname(threed_layer_path)
+        self.utils.make_permanent(merged_layer, path)
+        #QgsProject.instance().addMapLayer(merged_layer)
 
         #threed_layer.dataProvider().setDataSourceUri(threed_layer_path)
         #threed_layer.dataProvider().reloadData()

@@ -38,7 +38,7 @@ class utils:
         QgsProject.instance().layerTreeRoot().removeChildNode(group)
 
 
-    def make_permanent(self, layer, path, _3d=False):
+    def make_permanent(self, layer, path):
         """ save temporary layer to gpkg """
 
         if not os.path.exists(path):
@@ -51,10 +51,6 @@ class utils:
         options.layerName = layer.name()
         options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
         options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(25831), QgsProject.instance())
-
-        if _3d:
-            options.overrideGeometryType = QgsWkbTypes.PointZ
-            options.includeZ = True
 
         QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
 
