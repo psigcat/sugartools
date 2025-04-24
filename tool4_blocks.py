@@ -156,7 +156,7 @@ class BlocksTool():
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_points.qml")
         blocks_layer.loadNamedStyle(symbology_path)
 
-        self.utils.make_permanent(blocks_layer, self.parent.dlg.blocks_workspace.filePath())
+        #self.utils.make_permanent(blocks_layer, self.parent.dlg.blocks_workspace.filePath())
 
         self.points_layer = blocks_layer
 
