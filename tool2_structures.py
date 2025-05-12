@@ -30,21 +30,17 @@ class StructuresTool():
         """ load initial parameters """
 
         self.databases = self.utils.read_database_config()
-        self.fill_db()
-
-
-    def fill_db(self):
-        """ fill databases combobox """
-
-        self.parent.dlg.structures_db.clear()
-        for database in self.databases:
-            self.parent.dlg.structures_db.addItem(self.databases[database]["name"], {"value": database})
+        self.utils.fill_db_combo(self.parent.dlg.structures_db, self.databases)
 
 
     def process_structures(self):
         """ get structures from database """
 
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
+            return False
+
+        if not self.parent.dlg.structures_db.currentData()["value"]:
+            self.parent.dlg.messageBar.pushMessage("Please select a database connection", level=Qgis.Warning, duration=3)
             return False
 
         # connect to database

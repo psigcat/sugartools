@@ -37,7 +37,7 @@ class BlocksTool():
         """ load initial parameters """
 
         self.databases = self.utils.read_database_config()
-        self.fill_db()
+        self.utils.fill_db_combo(self.parent.dlg.blocks_db, self.databases)
         self.preselect_layers()
 
         #self.parent.dlg.blocks_polygon_layer.setFilters(QgsMapLayerProxyModel.VectorLayer)
@@ -46,18 +46,14 @@ class BlocksTool():
         self.parent.dlg.blocks_filter_expr_select_btn.clicked.connect(self.load_blocks)
 
 
-    def fill_db(self):
-        """ fill databases combobox """
-
-        self.parent.dlg.blocks_db.clear()
-        for database in self.databases:
-            self.parent.dlg.blocks_db.addItem(self.databases[database]["name"], {"value": database})
-
-
     def connect_db(self):
         """ get blocks from database """
 
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_BLOCKS):
+            return False
+
+        if not self.parent.dlg.blocks_db.currentData()["value"]:
+            self.parent.dlg.messageBar.pushMessage("Please select a database connection", level=Qgis.Warning, duration=3)
             return False
 
         # connect to database
@@ -84,7 +80,8 @@ class BlocksTool():
     def load_blocks(self):
         """ read blocks from db and paint points """
 
-        self.connect_db()
+        if not self.connect_db():
+            return
 
         exp = QgsExpression(self.parent.dlg.blocks_filter_expr.text())
 

@@ -244,6 +244,15 @@ class utils:
         return databases
 
 
+    def fill_db_combo(self, combo, databases):
+        """ fill databases combobox """
+
+        combo.clear()
+        combo.addItem("Please select a database connection", {"value": None})
+        for database in databases:
+            combo.addItem(databases[database]["name"], {"value": database})
+
+
     def get_layer_from_tree(self, name):
         """ parse whole layer tree and return first layer matching name """
 
