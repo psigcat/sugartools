@@ -54,8 +54,8 @@ class utils:
 
         QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
 
-        block_layer = QgsVectorLayer(path, 'Layer geopackage')
-        QgsProject.instance().addMapLayer(block_layer, False)
+        #block_layer = QgsVectorLayer(path, layer.name())
+        #QgsProject.instance().addMapLayer(block_layer, False)
 
         # change the data source
         layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')

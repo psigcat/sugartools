@@ -392,7 +392,8 @@ class BlocksTool():
 
         # Create new PolygonZ layer
         crs = self.points_layer.crs().authid()
-        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=id_bloque:integer&field=fid:integer", "3D Convex Hull", "memory")
+        dib_pieza = self.parent.dlg.blocks_dib_pieza.text()
+        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=id_bloque:integer&field=fid:integer", dib_pieza, "memory")
         provider = hull_layer.dataProvider()
 
         hull_faces = []  # Store triangular faces
@@ -437,7 +438,7 @@ class BlocksTool():
         if merged_geom and not merged_geom.isEmpty():
             # Check the validity of the geometry
             if not merged_geom.isGeosValid():
-                print("Invalid geometry detected. Forcing valid MultiPolygonZ...")
+                #print("Invalid geometry detected. Forcing valid MultiPolygonZ...")
 
                 # Reconstruct as MultiPolygonZ without losing Z values
                 merged_geom = QgsGeometry.fromWkt(merged_geom.asWkt())  # Force re-parsing
@@ -448,10 +449,10 @@ class BlocksTool():
 
             # Double-check that the geometry is still MultiPolygonZ
             if merged_geom.wkbType() == QgsWkbTypes.MultiPolygonZ:
-                print("Geometry is now valid MultiPolygonZ, adding to layer...")
+                #print("Geometry is now valid MultiPolygonZ, adding to layer...")
                 feature.setGeometry(merged_geom)
                 feature.setAttributes([
-                    int(self.parent.dlg.blocks_dib_pieza.text()),
+                    int(dib_pieza),
                     len(list(threed_layer.getFeatures())) + 1
                 ])
                 hull_layer.startEditing()
@@ -464,33 +465,36 @@ class BlocksTool():
             print("Merged geometry is empty, skipping.")
             return
 
-        #QgsProject.instance().addMapLayer(hull_layer)
+        QgsProject.instance().addMapLayer(hull_layer)
+        self.utils.make_permanent(hull_layer, self.parent.dlg.blocks_workspace.filePath())
 
-        result = processing.run("native:mergevectorlayers", {
-            'LAYERS': [hull_layer, threed_layer],
-            'OUTPUT': 'TEMPORARY_OUTPUT'
-            #'INVALID_FEATURES': 'IGNORE'
-        })
+        # for now we can't merge the new block into the 3d layer
+        # result = processing.run("native:mergevectorlayers", {
+        #     'LAYERS': [hull_layer, threed_layer],
+        #     'OUTPUT': 'TEMPORARY_OUTPUT'
+        #     #'INVALID_FEATURES': 'IGNORE'
+        # })
 
-        merged_layer = result['OUTPUT']
-        merged_layer.setName(self.parent.dlg.blocks_3d_layer.currentText())
+        # merged_layer = result['OUTPUT']
+        # merged_layer.setName(self.parent.dlg.blocks_3d_layer.currentText())
 
-        QgsProject.instance().addMapLayer(merged_layer)
+        # QgsProject.instance().addMapLayer(merged_layer)
 
-        # delete fields
-        fid_field = merged_layer.fields().indexFromName('fid')
-        layer_field = merged_layer.fields().indexFromName('layer')
-        path_field = merged_layer.fields().indexFromName('path')
-        merged_layer.startEditing()
-        merged_layer.dataProvider().deleteAttributes([fid_field, layer_field, path_field])
-        merged_layer.commitChanges()
-        merged_layer.updateFields()
+        # # delete fields
+        # fid_field = merged_layer.fields().indexFromName('fid')
+        # layer_field = merged_layer.fields().indexFromName('layer')
+        # path_field = merged_layer.fields().indexFromName('path')
+        # merged_layer.startEditing()
+        # merged_layer.dataProvider().deleteAttributes([fid_field, layer_field, path_field])
+        # merged_layer.commitChanges()
+        # merged_layer.updateFields()
 
-        threed_layer_path = QgsProviderRegistry.instance().decodeUri(threed_layer.dataProvider().name(), threed_layer.publicSource())['path']
-        layer_name = self.parent.dlg.blocks_3d_layer.currentText()
+        # threed_layer_path = QgsProviderRegistry.instance().decodeUri(threed_layer.dataProvider().name(), threed_layer.publicSource())['path']
+        # layer_name = self.parent.dlg.blocks_3d_layer.currentText()
 
-        # temporary remove 3d layer before loading new one with additional feature again
-        QgsProject.instance().removeMapLayer(threed_layer)
+        # path = os.path.dirname(threed_layer_path)
+        # self.utils.make_permanent(merged_layer, path)
+        # #QgsProject.instance().addMapLayer(merged_layer)
 
         #Save the new layer to the GeoPackage (mandatory has to be a separate gpkg file with only that layer with a Multipolygon3D geometry)
         # params = {
@@ -501,10 +505,6 @@ class BlocksTool():
         # processing.run("native:savefeatures", params)
 
         # new_layer = QgsVectorLayer(threed_layer_path, layer_name, "ogr")
-
-        path = os.path.dirname(threed_layer_path)
-        self.utils.make_permanent(merged_layer, path)
-        #QgsProject.instance().addMapLayer(merged_layer)
 
         #threed_layer.dataProvider().setDataSourceUri(threed_layer_path)
         #threed_layer.dataProvider().reloadData()
