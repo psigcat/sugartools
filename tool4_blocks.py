@@ -61,6 +61,8 @@ class BlocksTool():
         self.blocks_db_obj = utils_database(self.parent.plugin_dir, db)
         self.blocks_db = self.blocks_db_obj.open_database()
 
+        return True
+
 
     def preselect_layers(self):
         """ preselect layers """
@@ -80,7 +82,7 @@ class BlocksTool():
     def load_blocks(self):
         """ read blocks from db and paint points """
 
-        if not self.connect_db():
+        if self.connect_db() == None:
             return
 
         exp = QgsExpression(self.parent.dlg.blocks_filter_expr.text())
@@ -179,7 +181,10 @@ class BlocksTool():
 
         convex_hull = self.draw_polygon()
         self.draw_line(convex_hull)
-        self.draw_polygon3d()
+        
+        if not self.draw_polygon3d():
+            self.parent.dlg.messageBar.pushMessage(f"Polygons and lines written to selected layers, but not polygons3d", level=Qgis.Success)
+            return
 
         self.parent.dlg.messageBar.pushMessage(f"Polygons, lines and polygons3d written to selected layers", level=Qgis.Success)
 
@@ -373,13 +378,17 @@ class BlocksTool():
 
         if not threed_layer or threed_layer.wkbType() != QgsWkbTypes.MultiPolygonZ:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
-            return
+            return False
+
+        if not self.all_points_valid():
+            self.parent.dlg.messageBar.pushMessage(f"Given 'dib_pieza' different to attribute of at least one point.", level=Qgis.Critical, duration=3)
+            return False
 
         points = self.get_points_3d()
 
         if not points or len(points) < 4:
             self.parent.dlg.messageBar.pushMessage("A 3D convex hull requires at least 4 unique points.", level=Qgis.Warning, duration=3)
-            return
+            return False
 
         # Convert list to NumPy array for SciPy processing
         points_array = np.array(points)
@@ -555,6 +564,8 @@ class BlocksTool():
 
         #QgsProject.instance().removeMapLayer(hull_layer)
 
+        return True
+
 
     # def refresh_datasources(self, file_path):
     #     """ refresh data sources of loaded layers """
@@ -577,6 +588,18 @@ class BlocksTool():
     #     refresh_layer.reload()
 
     #     self.parent.iface.mapCanvas().refresh()
+
+
+    def all_points_valid(self):
+        """ check if all points have valid dib_pieza """
+
+        for feature in self.points_layer.getFeatures():
+            attr = feature.attributes()
+
+            if attr[4] != self.parent.dlg.blocks_dib_pieza.text():
+                return False
+
+        return True
 
 
     def get_points_3d(self):
@@ -603,9 +626,6 @@ class BlocksTool():
 
         points_2d = []
         for feature in self.points_layer.getFeatures():
-            attr = feature.attributes()
-            
-            #if attr[5] == self.parent.dlg.blocks_dib_pieza.text():
             geom = feature.geometry()
             points = [geom.asPoint()]
             for pt in points:
