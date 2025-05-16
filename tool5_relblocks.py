@@ -6,7 +6,7 @@ import os
 from .utils import utils
 
 
-FIELDS_MANDATORY = ["relblocks_id", "relblocks_table"]
+FIELDS_MANDATORY = ["relblocks_table"]
 RELTABLE_ID = "rel_"
 
 
@@ -37,14 +37,15 @@ class RelblocksTool():
     def setup_table(self):
         """ create table elements """
 
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["UA (arqueological unit)", "Position", "Action"])
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Block id", "UA (arqueological unit)", "Position", "Action"])
 
         # Populate table with first empty row
         self.table.setRowCount(1)
         row = 0
         self.table.setItem(row, 0, QTableWidgetItem(""))
         self.table.setItem(row, 1, QTableWidgetItem(""))
+        self.table.setItem(row, 2, QTableWidgetItem(""))
         self.add_action_buttons(row)
 
 
@@ -65,7 +66,7 @@ class RelblocksTool():
             layout.addWidget(button)
 
         cell_widget.setLayout(layout)
-        self.table.setCellWidget(row, 2, cell_widget)
+        self.table.setCellWidget(row, 3, cell_widget)
 
 
     def remove_row(self, row):
@@ -75,7 +76,7 @@ class RelblocksTool():
 
         # Update button connections (because row indices shift)
         for r in range(self.table.rowCount()):
-            widget = self.table.cellWidget(r, 2)
+            widget = self.table.cellWidget(r, 3)
             if widget:
                 layout = widget.layout()
                 if layout.count() > 1:
@@ -91,6 +92,7 @@ class RelblocksTool():
         self.table.insertRow(row)
         self.table.setItem(row, 0, QTableWidgetItem(""))
         self.table.setItem(row, 1, QTableWidgetItem(""))
+        self.table.setItem(row, 2, QTableWidgetItem(""))
         self.add_action_buttons(row)
 
 
@@ -102,28 +104,27 @@ class RelblocksTool():
 
         i = 0
         for r in range(self.table.rowCount()):
-            ua = self.table.item(r, 0).text()
-            position = self.table.item(r, 1).text()
+            id = self.table.item(r, 0).text()
+            ua = self.table.item(r, 1).text()
+            position = self.table.item(r, 2).text()
 
-            if ua != None and position != None and ua != "" and position != "":
-                self.write_feature(ua, position)
+            if id != None and ua != None and position != None and id != "" and ua != "" and position != "":
+                self.write_feature(id, ua, position)
                 i += 1
 
         self.parent.dlg.messageBar.pushMessage(f"{i} Relations written to table: '{self.parent.dlg.relblocks_table.currentText()}'", level=Qgis.Success)
 
 
-    def write_feature(self, ua, position):
+    def write_feature(self, id, ua, position):
         """ write feature to reltable """
 
-        id_block = int(self.parent.dlg.relblocks_id.text())
         reltable = self.parent.dlg.relblocks_table.currentText()
-
         reltable_layer = QgsProject.instance().mapLayersByName(reltable)[0]
         reltable_layer.startEditing()
         feature = QgsFeature()
         feature.setAttributes([
             None,
-            id_block,
+            id,
             ua,
             position,
             None,

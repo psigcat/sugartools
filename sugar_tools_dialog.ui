@@ -732,16 +732,6 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
-        <widget class="QLabel" name="label_28">
-         <property name="text">
-          <string>Block id</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="relblocks_id"/>
-       </item>
-       <item>
         <widget class="QLabel" name="label_29">
          <property name="text">
           <string>Block relations table</string>
@@ -760,7 +750,7 @@
           <item row="0" column="0">
            <widget class="QTableWidget" name="relblocks_relations">
             <attribute name="horizontalHeaderDefaultSectionSize">
-             <number>200</number>
+             <number>150</number>
             </attribute>
            </widget>
           </item>
