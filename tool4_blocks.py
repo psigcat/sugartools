@@ -106,6 +106,10 @@ class BlocksTool():
         self.draw_blocks(rows)
         self.parent.dlg.blocks_draw_box.setEnabled(True)
         self.preselect_layers()
+        dib_pieza = self.parent.dlg.blocks_filter_expr.text()
+        dib_pieza = dib_pieza.replace(r""""dib_pieza" = """, "")
+        dib_pieza = dib_pieza.replace("'", "").replace('"', "").strip()
+        self.parent.dlg.blocks_dib_pieza.setText(dib_pieza)
 
         self.parent.dlg.messageBar.pushMessage(f"Blocks selected", level=Qgis.Success)
 
@@ -280,6 +284,11 @@ class BlocksTool():
         geom = QgsGeometry.fromPolyline([top_points[1], top_points[0], top_points[2]])
         feature.setGeometry(geom)
         feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+
+        # field_index_permiter = line_layer.fields().indexFromName("perimeter")
+        # if field_index_permiter != -1:
+        #     line_layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
+        
         line_layer.addFeature(feature)
 
         # Add lines from each of this points to closest points on convex hull
