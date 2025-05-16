@@ -175,13 +175,6 @@ class SugarTools:
             callback=self.run,
             parent=self.iface.mainWindow())
 
-        icon_path = self.plugin_dir + '/icon2.png'
-        self.add_action(
-            icon_path,
-            text=self.tr(u'Sugar Tools Layout'),
-            callback=lambda:self.load_layout('tabLayout'),
-            parent=self.iface.mainWindow())
-
         # Create the dialog with elements (after translation) and keep reference
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         self.first_start = False
