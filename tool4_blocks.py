@@ -237,7 +237,7 @@ class BlocksTool():
         
         layer.commitChanges()
 
-        QgsProject.instance().addMapLayer(layer)
+        # QgsProject.instance().addMapLayer(layer)
         # self.utils.make_permanent(layer, self.parent.dlg.blocks_workspace.filePath())
 
         # write output to selected layer
