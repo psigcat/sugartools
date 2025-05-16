@@ -8,6 +8,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 import sqlite3
 import math
+import sip
 
 
 from .utils_database import utils_database
@@ -36,6 +37,7 @@ class BlocksTool():
     def setup(self):
         """ load initial parameters """
 
+        self.parent.dlg.blocks_draw_box.setEnabled(False)
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.blocks_db, self.databases)
         self.preselect_layers()
@@ -102,6 +104,7 @@ class BlocksTool():
             return
 
         self.draw_blocks(rows)
+        self.parent.dlg.blocks_draw_box.setEnabled(True)
         self.preselect_layers()
 
         self.parent.dlg.messageBar.pushMessage(f"Blocks selected", level=Qgis.Success)
@@ -166,7 +169,11 @@ class BlocksTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_PROCESS):
             return False
 
-        if not self.points_layer:
+        if sip.isdeleted(self.points_layer):
+            self.parent.dlg.messageBar.pushMessage(f"No block points available, load blocks first (or select 'points' layer if available) in order to draw a polygon.", level=Qgis.Critical, duration=10)
+            return
+
+        if self.points_layer is None:
             active_layer = self.parent.iface.activeLayer()
 
             if not active_layer or active_layer.name() != "points":
@@ -216,12 +223,21 @@ class BlocksTool():
         layer.dataProvider().addAttributes([new_field])
         layer.updateFields()
 
-        field_index = layer.fields().indexFromName("id_bloque")
+        field_index_id = layer.fields().indexFromName("id_bloque")
         feature = list(layer.getFeatures())[0]
-        layer.changeAttributeValue(feature.id(), field_index, int(self.parent.dlg.blocks_dib_pieza.text()))
+        layer.changeAttributeValue(feature.id(), field_index_id, int(self.parent.dlg.blocks_dib_pieza.text()))
+        
+        field_index_area = layer.fields().indexFromName("area")
+        if field_index_area != -1:
+            layer.renameAttribute(field_index_area, 'SHAPE_Area')
+
+        field_index_permiter = layer.fields().indexFromName("perimeter")
+        if field_index_permiter != -1:
+            layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
+        
         layer.commitChanges()
 
-        # QgsProject.instance().addMapLayer(layer)
+        QgsProject.instance().addMapLayer(layer)
         # self.utils.make_permanent(layer, self.parent.dlg.blocks_workspace.filePath())
 
         # write output to selected layer

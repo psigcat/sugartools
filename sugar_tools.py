@@ -187,6 +187,7 @@ class SugarTools:
         self.first_start = False
 
         self.utils = utils(self)
+
         self.sections_tool = SectionsTool(self)
         self.structures_tool = StructuresTool(self)
 
@@ -209,8 +210,16 @@ class SugarTools:
         iface.layerTreeView().currentLayerChanged.connect(self.sections_tool.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
 
+        # sections
         self.sections_tool.fill_layer()
         self.sections_tool.fill_layout()
+
+        # structures
+        self.structures_tool.setup()
+
+        # blocks
+        self.blocks_tool = BlocksTool(self)
+        self.blocks_tool.setup()
 
 
     def unload(self):
@@ -262,16 +271,9 @@ class SugarTools:
         self.sections_tool.fill_symbology_overlay()
         self.dlg.show()
 
-        # structures
-        self.structures_tool.setup()
-
         # refitting
         self.refitting_tool = RefittingTool(self)
         self.refitting_tool.setup()
-
-        # blocks
-        self.blocks_tool = BlocksTool(self)
-        self.blocks_tool.setup()
 
         # relate blocks
         self.relblocks_tool = RelblocksTool(self)

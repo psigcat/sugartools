@@ -660,7 +660,10 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_6">
+        <widget class="QGroupBox" name="blocks_draw_box">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="title">
           <string>Draw Geometries</string>
          </property>
