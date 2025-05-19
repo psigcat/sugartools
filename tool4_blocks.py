@@ -48,6 +48,13 @@ class BlocksTool():
         self.parent.dlg.blocks_filter_expr_select_btn.clicked.connect(self.load_blocks)
 
 
+    def reset_ui(self):
+        """ reset UI """
+
+        self.parent.dlg.blocks_filter_expr.setText(r""""dib_pieza" = '102'""")
+        self.parent.dlg.blocks_dib_pieza.setText("")
+
+
     def connect_db(self):
         """ get blocks from database """
 

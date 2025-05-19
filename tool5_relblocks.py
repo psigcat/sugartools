@@ -19,6 +19,13 @@ class RelblocksTool():
         self.utils = utils(self.parent)
         self.table = self.parent.dlg.relblocks_relations
 
+        self.reset_ui()
+
+
+    def reset_ui(self):
+        """ reset UI """
+
+        self.table.clear()
         self.preselect_layer()
         self.setup_table()
 

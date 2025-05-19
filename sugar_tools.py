@@ -187,6 +187,7 @@ class SugarTools:
         self.dlg = SugarToolsDialog()
         self.dlg.buttonBox.accepted.disconnect()
         self.dlg.buttonBox.accepted.connect(self.process)
+        self.dlg.tabWidgetMain.currentChanged.connect(self.tab_changed)
         self.dlg.section_ew.stateChanged.connect(self.sections_tool.fill_layer)
         self.dlg.section_ns.stateChanged.connect(self.sections_tool.fill_layer)
         self.dlg.layer.currentTextChanged.connect(self.sections_tool.set_and_zoom_active_layer)
@@ -223,6 +224,15 @@ class SugarTools:
                 self.tr(u'&Sugar Tools'),
                 action)
             self.iface.removeToolBarIcon(action)
+
+
+    def tab_changed(self, index):
+        """ execute actions when current tab changed """
+
+        if index == 3:
+            self.blocks_tool.reset_ui()
+        elif index == 4:
+            self.relblocks_tool.reset_ui()
 
 
     def process(self):

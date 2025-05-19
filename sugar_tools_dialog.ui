@@ -645,7 +645,7 @@
           <item row="0" column="0">
            <widget class="QLineEdit" name="blocks_filter_expr">
             <property name="text">
-             <string>&quot;dib_pieza&quot; = '102'</string>
+             <string/>
             </property>
            </widget>
           </item>
