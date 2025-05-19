@@ -199,6 +199,11 @@ class BlocksTool():
 
         self.parent.dlg.messageBar.pushMessage(f"Polygons, lines and polygons3d written to selected layers", level=Qgis.Success)
 
+        # reset for next round of loading points and drawing forms
+        self.parent.dlg.blocks_draw_box.setEnabled(False)
+        QgsProject.instance().removeMapLayer(self.points_layer)
+        self.points_layer = None
+
 
     def draw_polygon(self):
         """ draw polygon from convex hull """
