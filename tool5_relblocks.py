@@ -119,6 +119,7 @@ class RelblocksTool():
                 self.write_feature(id, ua, position)
                 i += 1
 
+        self.reset_ui()
         self.parent.dlg.messageBar.pushMessage(f"{i} Relations written to table: '{self.parent.dlg.relblocks_table.currentText()}'", level=Qgis.Success)
 
 
