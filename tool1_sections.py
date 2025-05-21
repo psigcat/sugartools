@@ -259,24 +259,6 @@ class SectionsTool():
         return [os.path.join(self.secciones_path, folder, f) for f in os.listdir(points_blocks_folder) if os.path.isfile(os.path.join(points_blocks_folder, f)) and f.find(pattern) > 0]
 
 
-    def initProgressBar(self, msg, messageBar):
-        """Show progress bar."""
-
-        fileCount = 0
-        # !!! hace falta limitarlo al directoria usado !!!
-        for root_dir, cur_dir, files in os.walk(self.secciones_path):
-            fileCount += len(files)
-
-        progressMessageBar = messageBar.createMessage(msg)
-        progress = QProgressBar()
-        progress.setMaximum(fileCount)
-        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-        progressMessageBar.layout().addWidget(progress)
-        messageBar.pushWidget(progressMessageBar, Qgis.Info)
-
-        return progress
-
-
     def import_files(self, active_tab):
         """ import all files from selected workspace """
 
@@ -297,7 +279,12 @@ class SectionsTool():
 
         success = False
         self.secciones_path = self.parent.dlg.workspace.filePath()
-        self.progress = self.initProgressBar("Import sections...", self.parent.dlg.messageBar)
+
+        file_count = 0
+        # !!! hace falta limitarlo al directoria usado !!!
+        for root_dir, cur_dir, files in os.walk(self.secciones_path):
+            file_count += len(files)
+        self.progress = self.utils.initProgressBar("Import sections...", file_count)
         
         if self.parent.dlg.section_ew.isChecked():
             file_list = self.get_file_list(SECTION_EW_PATTERN)

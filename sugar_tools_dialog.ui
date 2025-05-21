@@ -843,12 +843,12 @@
        <item>
         <widget class="QLabel" name="label_31">
          <property name="text">
-          <string>Restrict UAS, separted by comas (optional) [r1,r2]</string>
+          <string>Restrict UAS, separted by comas, f.ex.: r1,r2 (optional)</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="lineEdit"/>
+        <widget class="QLineEdit" name="extract_restrict"/>
        </item>
        <item>
         <spacer name="verticalSpacer_10">

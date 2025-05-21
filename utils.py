@@ -263,3 +263,18 @@ class utils:
                     return layers[0]
 
         return None
+
+
+    def initProgressBar(self, msg, count):
+        """Show progress bar."""
+
+        messageBar = self.parent.dlg.messageBar
+
+        progressMessageBar = messageBar.createMessage(msg)
+        progress = QProgressBar()
+        progress.setMaximum(count)
+        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+        progressMessageBar.layout().addWidget(progress)
+        messageBar.pushWidget(progressMessageBar, Qgis.Info)
+
+        return progress

@@ -48,6 +48,12 @@ class ExtractblocksTool():
 
         extract_table = self.parent.dlg.extract_table.currentText()
         extract_layer = QgsProject.instance().mapLayersByName(extract_table)[0]
+        restricted_uas = self.parent.dlg.extract_restrict.text().split(",")
+
+        print(restricted_uas)
+
+        feature_count = len(list(extract_layer.getFeatures()))
+        self.progress = self.utils.initProgressBar("Process extractioin...", feature_count)
 
         for feature in extract_layer.getFeatures():
             attributes = feature.attributes()
@@ -55,9 +61,12 @@ class ExtractblocksTool():
             id_bloque = feature[1]
             ua = feature[2]
             position = feature[3]
-        
-            self.add_features(id_bloque, ua, position)
 
+            if len(restricted_uas) == 0 or restricted_uas[0].strip() == "" or ua in restricted_uas:
+                self.add_features(id_bloque, ua, position)
+                self.progress.setValue(self.progress.value() + 1)
+
+        self.parent.dlg.messageBar.clearWidgets()
         self.parent.dlg.messageBar.pushMessage(f"Forms extracted and written to working directory", level=Qgis.Success)
 
 
