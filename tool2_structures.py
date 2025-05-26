@@ -10,7 +10,8 @@ from .utils import utils
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
 
-FIELDS = "&field=nom_nivel:string(8)&field=des_nivel:string(50)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
+#FIELDS = "&field=nom_nivel:string(8)&field=des_nivel:string(50)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
+FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
 FIELDS_MAP_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
 FIELDS_NS_EW_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
 
@@ -150,7 +151,7 @@ class StructuresTool():
             invert = -1
             invert_label = "_inverted"
 
-        point_layer_uri = "Point?crs=epsg:25831&field=id:integer" + FIELDS
+        point_layer_uri = "Point?crs=epsg:25831" + FIELDS
 
         name_type = f"{type}"
         if type != "map":
@@ -181,9 +182,9 @@ class StructuresTool():
             feature.setGeometry(geometry)
 
             field_values = [
-                int(row[2]),    # id = num_pieza
+                #int(row[2]),    # id = num_pieza
                 row[0],         # nom_nivel
-                row[1],         # des_nivel
+                #row[1],         # des_nivel
                 int(row[2]),    # id = num_pieza
                 row[3],         # coord_x
                 row[4],         # coord_y
