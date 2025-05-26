@@ -64,15 +64,18 @@ class StructuresTool():
 
         # create group
         group_map = self.utils.create_group(name + "_map")
+        group_map_helper = self.utils.create_group("helper", group_map)
         group_ew = self.utils.create_group(name + "_ew")
+        group_ew_helper = self.utils.create_group("helper", group_ew)
         group_ns = self.utils.create_group(name + "_ns")
+        group_ns_helper = self.utils.create_group("helper", group_ns)
 
         # get view formas EW
-        rows_ew = self.create_structure(name, "ew", group_ew)
+        rows_ew = self.create_structure(name, "ew", group_ew_helper)
         self.create_structure_empty(name, "ew", group_ew)
 
         # get view formas NS
-        rows_ns = self.create_structure(name, "ns", group_ns)
+        rows_ns = self.create_structure(name, "ns", group_ns_helper)
         self.create_structure_empty(name, "ns", group_ns)
 
         if not rows_ew and not rows_ns:
@@ -83,14 +86,14 @@ class StructuresTool():
             return
 
         # get view formas map
-        self.create_structure(name, "map", group_map)
+        self.create_structure(name, "map", group_map_helper)
         self.active_structure = name
 
         # draw ns and ew for map
-        self.create_structures_points(name, group_map, rows_ew, "map_ew")
-        self.create_structures_points(name, group_map, rows_ew, "label", "map_ew")
-        self.create_structures_points(name, group_map, rows_ns, "map_ns")
-        self.create_structures_points(name, group_map, rows_ns, "label", "map_ns")
+        self.create_structures_points(name, group_map_helper, rows_ew, "map_ew")
+        self.create_structures_points(name, group_map_helper, rows_ew, "label", "map_ew")
+        self.create_structures_points(name, group_map_helper, rows_ns, "map_ns")
+        self.create_structures_points(name, group_map_helper, rows_ns, "label", "map_ns")
 
         # add empty layers
         self.create_structure_empty(name, "map", group_map)
@@ -241,7 +244,11 @@ class StructuresTool():
                 if isinstance(subgroup, QgsLayerTreeLayer):
                     subgroup.setItemVisibilityChecked(subgroup.name() in layersToChanges)
                 else:
-                    subgroup.setItemVisibilityChecked(False)
+                    for subsubgroup in subgroup.children():
+                        if isinstance(subsubgroup, QgsLayerTreeLayer):
+                            subsubgroup.setItemVisibilityChecked(subsubgroup.name() in layersToChanges)
+                        else:
+                            subsubgroup.setItemVisibilityChecked(False)
         
         mapThemeRecord = QgsMapThemeCollection.createThemeFromCurrentState(
             QgsProject.instance().layerTreeRoot(),
