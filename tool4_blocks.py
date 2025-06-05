@@ -218,6 +218,11 @@ class BlocksTool():
         polygon_layer_name = self.parent.dlg.blocks_polygon_layer.currentText()
         polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
 
+        # save layer before processing
+        if polygon_layer.isEditable():
+            polygon_layer.commitChanges()
+            #polygon_layer.rollBack()
+
         if not polygon_layer or polygon_layer.wkbType() != QgsWkbTypes.MultiPolygon:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygon layer.", level=Qgis.Critical, duration=3)
             return
@@ -274,6 +279,11 @@ class BlocksTool():
 
         line_layer_name = self.parent.dlg.blocks_lines_layer.currentText()
         line_layer = QgsProject.instance().mapLayersByName(line_layer_name)[0]
+
+        # save layer before processing
+        if line_layer.isEditable():
+            line_layer.commitChanges()
+            #line_layer.rollBack()
 
         if not line_layer or line_layer.wkbType() != QgsWkbTypes.MultiLineString:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiLineString layer.", level=Qgis.Critical, duration=3)
