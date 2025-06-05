@@ -1,4 +1,4 @@
-from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature
+from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle
 
 import os
 import json
@@ -279,9 +279,49 @@ class StructuresTool():
                 bookmark_extent = bookmark.name().split("_")[1]
                 if isinstance(item, QgsLayoutItemMap) and item.id() == bookmark_extent:
                     #print("set extent", bookmark.name())
-                    item.setExtent(bookmark.extent())
-                    item.refresh()
+                    #item.setExtent(bookmark.extent())
+                    self.set_extent_preserving_size(item, bookmark.extent())
                     break
+
+
+    def set_extent_preserving_size(self, map_item: QgsLayoutItemMap, new_extent: QgsRectangle):
+        """ Set Extent Without Changing Size of QgsLayoutItemMap """
+
+        # Get current item width and height in layout units (e.g., mm)
+        item_width = map_item.rect().width()
+        item_height = map_item.rect().height()
+        item_ratio = item_width / item_height
+
+        # Calculate extent dimensions
+        extent_width = new_extent.width()
+        extent_height = new_extent.height()
+        extent_ratio = extent_width / extent_height
+
+        # Adjust extent to match item aspect ratio
+        center = new_extent.center()
+
+        if extent_ratio > item_ratio:
+            # Extent is too wide, adjust height
+            new_height = extent_width / item_ratio
+            new_extent = QgsRectangle(
+                center.x() - extent_width / 2,
+                center.y() - new_height / 2,
+                center.x() + extent_width / 2,
+                center.y() + new_height / 2,
+            )
+        else:
+            # Extent is too tall, adjust width
+            new_width = extent_height * item_ratio
+            new_extent = QgsRectangle(
+                center.x() - new_width / 2,
+                center.y() - extent_height / 2,
+                center.x() + new_width / 2,
+                center.y() + extent_height / 2,
+            )
+
+        # Now set the adjusted extent without changing item size
+        map_item.setExtent(new_extent)
+        map_item.refresh()
 
 
     def onLayoutLoaded(self):
