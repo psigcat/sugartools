@@ -30,6 +30,8 @@ class ExtractblocksTool():
             if isinstance(layer, QgsLayerTreeLayer):
                 layer_name = layer.layer().name()
                 layer = QgsProject.instance().mapLayersByName(layer_name)[0]
+                layer.setSubsetString("")
+
                 if RELTABLE_ID in layer_name:
                     self.parent.dlg.extract_table.setLayer(layer)
                 elif POLYGON_LAYER_ID in layer_name:
