@@ -50,7 +50,7 @@ class ExtractblocksTool():
         extract_layer = QgsProject.instance().mapLayersByName(extract_table)[0]
         restricted_uas = self.parent.dlg.extract_restrict.text().split(",")
 
-        print(restricted_uas)
+        #print(restricted_uas)
 
         feature_count = len(list(extract_layer.getFeatures()))
         self.progress = self.utils.initProgressBar("Process extractioin...", feature_count)
@@ -82,25 +82,25 @@ class ExtractblocksTool():
         layer_name_3d = "BL3D" + combination
         layer_name_3d_all = "BL3D" + combination_all
 
-        self.add_feature(id_bloque, layer_name_2d, "Polygon")
-        self.add_feature(id_bloque, layer_name_2d_all, "Polygon")
-        self.add_feature(id_bloque, layer_name_lines, "LineString")
-        self.add_feature(id_bloque, layer_name_lines_all, "LineString")
-        self.add_feature(id_bloque, layer_name_3d, "PolygonZ")
-        self.add_feature(id_bloque, layer_name_3d_all, "PolygonZ")
+        self.add_feature(id_bloque, layer_name_2d, "Polygon", ua)
+        self.add_feature(id_bloque, layer_name_2d_all, "Polygon", ua)
+        self.add_feature(id_bloque, layer_name_lines, "LineString", ua)
+        self.add_feature(id_bloque, layer_name_lines_all, "LineString", ua)
+        self.add_feature(id_bloque, layer_name_3d, "PolygonZ", ua)
+        self.add_feature(id_bloque, layer_name_3d_all, "PolygonZ", ua)
 
 
-    def add_feature(self, id_bloque, layer_name, geom_type):
+    def add_feature(self, id_bloque, layer_name, geom_type, ua):
         """ write combination to layer files """
 
-        layer = self.get_layer(layer_name, geom_type)
+        layer = self.get_layer(layer_name, geom_type, ua)
         feature = self.get_feature(id_bloque, geom_type)
 
         if layer and feature:
             self.write_feature(feature, layer, id_bloque)
 
 
-    def get_layer(self, layer_name, geom_type):
+    def get_layer(self, layer_name, geom_type, ua):
         """ get layer from project """
 
         layer_path = os.path.join(self.parent.dlg.extractblocks_folder.filePath(), layer_name + ".gpkg")
@@ -111,23 +111,24 @@ class ExtractblocksTool():
                 print(f"Layer failed to load: {layer_path}")
                 return
 
-            if not self.has_layer(layer_name):
-                QgsProject.instance().addMapLayer(layer)
+            #if not self.has_layer(layer_name):
+            #    QgsProject.instance().addMapLayer(layer)
         else:
-            layer = self.create_layer(layer_name, geom_type)
+            layer = self.create_layer(layer_name, geom_type, ua)
 
         return layer
 
 
-    def create_layer(self, layer_name, geom_type):
+    def create_layer(self, layer_name, geom_type, ua):
         """ create empty polygon 2d layer file """
 
         layer_uri = f"{geom_type}?crs=epsg:25831&field=id_bloque:integer"
         layer = QgsVectorLayer(layer_uri, layer_name, "memory")
 
-        QgsProject.instance().addMapLayer(layer)
+        #QgsProject.instance().addMapLayer(layer)
 
         path = self.parent.dlg.extractblocks_folder.filePath()
+        path = os.path.join(path, f"Bloques_{ua}")
         self.utils.make_permanent(layer, path)
 
         return layer
