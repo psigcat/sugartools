@@ -851,6 +851,13 @@
         <widget class="QLineEdit" name="extract_restrict"/>
        </item>
        <item>
+        <widget class="QCheckBox" name="extract_check_layers">
+         <property name="text">
+          <string>Add extracted forms to Layers panel</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_10">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

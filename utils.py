@@ -41,6 +41,8 @@ class utils:
     def make_permanent(self, layer, path):
         """ save temporary layer to gpkg """
 
+        #print("create file", layer, path)
+
         if not os.path.exists(path):
             os.makedirs(path)
         path = os.path.join(path, layer.name() + ".gpkg")
@@ -60,6 +62,8 @@ class utils:
         # change the data source
         layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')
         #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
+
+        #print("created file", path, os.path.exists(path))
 
 
     def create_vector_layer(self, name, geom_type, group=False, fields=""):

@@ -10,6 +10,9 @@ RELTABLE_ID = "rel_"
 POLYGON_LAYER_ID = "_2D"
 LINE_LAYER_ID = "_lin2D"
 THREED_LAYER_ID = "_3D"
+STR_BLOQUES = "BL"
+STR_BASES_NAGATIVAS = "BN"
+STR_ESTRUCTURAS = "ES"
 
 
 class ExtractblocksTool():
@@ -105,7 +108,9 @@ class ExtractblocksTool():
     def get_layer(self, layer_name, geom_type, ua):
         """ get layer from project """
 
-        layer_path = os.path.join(self.parent.dlg.extractblocks_folder.filePath(), layer_name + ".gpkg")
+        dir_name = f"{self.get_form_type()}_{ua}"
+
+        layer_path = os.path.join(self.parent.dlg.extractblocks_folder.filePath(), dir_name, layer_name + ".gpkg")
 
         if os.path.exists(layer_path):
             layer = QgsVectorLayer(layer_path, layer_name, 'ogr')
@@ -113,24 +118,25 @@ class ExtractblocksTool():
                 print(f"Layer failed to load: {layer_path}")
                 return
 
-            #if not self.has_layer(layer_name):
-            #    QgsProject.instance().addMapLayer(layer)
+            if not self.has_layer(layer_name) and self.parent.dlg.extract_check_layers.isChecked():
+                QgsProject.instance().addMapLayer(layer)
         else:
-            layer = self.create_layer(layer_name, geom_type, ua)
+            layer = self.create_layer(layer_name, geom_type, dir_name)
 
         return layer
 
 
-    def create_layer(self, layer_name, geom_type, ua):
+    def create_layer(self, layer_name, geom_type, dir_name):
         """ create empty polygon 2d layer file """
 
         layer_uri = f"{geom_type}?crs=epsg:25831&field=id_bloque:integer"
         layer = QgsVectorLayer(layer_uri, layer_name, "memory")
 
-        #QgsProject.instance().addMapLayer(layer)
+        if self.parent.dlg.extract_check_layers.isChecked():
+            QgsProject.instance().addMapLayer(layer)
 
         path = self.parent.dlg.extractblocks_folder.filePath()
-        path = os.path.join(path, f"Bloques_{ua}")
+        path = os.path.join(path, dir_name)
         self.utils.make_permanent(layer, path)
 
         return layer
@@ -180,3 +186,19 @@ class ExtractblocksTool():
                 return True 
 
         return False
+
+
+    def get_form_type(self):
+        """ check if bloque, base negativa or estructura """
+
+        # for now only check with 2d types
+        polygon_layer_name = self.parent.dlg.extract_polygon_layer.currentLayer().name()
+
+        if STR_BLOQUES in polygon_layer_name:
+            return STR_BLOQUES
+        elif STR_BASES_NAGATIVAS in polygon_layer_name:
+            return STR_BASES_NAGATIVAS
+        elif STR_ESTRUCTURAS in polygon_layer_name:
+            return STR_ESTRUCTURAS
+        else:
+            return STR_BLOQUES
