@@ -78,37 +78,37 @@ class ExtractblocksTool():
     def add_features(self, id_bloque, ua, position):
         """ write combination to layer files """
 
+        form_type = self.get_form_type()
+        dir_name = f"{form_type}_{ua}"
         combination = f"_{ua}_{position}"
         combination_all = f"_{ua}_ALL"
-        layer_name_2d = "BL2D" + combination
-        layer_name_2d_all = "BL2D" + combination_all
+        layer_name_2d = form_type + "2D" + combination
+        layer_name_2d_all = form_type + "2D" + combination_all
         layer_name_lines = "Lines" + combination
         layer_name_lines_all = "Lines" + combination_all
-        layer_name_3d = "BL3D" + combination
-        layer_name_3d_all = "BL3D" + combination_all
+        layer_name_3d = form_type + "3D" + combination
+        layer_name_3d_all = form_type + "3D" + combination_all
 
-        self.add_feature(id_bloque, layer_name_2d, "Polygon", ua)
-        self.add_feature(id_bloque, layer_name_2d_all, "Polygon", ua)
-        self.add_feature(id_bloque, layer_name_lines, "LineString", ua)
-        self.add_feature(id_bloque, layer_name_lines_all, "LineString", ua)
-        self.add_feature(id_bloque, layer_name_3d, "PolygonZ", ua)
-        self.add_feature(id_bloque, layer_name_3d_all, "PolygonZ", ua)
+        self.add_feature(id_bloque, layer_name_2d, "Polygon", dir_name)
+        self.add_feature(id_bloque, layer_name_2d_all, "Polygon", dir_name)
+        self.add_feature(id_bloque, layer_name_lines, "LineString", dir_name)
+        self.add_feature(id_bloque, layer_name_lines_all, "LineString", dir_name)
+        self.add_feature(id_bloque, layer_name_3d, "PolygonZ", dir_name)
+        self.add_feature(id_bloque, layer_name_3d_all, "PolygonZ", dir_name)
 
 
-    def add_feature(self, id_bloque, layer_name, geom_type, ua):
+    def add_feature(self, id_bloque, layer_name, geom_type, dir_name):
         """ write combination to layer files """
 
-        layer = self.get_layer(layer_name, geom_type, ua)
+        layer = self.get_layer(layer_name, geom_type, dir_name)
         feature = self.get_feature(id_bloque, geom_type)
 
         if layer and feature:
             self.write_feature(feature, layer, id_bloque)
 
 
-    def get_layer(self, layer_name, geom_type, ua):
+    def get_layer(self, layer_name, geom_type, dir_name):
         """ get layer from project """
-
-        dir_name = f"{self.get_form_type()}_{ua}"
 
         layer_path = os.path.join(self.parent.dlg.extractblocks_folder.filePath(), dir_name, layer_name + ".gpkg")
 
