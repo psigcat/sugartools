@@ -22,6 +22,7 @@ CSV_PARAMS_COORDS_EW = '&xField=X&yField=Z'
 CSV_PARAMS_COORDS_NS = '&xField=Y&yField=Z'
 CSV_PARAMS_COORDS_EW_NEG = '&xField=X_NEG&yField=Z'
 CSV_PARAMS_COORDS_NS_NEG = '&xField=Y_NEG&yField=Z'
+SECTIONS_LAYOUT_NAME = 'sections'
 
 # copia de site_params.py
 SITES = {
@@ -125,38 +126,38 @@ class SectionsTool():
             widget.addItem(file)
 
 
-    def fill_layer(self):
-        """ show all layers in combobox """
+    # def fill_layer(self):
+    #     """ show all layers in combobox """
 
-        self.parent.dlg.layer.clear()
-        self.parent.dlg.layer.addItem(COMBO_SELECT)
-        for group in QgsProject.instance().layerTreeRoot().children():
-            #self.add_layer_tree_item(self.getLayerTree(group))
-            self.getLayerTree(group)
+    #     self.parent.dlg.layer.clear()
+    #     self.parent.dlg.layer.addItem(COMBO_SELECT)
+    #     for group in QgsProject.instance().layerTreeRoot().children():
+    #         #self.add_layer_tree_item(self.getLayerTree(group))
+    #         self.getLayerTree(group)
 
-        # select active layer
-        if self.parent.iface.activeLayer():
-            self.parent.dlg.layer.setCurrentText(self.parent.iface.activeLayer().name())
-        else:
-            self.parent.dlg.layer.setCurrentIndex(1)
-
-
-    def getLayerTree(self, node):
-        if isinstance(node, QgsLayerTreeGroup):
-            for child in node.children():
-                self.getLayerTree(child)
-        elif isinstance(node, QgsLayerTreeNode):
-            self.parent.dlg.layer.addItem(node.name())
+    #     # select active layer
+    #     if self.parent.iface.activeLayer():
+    #         self.parent.dlg.layer.setCurrentText(self.parent.iface.activeLayer().name())
+    #     else:
+    #         self.parent.dlg.layer.setCurrentIndex(1)
 
 
-    def fill_layout(self):
-        """ show all layouts in combobox """
+    # def getLayerTree(self, node):
+    #     if isinstance(node, QgsLayerTreeGroup):
+    #         for child in node.children():
+    #             self.getLayerTree(child)
+    #     elif isinstance(node, QgsLayerTreeNode):
+    #         self.parent.dlg.layer.addItem(node.name())
 
-        self.parent.dlg.layout.clear()
-        #self.parent.dlg.layout.addItem(COMBO_SELECT)
-        layout_manager = QgsProject.instance().layoutManager()
-        for layout in layout_manager.printLayouts():
-            self.parent.dlg.layout.addItem(layout.name())
+
+    # def fill_layout(self):
+    #     """ show all layouts in combobox """
+
+    #     self.parent.dlg.layout.clear()
+    #     #self.parent.dlg.layout.addItem(COMBO_SELECT)
+    #     layout_manager = QgsProject.instance().layoutManager()
+    #     for layout in layout_manager.printLayouts():
+    #         self.parent.dlg.layout.addItem(layout.name())
 
 
     def load_file(self, file, group, csv_params_coords, prefix, inverted=False):
@@ -259,11 +260,8 @@ class SectionsTool():
         return [os.path.join(self.secciones_path, folder, f) for f in os.listdir(points_blocks_folder) if os.path.isfile(os.path.join(points_blocks_folder, f)) and f.find(pattern) > 0]
 
 
-    def import_files(self, active_tab):
+    def import_files(self):
         """ import all files from selected workspace """
-
-        if not self.utils.check_mandatory(active_tab):
-            return False
 
         # 0. crear grupo
         # 1. recorrer todos los ficheros del workspace
@@ -329,8 +327,8 @@ class SectionsTool():
             self.parent.dlg.messageBar.pushMessage(f"No files imported, workspace has to have UA folder with points data or FO folder with blocks data.", level=Qgis.Warning)
             return
 
-        self.fill_layer()
-        self.fill_layout()
+        #self.fill_layer()
+        #self.fill_layout()
 
         # close dialog
         self.parent.dlg.close()
@@ -391,9 +389,10 @@ class SectionsTool():
     def write_layout_vars(self, layout):
         """ write variables to composition """
 
-        if self.parent.dlg.layer.currentText() == COMBO_SELECT or self.parent.dlg.layer.currentText() == "":
-            return False
-        layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
+        # if self.parent.dlg.layer.currentText() == COMBO_SELECT or self.parent.dlg.layer.currentText() == "":
+        #     return False
+        # layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
+        layer = self.parent.iface.activeLayer()
 
         # var_name = "yacimiento"
         # var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
@@ -595,20 +594,20 @@ class SectionsTool():
         return layer_clone
 
 
-    def load_layout(self, active_tab):
-        """ only show selected layer and load into layout """
+    # def load_layout(self, active_tab):
+    #     """ only show selected layer and load into layout """
 
-        if not self.utils.check_mandatory(active_tab):
-            self.self.parent.iface.messageBar().pushMessage(f"You have to import data and a layout first.", level=Qgis.Warning, duration=3)
-            return False
+    #     if not self.utils.check_mandatory(active_tab):
+    #         self.self.parent.iface.messageBar().pushMessage(f"You have to import data and a layout first.", level=Qgis.Warning, duration=3)
+    #         return False
 
-        # open layout
-        layout_manager = QgsProject.instance().layoutManager()
-        layout = layout_manager.layoutByName(self.parent.dlg.layout.currentText())
-        self.parent.iface.openLayoutDesigner(layout)
+    #     # open layout
+    #     layout_manager = QgsProject.instance().layoutManager()
+    #     layout = layout_manager.layoutByName(self.parent.dlg.layout.currentText())
+    #     self.parent.iface.openLayoutDesigner(layout)
 
-        # close dialog
-        self.parent.dlg.close()
+    #     # close dialog
+    #     self.parent.dlg.close()
 
 
     def onLayoutLoaded(self):
@@ -617,7 +616,7 @@ class SectionsTool():
         print("onLayoutLoaded")
 
         layout_manager = QgsProject.instance().layoutManager()
-        layout = layout_manager.layoutByName(self.parent.dlg.layout.currentText())
+        layout = layout_manager.layoutByName(SECTIONS_LAYOUT_NAME)
         #layout.refreshed.connect(lambda:self.write_layer_vars(self.parent.iface.activeLayer()))
         self.write_layout_vars(layout)
         self.write_layout_thickness(layout)
@@ -643,9 +642,7 @@ class SectionsTool():
                 self.toggle_layer_node(child)
         elif isinstance(node, QgsLayerTreeNode):
             if isinstance(self.parent.iface.activeLayer(), QgsVectorLayer):
-                node.setItemVisibilityChecked(node.name() == self.parent.iface.activeLayer().name() or node.name() == self.parent.dlg.layer.currentText())
-            else:
-                node.setItemVisibilityChecked(node.name() == self.parent.dlg.layer.currentText())
+                node.setItemVisibilityChecked(node.name() == self.parent.iface.activeLayer().name())
 
 
     def hide_all_layers_but_selected(self):
@@ -661,18 +658,19 @@ class SectionsTool():
         self.hide_all_layers_but_selected()
         if self.parent.iface.activeLayer():
             active_layer_name = self.parent.iface.activeLayer().name()
-            self.parent.dlg.layer.setCurrentText(active_layer_name)
+            #self.parent.dlg.layer.setCurrentText(active_layer_name)
             self.parent.iface.zoomToActiveLayer()
 
 
     def set_and_zoom_active_layer(self):
         """ set active layer and zoom to it """
 
-        if self.parent.dlg.layer.currentText() == COMBO_SELECT or self.parent.dlg.layer.currentText() == "":
-            return False
+        # if self.parent.dlg.layer.currentText() == COMBO_SELECT or self.parent.dlg.layer.currentText() == "":
+        #     return False
 
         self.hide_all_layers_but_selected()
 
-        active_layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
+        #active_layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
+        active_layer = self.parent.iface.activeLayer()
         self.parent.iface.setActiveLayer(active_layer)
         self.parent.iface.zoomToActiveLayer()

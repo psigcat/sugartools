@@ -215,8 +215,8 @@ class utils:
         layout_added = project.layoutManager().addLayout(layout)
 
         # add to combo box
-        if layout_added:
-            self.parent.dlg.layout.addItem(layout.name())
+        # if layout_added:
+        #     self.parent.dlg.layout.addItem(layout.name())
 
 
     def read_database_config(self):
