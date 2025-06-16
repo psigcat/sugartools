@@ -327,7 +327,7 @@ class StructuresTool():
     def onLayoutLoaded(self):
         """ load spatial bookmarks when layout designer is opened """
 
-        print("active", self.active_structure)
+        # print("active", self.active_structure)
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName("structures")
 

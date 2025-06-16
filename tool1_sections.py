@@ -602,7 +602,20 @@ class SectionsTool():
             self.self.parent.iface.messageBar().pushMessage(f"You have to import data and a layout first.", level=Qgis.Warning, duration=3)
             return False
 
-        # get selected layout
+        # open layout
+        layout_manager = QgsProject.instance().layoutManager()
+        layout = layout_manager.layoutByName(self.parent.dlg.layout.currentText())
+        self.parent.iface.openLayoutDesigner(layout)
+
+        # close dialog
+        self.parent.dlg.close()
+
+
+    def onLayoutLoaded(self):
+        """ set layout vars when layout designer is opened """
+
+        print("onLayoutLoaded")
+
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName(self.parent.dlg.layout.currentText())
         #layout.refreshed.connect(lambda:self.write_layer_vars(self.parent.iface.activeLayer()))
@@ -614,12 +627,6 @@ class SectionsTool():
         map_item = layout.itemById(LAYOUT_MAP_ITEM)
         map_canvas = self.parent.iface.mapCanvas()
         map_item.zoomToExtent(map_canvas.extent())
-
-        # open layout
-        self.parent.iface.openLayoutDesigner(layout)
-
-        # close dialog
-        self.parent.dlg.close()
 
 
     def open_expr_builder(self):
