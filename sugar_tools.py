@@ -188,9 +188,9 @@ class SugarTools:
         self.dlg.buttonBox.accepted.disconnect()
         self.dlg.buttonBox.accepted.connect(self.process)
         self.dlg.tabWidgetMain.currentChanged.connect(self.tab_changed)
-        self.dlg.section_ew.stateChanged.connect(self.sections_tool.fill_layer)
-        self.dlg.section_ns.stateChanged.connect(self.sections_tool.fill_layer)
-        self.dlg.layer.currentTextChanged.connect(self.sections_tool.set_and_zoom_active_layer)
+        # self.dlg.section_ew.stateChanged.connect(self.sections_tool.fill_layer)
+        # self.dlg.section_ns.stateChanged.connect(self.sections_tool.fill_layer)
+        #self.dlg.layer.currentTextChanged.connect(self.sections_tool.set_and_zoom_active_layer)
         self.dlg.filter_expr_btn.clicked.connect(self.sections_tool.open_expr_builder)
         self.dlg.radioPoints.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioBlocks.toggled.connect(self.sections_tool.point_or_block)
@@ -201,12 +201,14 @@ class SugarTools:
         self.dlg.import_shapefiles_btn.clicked.connect(self.utils.import_shapefiles)
         self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
+
         iface.layerTreeView().currentLayerChanged.connect(self.sections_tool.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
+        iface.layoutDesignerOpened.connect(self.sections_tool.onLayoutLoaded)
 
         # sections
-        self.sections_tool.fill_layer()
-        self.sections_tool.fill_layout()
+        # self.sections_tool.fill_layer()
+        # self.sections_tool.fill_layout()
 
         # structures
         self.structures_tool.setup()
@@ -239,14 +241,14 @@ class SugarTools:
         """ execute actions when ok clicked """
 
         main_tab = self.dlg.tabWidgetMain.currentWidget().objectName()
-        active_tab = self.dlg.tabWidgetSections.currentWidget().objectName()
+        #active_tab = self.dlg.tabWidgetSections.currentWidget().objectName()
 
         if main_tab == "tabSections":
-            if active_tab == "tabImport":
-                self.sections_tool.import_files(active_tab)
+            #if active_tab == "tabImport":
+            self.sections_tool.import_files()
 
-            elif active_tab == "tabLayout":
-                self.sections_tool.load_layout(active_tab)
+            # elif active_tab == "tabLayout":
+            #     self.sections_tool.load_layout(active_tab)
 
         elif main_tab == "tabStructures":
             self.structures_tool.process_structures()
