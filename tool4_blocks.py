@@ -169,7 +169,7 @@ class BlocksTool():
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_points.qml")
         blocks_layer.loadNamedStyle(symbology_path)
 
-        #self.utils.make_permanent(blocks_layer, self.parent.dlg.blocks_workspace.filePath())
+        #self.utils.save_layer_gpkg(blocks_layer, self.parent.dlg.blocks_workspace.filePath())
 
         self.points_layer = blocks_layer
 
@@ -197,8 +197,8 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.", level=Qgis.Critical, duration=3)
             return
 
-        convex_hull = self.draw_polygon()
-        self.draw_line(convex_hull)
+        #convex_hull = self.draw_polygon()
+        #self.draw_line(convex_hull)
         
         if not self.draw_polygon3d():
             self.parent.dlg.messageBar.pushMessage(f"Polygons and lines written to selected layers, but not polygons3d", level=Qgis.Success)
@@ -259,7 +259,7 @@ class BlocksTool():
         layer.commitChanges()
 
         # QgsProject.instance().addMapLayer(layer)
-        # self.utils.make_permanent(layer, self.parent.dlg.blocks_workspace.filePath())
+        # self.utils.save_layer_gpkg(layer, self.parent.dlg.blocks_workspace.filePath())
 
         # write output to selected layer
         params = {
@@ -519,7 +519,7 @@ class BlocksTool():
             return
 
         QgsProject.instance().addMapLayer(hull_layer)
-        self.utils.make_permanent(hull_layer, self.parent.dlg.blocks_workspace.filePath())
+        self.utils.save_layer_gpkg(hull_layer, self.parent.dlg.blocks_workspace.filePath())
 
         # for now we can't merge the new block into the 3d layer
         # result = processing.run("native:mergevectorlayers", {
@@ -546,7 +546,7 @@ class BlocksTool():
         # layer_name = self.parent.dlg.blocks_3d_layer.currentText()
 
         # path = os.path.dirname(threed_layer_path)
-        # self.utils.make_permanent(merged_layer, path)
+        # self.utils.save_layer_gpkg(merged_layer, path)
         # #QgsProject.instance().addMapLayer(merged_layer)
 
         #Save the new layer to the GeoPackage (mandatory has to be a separate gpkg file with only that layer with a Multipolygon3D geometry)

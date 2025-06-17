@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import Qt, QFile
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
 
 import os
 
@@ -38,8 +38,8 @@ class utils:
         QgsProject.instance().layerTreeRoot().removeChildNode(group)
 
 
-    def make_permanent(self, layer, path):
-        """ save temporary layer to gpkg """
+    def save_layer_gpkg(self, layer, path):
+        """ save layer as gpkg """
 
         #print("create file", layer, path)
 
@@ -282,3 +282,27 @@ class utils:
         messageBar.pushWidget(progressMessageBar, Qgis.Info)
 
         return progress
+
+
+    def select_layer(self):
+        """ zoom to selected layer and hide all not selected layers """
+
+        self.hide_all_layers_but_selected()
+        if self.parent.iface.activeLayer():
+            self.parent.iface.zoomToActiveLayer()
+
+
+    def hide_all_layers_but_selected(self):
+        """ hide all layers in layer tree but selected, nor layers belonging to selected layer group """
+
+        for group in QgsProject.instance().layerTreeRoot().children():
+            self.toggle_layer_node(group)
+
+
+    def toggle_layer_node(self, node):
+        if isinstance(node, QgsLayerTreeGroup):
+            for child in node.children():
+                self.toggle_layer_node(child)
+        elif isinstance(node, QgsLayerTreeNode):
+            if isinstance(self.parent.iface.activeLayer(), QgsVectorLayer):
+                node.setItemVisibilityChecked(node.name() == self.parent.iface.activeLayer().name())

@@ -163,7 +163,7 @@ class SectionsTool():
     def load_file(self, file, group, csv_params_coords, prefix, inverted=False):
         """ load csv file as vector layer """
 
-        print("import file", file)
+        # print("import file", file)
 
         inverted_str = ""
         if inverted:
@@ -188,26 +188,32 @@ class SectionsTool():
 
         layer_name = prefix + "_" + layer_name
         csv_layer = QgsVectorLayer(uri, "Pnt" + layer_name + inverted_str, "delimitedtext")
-        QgsProject.instance().addMapLayer(csv_layer, False)
+
+        # save to geopackage
+        path = os.path.join(self.secciones_path, "sections")
+        self.utils.save_layer_gpkg(csv_layer, path)
+
+        gpkg_layer = QgsVectorLayer(os.path.join(path, csv_layer.name() + ".gpkg"), csv_layer.name())
+        QgsProject.instance().addMapLayer(gpkg_layer, False)
 
         # check if group already does exist
         layer_group = self.get_layer_group("Sec" + layer_name, group)
         if not layer_group:
             layer_group = self.utils.create_group("Sec" + layer_name, group)
         # insert as first element in group to assure that it does appear before blocks
-        layer_group.insertChildNode(0, QgsLayerTreeLayer(csv_layer))
+        layer_group.insertChildNode(0, QgsLayerTreeLayer(gpkg_layer))
 
         if file.find(POINT_PATTERN) > -1:
-            self.filter_layer_points(csv_layer, layer_group)
-            self.set_symbology(csv_layer)
+            self.filter_layer_points(gpkg_layer, layer_group)
+            self.set_symbology(gpkg_layer)
 
         if (self.parent.dlg.radioBlocks.isChecked() or (self.parent.dlg.radioPointsBlocks.isChecked() and file.find(BLOCK_PATTERN) > -1)) and self.parent.dlg.option_polygons.isChecked():
-            new_layer = self.create_blocks(csv_layer, prefix, layer_group, file)
+            new_layer = self.create_blocks(gpkg_layer, prefix, layer_group, file)
             self.write_layer_vars(new_layer)
         else:
-            self.write_layer_vars(csv_layer)
+            self.write_layer_vars(gpkg_layer)
             # !!! only for first layer !!!
-            # self.write_layout_yacimiento(csv_layer)
+            # self.write_layout_yacimiento(gpkg_layer)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -316,16 +322,18 @@ class SectionsTool():
                 for file in file_list:
                     self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
 
-        # hide all layers
-        self.parent.iface.setActiveLayer(None)
-        self.hide_all_layers_but_selected()
-
         # remove progress bar
         self.parent.dlg.messageBar.clearWidgets()
 
         if not success:
             self.parent.dlg.messageBar.pushMessage(f"No files imported, workspace has to have UA folder with points data or FO folder with blocks data.", level=Qgis.Warning)
             return
+
+        # select first layers
+        first_layer = self.get_first_layer(QgsProject.instance().layerTreeRoot())
+        if first_layer:
+            self.parent.iface.setActiveLayer(first_layer)
+        self.utils.select_layer()
 
         #self.fill_layer()
         #self.fill_layout()
@@ -540,7 +548,7 @@ class SectionsTool():
         result['OUTPUT'].triggerRepaint()
 
         path = os.path.join(self.secciones_path, "sections")
-        self.utils.make_permanent(result['OUTPUT'], path)
+        self.utils.save_layer_gpkg(result['OUTPUT'], path)
 
         # delete point layer
         if self.parent.dlg.option_polygons.isChecked(): #and self.parent.dlg.radioPointsBlocks.isChecked() and layer.name().find(BLOCK_PATTERN) > -1:
@@ -636,41 +644,28 @@ class SectionsTool():
             self.parent.dlg.filter_expr.setText(expr_dialog.expressionText())
 
 
-    def toggle_layer_node(self, node):
-        if isinstance(node, QgsLayerTreeGroup):
-            for child in node.children():
-                self.toggle_layer_node(child)
-        elif isinstance(node, QgsLayerTreeNode):
-            if isinstance(self.parent.iface.activeLayer(), QgsVectorLayer):
-                node.setItemVisibilityChecked(node.name() == self.parent.iface.activeLayer().name())
-
-
-    def hide_all_layers_but_selected(self):
-        """ hide all layers in layer tree but selected, nor layers belonging to selected layer group """
-
-        for group in QgsProject.instance().layerTreeRoot().children():
-            self.toggle_layer_node(group)
-
-
-    def select_layer(self):
-        """ select layer in combo box and zoom to it """
-
-        self.hide_all_layers_but_selected()
-        if self.parent.iface.activeLayer():
-            active_layer_name = self.parent.iface.activeLayer().name()
-            #self.parent.dlg.layer.setCurrentText(active_layer_name)
-            self.parent.iface.zoomToActiveLayer()
-
-
     def set_and_zoom_active_layer(self):
         """ set active layer and zoom to it """
 
         # if self.parent.dlg.layer.currentText() == COMBO_SELECT or self.parent.dlg.layer.currentText() == "":
         #     return False
 
-        self.hide_all_layers_but_selected()
+        self.utils.hide_all_layers_but_selected()
 
         #active_layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
         active_layer = self.parent.iface.activeLayer()
         self.parent.iface.setActiveLayer(active_layer)
         self.parent.iface.zoomToActiveLayer()
+
+
+    def get_first_layer(self, node):
+        """ set first layer from layer tree active """
+
+        if isinstance(node, QgsLayerTreeLayer):
+            return node.layer()
+        elif hasattr(node, 'children'):
+            for child in node.children():
+                result = self.get_first_layer(child)
+                if result:
+                    return result
+        return None

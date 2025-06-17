@@ -146,7 +146,7 @@ class ExtractblocksTool():
 
         path = self.parent.dlg.extractblocks_folder.filePath()
         path = os.path.join(path, dir_name)
-        self.utils.make_permanent(layer, path)
+        self.utils.save_layer_gpkg(layer, path)
 
         #print("create_layer", layer_name, geom_type, path)
 

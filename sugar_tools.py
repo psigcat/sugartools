@@ -202,7 +202,7 @@ class SugarTools:
         self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
 
-        iface.layerTreeView().currentLayerChanged.connect(self.sections_tool.select_layer)
+        iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
         iface.layoutDesignerOpened.connect(self.sections_tool.onLayoutLoaded)
 

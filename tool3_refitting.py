@@ -528,7 +528,7 @@ class RefittingTool():
         layer.loadNamedStyle(symbology_path)
         #layer.triggerRepaint()
 
-        self.utils.make_permanent(layer, path)
+        self.utils.save_layer_gpkg(layer, path)
 
 
     def create_line_layer(self, path, group):
@@ -557,4 +557,4 @@ class RefittingTool():
         layer.loadNamedStyle(symbology_path)
         #layer.triggerRepaint()
 
-        self.utils.make_permanent(layer, path)
+        self.utils.save_layer_gpkg(layer, path)

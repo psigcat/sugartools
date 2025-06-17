@@ -138,7 +138,7 @@ class StructuresTool():
 
         layer = self.utils.create_vector_layer(f"{name}_{type}_{geom_type}", geom_type, group, field_names)
         layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name, "layers_" + name)
-        self.utils.make_permanent(layer, layer_path)
+        self.utils.save_layer_gpkg(layer, layer_path)
 
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_{geom_type}.qml")
         layer.loadNamedStyle(symbology_path)
@@ -211,7 +211,7 @@ class StructuresTool():
         point_layer.triggerRepaint()
 
         path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name, "layers_" + name)
-        self.utils.make_permanent(point_layer, path)
+        self.utils.save_layer_gpkg(point_layer, path)
 
         return point_layer
 
