@@ -207,6 +207,11 @@ class SectionsTool():
             self.filter_layer_points(gpkg_layer, layer_group)
             self.set_symbology(gpkg_layer)
 
+            # save style to gpkg
+            symbology = self.parent.dlg.symbology.currentText()
+            symbology_name = symbology.split(".qml")[0]
+            gpkg_layer.saveStyleToDatabase(symbology_name, "", True, "")
+
         if (self.parent.dlg.radioBlocks.isChecked() or (self.parent.dlg.radioPointsBlocks.isChecked() and file.find(BLOCK_PATTERN) > -1)) and self.parent.dlg.option_polygons.isChecked():
             new_layer = self.create_blocks(gpkg_layer, prefix, layer_group, file)
             self.write_layer_vars(new_layer)
