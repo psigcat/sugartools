@@ -590,19 +590,29 @@ class SectionsTool():
         layer.setSubsetString(expr)
 
         if self.parent.dlg.filter_expr.text() != "" and self.parent.dlg.symbology_overlay.currentText() != COMBO_SELECT:
-            duplicate_layer = self.duplicate_layer(layer, group)
+            duplicate_layer = self.duplicate_layer(layer, group, expr)
             self.set_symbology_overlay(duplicate_layer)
 
 
-    def duplicate_layer(self, layer, group):
+    def duplicate_layer(self, layer, group, expr):
         """ duplicate existing layer in layer group """
-
-        print("duplicate overlay", layer.name())
 
         layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
         QgsProject.instance().addMapLayer(layer_clone, False)
         # insert after points, but before blocks
         group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
+
+        layer_clone.setName(layer.name() + "_overlay")
+        #!!!for any reason when selecting by expression, the written layer is empty!!!
+        #layer_clone.selectByExpression(expr)
+        path = os.path.join(self.secciones_path, "sections")
+        #self.utils.save_layer_gpkg(layer_clone, path, True)
+        self.utils.save_layer_gpkg(layer_clone, path, False)
+
+        # save style to gpkg
+        # symbology = self.parent.dlg.symbology_overlay.currentText()
+        # symbology_name = symbology.split(".qml")[0]
+        # layer_clone.saveStyleToDatabase(symbology_name, "", True, "")
 
         return layer_clone
 

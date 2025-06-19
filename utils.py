@@ -38,7 +38,7 @@ class utils:
         QgsProject.instance().layerTreeRoot().removeChildNode(group)
 
 
-    def save_layer_gpkg(self, layer, path):
+    def save_layer_gpkg(self, layer, path, only_selected=False):
         """ save layer as gpkg """
 
         #print("create file", layer, path)
@@ -53,6 +53,9 @@ class utils:
         options.layerName = layer.name()
         options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
         options.ct = QgsCoordinateTransform(layer.crs(), QgsCoordinateReferenceSystem.fromEpsgId(25831), QgsProject.instance())
+
+        if only_selected:
+            options.onlySelectedFeatures = True
 
         QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
 
