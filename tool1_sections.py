@@ -646,9 +646,10 @@ class SectionsTool():
         #self.write_layout_yacimiento(layout)
 
         # set map extent to match main canvas extent
-        map_item = layout.itemById(LAYOUT_MAP_ITEM)
-        map_canvas = self.parent.iface.mapCanvas()
-        map_item.zoomToExtent(map_canvas.extent())
+        if layout != None:
+            map_item = layout.itemById(LAYOUT_MAP_ITEM)
+            map_canvas = self.parent.iface.mapCanvas()
+            map_item.zoomToExtent(map_canvas.extent())
 
 
     def open_expr_builder(self):

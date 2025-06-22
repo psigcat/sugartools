@@ -70,13 +70,9 @@ class StructuresTool():
         group_ns = self.utils.create_group(name + "_ns")
         group_ns_helper = self.utils.create_group("helper", group_ns)
 
-        # get view formas EW
+        # get views from db
         rows_ew = self.create_structure(name, "ew", group_ew_helper)
-        self.create_structure_empty(name, "ew", group_ew)
-
-        # get view formas NS
         rows_ns = self.create_structure(name, "ns", group_ns_helper)
-        self.create_structure_empty(name, "ns", group_ns)
 
         if not rows_ew and not rows_ns:
             self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning, duration=3)
@@ -84,6 +80,10 @@ class StructuresTool():
             self.utils.remove_group(group_ew)
             self.utils.remove_group(group_ns)
             return
+
+        # create containers
+        self.create_structure_empty(name, "ew", group_ew)
+        self.create_structure_empty(name, "ns", group_ns)
 
         # get view formas map
         self.create_structure(name, "map", group_map_helper)
@@ -126,6 +126,7 @@ class StructuresTool():
         self.create_structures_empty(name, type, "linestring", group)
         self.create_structures_empty(name, type, "multilinestring", group)
         self.create_map_theme(name, type)
+        self.create_map_theme(name, type, True)
 
 
     def create_structures_empty(self, name, type, geom_type, group):
@@ -216,28 +217,26 @@ class StructuresTool():
         return point_layer
 
 
-    def create_map_theme(self, name, type):
+    def create_map_theme(self, name, type, print=False):
         """ create map theme from given layers """
 
         mapThemesCollection = QgsProject.instance().mapThemeCollection()
         mapThemes = mapThemesCollection.mapThemes()
         layersToChanges = [
-            f"{name}_{type}", f"{name}_{type}_label", 
-            f"{name}_{type}_polygon", f"{name}_{type}_polygon_label",
-            f"{name}_{type}_linestring", f"{name}_{type}_linestring_label",
-            f"{name}_{type}_multilinestring", f"{name}_{type}_multilinestring_label",
+            #f"{name}_{type}",
+            #f"{name}_{type}_label", 
+            f"{name}_{type}_polygon",
+            f"{name}_{type}_linestring",
+            f"{name}_{type}_multilinestring",
         ]
         if type == "map":
-            layersToChanges.append(f"{name}_map_ns")
-            layersToChanges.append(f"{name}_map_ns_label")
-            layersToChanges.append(f"{name}_map_ew")
-            layersToChanges.append(f"{name}_map_ew_label")
+            #layersToChanges.append(f"{name}_map_ns")
+            #layersToChanges.append(f"{name}_map_ns_label")
+            #layersToChanges.append(f"{name}_map_ew")
+            #layersToChanges.append(f"{name}_map_ew_label")
             layersToChanges.append(f"{name}_map_polygon")
-            layersToChanges.append(f"{name}_map_polygon_label")
             layersToChanges.append(f"{name}_map_line")
-            layersToChanges.append(f"{name}_map_line_label")
             layersToChanges.append(f"{name}_map_multiline")
-            layersToChanges.append(f"{name}_map_multiline_label")
 
         for group in QgsProject.instance().layerTreeRoot().children():
             for subgroup in group.children():
@@ -331,6 +330,9 @@ class StructuresTool():
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName("structures")
 
+        # set active structure to layout variable
+        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", self.active_structure)
+
         if self.active_structure:
             bookmark_manager = QgsProject.instance().bookmarkManager()
             bookmark_map = bookmark_manager.bookmarkById(f"{self.active_structure}_map")
@@ -338,16 +340,10 @@ class StructuresTool():
             bookmark_ew = bookmark_manager.bookmarkById(f"{self.active_structure}_ew")
 
             if bookmark_map and bookmark_ns and bookmark_ew:
-                layout = QgsProject.instance().layoutManager().layoutByName("structures")
                 self.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
-
-            # set active structure to layout variable
-            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", self.active_structure)
 
         else:
             # set active structure to name extracted from first selected layer
-            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", self.active_structure)
-
             if self.parent.iface.activeLayer():
                 name = self.parent.iface.activeLayer().name()
                 name = name.split("_")[0]
