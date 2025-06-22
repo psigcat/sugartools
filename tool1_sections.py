@@ -1,7 +1,7 @@
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QProgressBar
 from qgis.gui import QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsExpression
 
 import os
 import processing
@@ -232,25 +232,16 @@ class SectionsTool():
         return False
 
 
-    def set_symbology(self, layer):
+    def set_symbology(self, layer, overlay=False):
         """ set symbology from selected qml file """
 
         symbology = self.parent.dlg.symbology.currentText()
+        if overlay:
+            symbology = self.parent.dlg.symbology_overlay.currentText()
+
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, symbology)
         layer.loadNamedStyle(symbology_path)
         layer.triggerRepaint()
-
-
-    def set_symbology_overlay(self, layer):
-        """ set symbology defined by filter from selected qml file """
-
-        filter_text = self.parent.dlg.filter_expr.text()
-        symbology_overlay = self.parent.dlg.symbology_overlay.currentText()
-        if filter_text != "" and symbology_overlay != COMBO_SELECT:
-            layer.setSubsetString(filter_text)
-            symbology_overlay_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, symbology_overlay)
-            layer.loadNamedStyle(symbology_overlay_path)
-            layer.triggerRepaint()
 
 
     def get_file_list(self, pattern):
@@ -590,31 +581,62 @@ class SectionsTool():
         layer.setSubsetString(expr)
 
         if self.parent.dlg.filter_expr.text() != "" and self.parent.dlg.symbology_overlay.currentText() != COMBO_SELECT:
-            duplicate_layer = self.duplicate_layer(layer, group, expr)
-            self.set_symbology_overlay(duplicate_layer)
+            self.duplicate_layer(layer, group)
 
 
-    def duplicate_layer(self, layer, group, expr):
+    def duplicate_layer(self, layer, group):
         """ duplicate existing layer in layer group """
 
-        layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay", layer.providerType())
-        QgsProject.instance().addMapLayer(layer_clone, False)
-        # insert after points, but before blocks
-        group.insertChildNode(1, QgsLayerTreeLayer(layer_clone))
-
+        layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay")
         layer_clone.setName(layer.name() + "_overlay")
-        #!!!for any reason when selecting by expression, the written layer is empty!!!
-        #layer_clone.selectByExpression(expr)
         path = os.path.join(self.secciones_path, "sections")
-        #self.utils.save_layer_gpkg(layer_clone, path, True)
         self.utils.save_layer_gpkg(layer_clone, path, False)
 
-        # save style to gpkg
-        # symbology = self.parent.dlg.symbology_overlay.currentText()
-        # symbology_name = symbology.split(".qml")[0]
-        # layer_clone.saveStyleToDatabase(symbology_name, "", True, "")
+        layer_final = self.remove_filtered_features(layer_clone.name())
+        QgsProject.instance().addMapLayer(layer_final, False)
+        # insert after points, but before blocks
+        group.insertChildNode(1, QgsLayerTreeLayer(layer_final))
 
-        return layer_clone
+        # save style to gpkg
+        self.set_symbology(layer_final, True)
+        symbology = self.parent.dlg.symbology_overlay.currentText()
+        symbology_name = symbology.split(".qml")[0]
+        layer_final.saveStyleToDatabase(symbology_name, "", True, "")
+
+
+    def remove_filtered_features(self, layer_name):
+        """ remove all features from vector layer which are filtered out """
+
+        path = os.path.join(self.secciones_path, "sections")
+        layer = QgsVectorLayer(path + f"/{layer_name}.gpkg|layername={layer_name}", layer_name)
+
+        # get expression
+        filter_text = self.parent.dlg.filter_expr.text()
+        symbology_overlay = self.parent.dlg.symbology_overlay.currentText()
+
+        # check for expression to delete filtered out features
+        if filter_text == "" or symbology_overlay == COMBO_SELECT:
+            print("no filter to apply, so nothing to delete")
+            return layer
+
+        # Use the inverse expression to get filtered-out features
+        inverse_expression = f'NOT ({filter_text})'
+        request = QgsFeatureRequest(QgsExpression(inverse_expression))
+        ids_to_delete = [f.id() for f in layer.getFeatures(request)]
+
+        # Delete the features
+        if ids_to_delete:
+            layer.startEditing()
+            layer.deleteFeatures(ids_to_delete)
+            #print(f"Deleted {len(ids_to_delete)} features.")
+
+        # Commit the changes
+        if not layer.commitChanges():
+            print("Failed to commit changes:", layer.commitErrors())
+
+        layer.setSubsetString("")
+
+        return layer
 
 
     # def load_layout(self, active_tab):
