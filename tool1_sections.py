@@ -194,23 +194,23 @@ class SectionsTool():
         self.utils.save_layer_gpkg(csv_layer, path)
 
         gpkg_layer = QgsVectorLayer(os.path.join(path, csv_layer.name() + ".gpkg"), csv_layer.name())
-        QgsProject.instance().addMapLayer(gpkg_layer, False)
+        #QgsProject.instance().addMapLayer(gpkg_layer, False)
 
         # check if group already does exist
         layer_group = self.get_layer_group("Sec" + layer_name, group)
         if not layer_group:
             layer_group = self.utils.create_group("Sec" + layer_name, group)
         # insert as first element in group to assure that it does appear before blocks
-        layer_group.insertChildNode(0, QgsLayerTreeLayer(gpkg_layer))
+        #layer_group.insertChildNode(0, QgsLayerTreeLayer(gpkg_layer))
 
         if file.find(POINT_PATTERN) > -1:
             self.filter_layer_points(gpkg_layer, layer_group)
-            self.set_symbology(gpkg_layer)
+            # self.set_symbology(gpkg_layer)
 
-            # save style to gpkg
-            symbology = self.parent.dlg.symbology.currentText()
-            symbology_name = symbology.split(".qml")[0]
-            gpkg_layer.saveStyleToDatabase(symbology_name, "", True, "")
+            # # save style to gpkg
+            # symbology = self.parent.dlg.symbology.currentText()
+            # symbology_name = symbology.split(".qml")[0]
+            # gpkg_layer.saveStyleToDatabase(symbology_name, "", True, "")
 
         if (self.parent.dlg.radioBlocks.isChecked() or (self.parent.dlg.radioPointsBlocks.isChecked() and file.find(BLOCK_PATTERN) > -1)) and self.parent.dlg.option_polygons.isChecked():
             new_layer = self.create_blocks(gpkg_layer, prefix, layer_group, file)
@@ -566,12 +566,12 @@ class SectionsTool():
         if self.parent.dlg.exclude_red_points.isChecked():
             if expr != "":
                 expr += " AND "
-            expr = "bol_nivelok = 'true'"
+            expr = "bol_nivelok = true"
 
         if self.parent.dlg.exclude_duplicated_points.isChecked():
             if expr != "":
                 expr += " AND "
-            expr += "bol_duplicado = 'false'"
+            expr += "bol_duplicado = false"
 
         if self.parent.dlg.exclude_no_coords.isChecked():
             if expr != "":
@@ -580,19 +580,37 @@ class SectionsTool():
         
         layer.setSubsetString(expr)
 
+        # remove filtered out features  
+        layer_final = layer
+        if expr != "":
+            layer_final = self.remove_filtered_features(layer.name(), False, expr)
+
+        # insert after points, but before blocks
+        QgsProject.instance().addMapLayer(layer_final, False)
+        group.insertChildNode(1, QgsLayerTreeLayer(layer_final))       
+
+        self.set_symbology(layer_final)
+
+        # save style to gpkg
+        symbology = self.parent.dlg.symbology.currentText()
+        symbology_name = symbology.split(".qml")[0]
+        layer_final.saveStyleToDatabase(symbology_name, "", True, "")
+
         if self.parent.dlg.filter_expr.text() != "" and self.parent.dlg.symbology_overlay.currentText() != COMBO_SELECT:
-            self.duplicate_layer(layer, group)
+            self.duplicate_layer(layer_final, group)
 
 
     def duplicate_layer(self, layer, group):
         """ duplicate existing layer in layer group """
+
+        print("make overlay for layer", layer.name())
 
         layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay")
         layer_clone.setName(layer.name() + "_overlay")
         path = os.path.join(self.secciones_path, "sections")
         self.utils.save_layer_gpkg(layer_clone, path, False)
 
-        layer_final = self.remove_filtered_features(layer_clone.name())
+        layer_final = self.remove_filtered_features(layer_clone.name(), True, self.parent.dlg.filter_expr.text())
         QgsProject.instance().addMapLayer(layer_final, False)
         # insert after points, but before blocks
         group.insertChildNode(1, QgsLayerTreeLayer(layer_final))
@@ -604,23 +622,30 @@ class SectionsTool():
         layer_final.saveStyleToDatabase(symbology_name, "", True, "")
 
 
-    def remove_filtered_features(self, layer_name):
+    def remove_filtered_features(self, layer_name, overlay, filter_text):
         """ remove all features from vector layer which are filtered out """
 
         path = os.path.join(self.secciones_path, "sections")
         layer = QgsVectorLayer(path + f"/{layer_name}.gpkg|layername={layer_name}", layer_name)
 
+        print("remove filtered features for layer", layer.name(), len(list(layer.getFeatures())))
+
         # get expression
-        filter_text = self.parent.dlg.filter_expr.text()
-        symbology_overlay = self.parent.dlg.symbology_overlay.currentText()
+        symbology = self.parent.dlg.symbology.currentText()
+        if overlay:
+            filter_text = self.parent.dlg.filter_expr.text()
+            symbology = self.parent.dlg.symbology_overlay.currentText()
+
+        print("active filter", filter_text)
 
         # check for expression to delete filtered out features
-        if filter_text == "" or symbology_overlay == COMBO_SELECT:
+        if filter_text == "" or symbology == COMBO_SELECT:
             print("no filter to apply, so nothing to delete")
             return layer
 
         # Use the inverse expression to get filtered-out features
         inverse_expression = f'NOT ({filter_text})'
+        print("inverse filter", inverse_expression)
         request = QgsFeatureRequest(QgsExpression(inverse_expression))
         ids_to_delete = [f.id() for f in layer.getFeatures(request)]
 
@@ -628,11 +653,11 @@ class SectionsTool():
         if ids_to_delete:
             layer.startEditing()
             layer.deleteFeatures(ids_to_delete)
-            #print(f"Deleted {len(ids_to_delete)} features.")
+            print(f"Deleted {len(ids_to_delete)} features.")
 
         # Commit the changes
         if not layer.commitChanges():
-            print("Failed to commit changes:", layer.commitErrors())
+            print("Failed to commit changes:", layer.name(), layer.commitErrors())
 
         layer.setSubsetString("")
 
