@@ -197,8 +197,8 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.", level=Qgis.Critical, duration=3)
             return
 
-        #convex_hull = self.draw_polygon()
-        #self.draw_line(convex_hull)
+        convex_hull = self.draw_polygon()
+        self.draw_line(convex_hull)
         
         if not self.draw_polygon3d():
             self.parent.dlg.messageBar.pushMessage(f"Polygons and lines written to selected layers, but not polygons3d", level=Qgis.Success)
@@ -427,9 +427,9 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
             return False
 
-        if not self.all_points_valid():
-            self.parent.dlg.messageBar.pushMessage(f"Given 'dib_pieza' different to attribute of at least one point.", level=Qgis.Critical, duration=3)
-            return False
+        # if not self.all_points_valid():
+        #     self.parent.dlg.messageBar.pushMessage(f"Given 'dib_pieza' different to attribute of at least one point.", level=Qgis.Critical, duration=3)
+        #     return False
 
         points = self.get_points_3d()
 
