@@ -1,16 +1,13 @@
-# This file contains metadata for your plugin.
-
-# This file should be included when you package your plugin.# Mandatory items:
-
+# Mandatory items:
 [general]
 name=Sugar Tools
 qgisMinimumVersion=3.0
 description=Aqueological tools for QGIS
-version=0.1
+version=0.2
 author=PSIG
 email=geraldo@servus.at
 
-about=Aqueological tools for QGIS: 1. OrthoSections
+about=Aqueological tools for QGIS
 
 tracker=https://github.com/psigcat/sugartools/issues
 repository=https://github.com/psigcat/sugartools
