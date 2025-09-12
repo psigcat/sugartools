@@ -1,7 +1,7 @@
 # Mandatory items:
 [general]
 name=Sugar Tools
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.38
 description=Aqueological tools for QGIS
 version=0.2
 author=PSIG
