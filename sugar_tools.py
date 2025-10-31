@@ -221,6 +221,11 @@ class SugarTools:
         self.blocks_tool = BlocksTool(self)
         self.blocks_tool.setup()
 
+        # import layouts on startup
+        self.utils.import_layout("layout_sections.qpt")
+        self.utils.import_layout("layout_map.qpt")
+        self.utils.import_layout("layout_structures.qpt")
+
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
