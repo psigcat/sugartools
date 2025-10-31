@@ -5,6 +5,7 @@ from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
 from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
 
 import os
+import configparser
 
 
 COMBO_SELECT = "(Select)"
@@ -20,6 +21,26 @@ class utils:
     def __init__(self, parent):
 
         self.parent = parent
+
+
+    def get_metadata_parameter(self, folder, section="general", parameter="version", file="metadata.txt"):
+        """ Get parameter value from Metadata """
+
+        # Check if metadata file exists
+        metadata_file = os.path.join(folder, file)
+        if not os.path.exists(metadata_file):
+            show_warning(f"Couldn'f find metadata file: {metadata_file}")
+            return None
+
+        value = None
+        try:
+            metadata = configparser.ConfigParser()
+            metadata.read(metadata_file)
+            value = metadata.get(section, parameter)
+        except Exception as e:
+            show_warning(e)
+        finally:
+            return value
 
 
     def create_group(self, group_name, parent=False):

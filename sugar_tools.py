@@ -206,6 +206,10 @@ class SugarTools:
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
         iface.layoutDesignerOpened.connect(self.sections_tool.onLayoutLoaded)
 
+        # Get plugin version from metadata
+        version = self.utils.get_metadata_parameter(self.plugin_dir)
+        self.dlg.setWindowTitle(f"SugarTools v{version}")
+
         # sections
         # self.sections_tool.fill_layer()
         # self.sections_tool.fill_layout()
