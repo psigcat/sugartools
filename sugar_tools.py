@@ -25,6 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from qgis.utils import iface
+from qgis.core import QgsProject
 
 import os
 
@@ -72,6 +73,9 @@ class SugarTools:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+
+        QgsProject.instance().readProject.disconnect()
+        QgsProject.instance().readProject.connect(self.initialLoad)
 
 
     # noinspection PyMethodMayBeStatic
@@ -221,7 +225,10 @@ class SugarTools:
         self.blocks_tool = BlocksTool(self)
         self.blocks_tool.setup()
 
-        # import layouts on startup
+
+    def initialLoad(self):
+        """ import layouts on startup """
+
         self.utils.import_layout("layout_sections.qpt")
         self.utils.import_layout("layout_map.qpt")
         self.utils.import_layout("layout_structures.qpt")
