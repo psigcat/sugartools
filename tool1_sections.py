@@ -1,7 +1,7 @@
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QProgressBar
 from qgis.gui import QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsExpressionContextUtils, QgsProviderRegistry, QgsFeature, QgsLayout, QgsExpression
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsProviderRegistry, QgsFeature, QgsLayout, QgsExpression
 
 import os
 import processing
@@ -69,7 +69,7 @@ class SectionsTool():
 
 
     def get_section_layer(self, node):
-        """ recursevly parse whole layer tree and return first two layers of section """
+        """ recursevly parse whole layer tree and return first layer section """
 
         # if isinstance(node, QgsLayerTreeLayer):
         #     if ((self.parent.dlg.section_ew.isChecked() and node.name().find(SECTION_EW_PATTERN) > 0) or (self.parent.dlg.section_ns.isChecked() and node.name().find(SECTION_NS_PATTERN) > 0)) and not node.layer().isTemporary():
@@ -393,42 +393,22 @@ class SectionsTool():
     def write_layout_vars(self, layout):
         """ write variables to composition """
 
-        # if self.parent.dlg.layer.currentText() == COMBO_SELECT or self.parent.dlg.layer.currentText() == "":
-        #     return False
-        # layer = QgsProject.instance().mapLayersByName(self.parent.dlg.layer.currentText())[0]
-        layer = self.parent.iface.activeLayer()
+        checked_layers = self.parent.iface.mapCanvas().layers()
+        var_names = ["layer", "section", "red_points", "duplicated_points", "no_coord", "thickness", "blocks"]
 
-        # var_name = "yacimiento"
-        # var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        # QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+        for var_name in var_names:
 
-        var_name = "layer"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+            vars = []
+            for layer in checked_layers:
+                var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
+                if var is not None:
+                    vars.append(var)
 
-        var_name = "section"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
-
-        var_name = "red_points"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
-
-        var_name = "duplicated_points"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
-
-        var_name = "no_coord"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
-
-        var_name = "thickness"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
-
-        var_name = "blocks"
-        var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, var)
+            vars = list(set(vars))
+            vars_str = ""
+            if len(vars) > 0:
+                vars_str = ', '.join(vars)
+            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, vars_str)
 
 
     def write_layout_yacimiento(self, layout):
@@ -467,6 +447,8 @@ class SectionsTool():
         section = ""
         layer_name = layer.name()
         QgsExpressionContextUtils.setLayerVariable(layer, "layer_layer", layer_name)
+
+        print("write_layer_vars", layer_name)
 
         # section
         if layer_name.find(SECTION_EW_PATTERN) > 0:
