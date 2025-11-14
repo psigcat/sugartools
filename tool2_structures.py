@@ -12,8 +12,9 @@ FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structu
 
 #FIELDS = "&field=nom_nivel:string(8)&field=des_nivel:string(50)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
 FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
-FIELDS_MAP_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
-FIELDS_NS_EW_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
+#FIELDS_MAP_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
+FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)&field=SHAPE_length:float&field=SHAPE_area:float"
+FIELDS_NS_EW_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
 
 
 class StructuresTool():
