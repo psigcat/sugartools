@@ -2,10 +2,11 @@ from qgis.PyQt.QtCore import Qt, QFile
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication
 
 import os
 import configparser
+import processing
 
 
 COMBO_SELECT = "(Select)"
@@ -15,6 +16,151 @@ FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 FIELDS_MANDATORY_SHAPEFILES = ["shapefiles_folder"]
 
+STRUCTURES_FIELD_MAPPINGS = [
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "fid",
+        "length": 0,
+        "name": "fid",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 4,
+        "type_name": "int8"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "nom_nivel",
+        "length": 8,
+        "name": "nom_nivel",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "nom_est",
+        "length": 10,
+        "name": "nom_est",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "label",
+        "length": 20,
+        "name": "label",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "t_est1",
+        "length": 10,
+        "name": "t_est1",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "t_forma",
+        "length": 10,
+        "name": "planta",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "t_est2",
+        "length": 10,
+        "name": "morfologia_3d",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 10,
+        "name": "forma_2d",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 2,
+        "name": "white_layer",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 2,
+        "name": "black_layer",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 2,
+        "name": "rubefaccion",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 0,
+        "name": "SHAPE_length",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 6,
+        "type_name": "double precision"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 0,
+        "name": "SHAPE_area",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 6,
+        "type_name": "double precision"
+    }
+]
 
 class utils:
 
@@ -243,6 +389,31 @@ class utils:
         #     self.parent.dlg.layout.addItem(layout.name())
 
 
+    def refactor_attributes(self):
+        """ refactor attribute tables of all structures layers _map_polygon """
+
+        for layer in QgsProject.instance().mapLayers().values():
+
+            if "_map_polygon" in layer.name():
+
+                # remove layer part from file name
+                source = layer.source().split('|')[0]
+
+                params = {
+                    'INPUT': layer.source(),
+                    'FIELDS_MAPPING': STRUCTURES_FIELD_MAPPINGS,
+                    'OUTPUT': source
+                }
+                processing.run("native:refactorfields", params)
+
+                # reloading layers data source
+                #layer.dataProvider().reloadData() # does not work
+                layer.setDataSource(layer.source(), layer.name(), layer.providerType())
+                layer.triggerRepaint()
+
+                self.parent.dlg.messageBar.pushMessage(f"Refactored structures attribute tables '{layer.name()}'", level=Qgis.Success)
+
+
     def read_database_config(self):
         """ read params from QGIS3.ini """
 
@@ -330,3 +501,27 @@ class utils:
         elif isinstance(node, QgsLayerTreeNode):
             if isinstance(self.parent.iface.activeLayer(), QgsVectorLayer):
                 node.setItemVisibilityChecked(node.name() == self.parent.iface.activeLayer().name())
+
+
+    def create_custom_crs(self):
+        """ create a custom CRS based on EPSG:28531, but using mm units """
+
+        PROJ_STR = "+proj=utm +zone=31 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=mm +no_defs"
+        PROJ_NAME = "25831mm"
+
+        crs = QgsCoordinateReferenceSystem()
+        if not crs.createFromProj(PROJ_STR):
+            print("Invalid PROJ string")
+            return None
+
+        # Check for duplicates in user-defined CRS list
+        registry = QgsApplication.coordinateReferenceSystemRegistry()
+        for existing in registry.userCrsList():
+            print(existing.name, existing.proj)
+            if existing.name == PROJ_NAME or existing.proj == crs.toProj():
+                print(f"CRS already exists: {existing.name} (ID: {existing.id})")
+                return existing
+        
+        crs.saveAsUserCrs(PROJ_NAME)
+        print(f"Added custom user projection {PROJ_NAME}")
+        return crs

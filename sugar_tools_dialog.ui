@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>680</width>
-    <height>842</height>
+    <width>683</width>
+    <height>792</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -872,6 +872,22 @@
            <widget class="QgsFileWidget" name="symbology_overlay_folder">
             <property name="storageMode">
              <enum>QgsFileWidget::GetDirectory</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_10">
+         <property name="title">
+          <string>Structures refactor attributes</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_10">
+          <item>
+           <widget class="QPushButton" name="refactor_structures_attr_btn">
+            <property name="text">
+             <string>Refactor all attribute tables ending with &quot;_map_polygon&quot;</string>
             </property>
            </widget>
           </item>

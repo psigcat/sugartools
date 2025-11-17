@@ -203,6 +203,7 @@ class SugarTools:
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.utils.import_layout("layout_map.qpt"))
         self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures.qpt"))
         self.dlg.import_shapefiles_btn.clicked.connect(self.utils.import_shapefiles)
+        self.dlg.refactor_structures_attr_btn.clicked.connect(self.utils.refactor_attributes)
         self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
 
@@ -227,11 +228,15 @@ class SugarTools:
 
 
     def initialLoad(self):
-        """ import layouts on startup """
+        """ initial actions """
 
+        # import layouts on startup
         self.utils.import_layout("layout_sections.qpt")
         self.utils.import_layout("layout_map.qpt")
         self.utils.import_layout("layout_structures.qpt")
+
+        # create custom crs
+        self.utils.create_custom_crs()
 
 
     def unload(self):
