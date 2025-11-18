@@ -390,15 +390,16 @@ class utils:
 
 
     def refactor_attributes(self):
-        """ refactor attribute tables of all structures layers _map_polygon """
+        """ refactor attribute tables of selected layers """
 
-        for layer in QgsProject.instance().mapLayers().values():
+        for group in self.parent.iface.layerTreeView().selectedNodes():
 
-            if "_map_polygon" in layer.name():
+            if isinstance(group, QgsLayerTreeLayer):
 
                 # remove layer part from file name
+                layer = QgsProject.instance().mapLayersByName(group.name())[0]
                 source = layer.source().split('|')[0]
-
+                
                 params = {
                     'INPUT': layer.source(),
                     'FIELDS_MAPPING': STRUCTURES_FIELD_MAPPINGS,
@@ -407,7 +408,6 @@ class utils:
                 processing.run("native:refactorfields", params)
 
                 # reloading layers data source
-                #layer.dataProvider().reloadData() # does not work
                 layer.setDataSource(layer.source(), layer.name(), layer.providerType())
                 layer.triggerRepaint()
 

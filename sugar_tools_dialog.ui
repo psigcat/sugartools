@@ -887,7 +887,7 @@
           <item>
            <widget class="QPushButton" name="refactor_structures_attr_btn">
             <property name="text">
-             <string>Refactor all attribute tables ending with &quot;_map_polygon&quot;</string>
+             <string>Refactor attribute table of selected layers</string>
             </property>
            </widget>
           </item>
