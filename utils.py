@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import Qt, QFile
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle
 
 import os
 import configparser
@@ -141,9 +141,9 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "",
+        "expression": "SHAPE_Length",
         "length": 0,
-        "name": "SHAPE_length",
+        "name": "SHAPE_Length",
         "precision": 0,
         "sub_type": 0,
         "type": 6,
@@ -152,9 +152,9 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "",
+        "expression": "SHAPE_Area",
         "length": 0,
-        "name": "SHAPE_area",
+        "name": "SHAPE_Area",
         "precision": 0,
         "sub_type": 0,
         "type": 6,
@@ -396,22 +396,68 @@ class utils:
 
             if isinstance(group, QgsLayerTreeLayer):
 
-                # remove layer part from file name
                 layer = QgsProject.instance().mapLayersByName(group.name())[0]
-                source = layer.source().split('|')[0]
-                
-                params = {
-                    'INPUT': layer.source(),
+                #print(layer.name(), layer.source(), layer.providerType())
+
+                if not layer.providerType() == 'ogr':
+                    self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
+                    return
+
+                # remove layer part from file name
+                source = layer.source().split('|layername=')
+                if len(source) < 2:
+                    self.parent.dlg.messageBar.pushMessage(f"No layername defined in layer {layer.name()}", level=Qgis.Warning, duration=3)
+                    return
+
+                # get source file name, file extension and table name
+                source_file = source[0]
+                source_file_extension = source_file.split('.')[1]
+                source_table = source[1].split('|')[0]
+                if source_file_extension != 'gpkg':
+                    self.parent.dlg.messageBar.pushMessage(f"Does only work for Geopackage (*.gpkg) layers", level=Qgis.Warning, duration=3)
+                    return
+
+                # refactor attribute table
+                layer_refactored = processing.run("native:refactorfields", {
+                    'INPUT': layer,
                     'FIELDS_MAPPING': STRUCTURES_FIELD_MAPPINGS,
-                    'OUTPUT': source
-                }
-                processing.run("native:refactorfields", params)
+                    'OUTPUT': 'TEMPORARY_OUTPUT'
+                })["OUTPUT"]
+                table_name_refactored = f"{source_table}_refactored"
+                source_refactored = f"{source_file}|layername={table_name_refactored}"
 
-                # reloading layers data source
-                layer.setDataSource(layer.source(), layer.name(), layer.providerType())
-                layer.triggerRepaint()
+                # delete original table inside the gpkg
+                # processing.run("qgis:spatialiteexecutesql", {
+                #     'DATABASE': layer.source(),
+                #     'SQL': f'DROP TABLE "{source_table}"',
+                # })
 
-                self.parent.dlg.messageBar.pushMessage(f"Refactored structures attribute tables '{layer.name()}'", level=Qgis.Success)
+                # save new layer to gpkg
+                result = processing.run("native:savefeatures", {
+                    'INPUT': layer_refactored,
+                    'OUTPUT': source_file,
+                    'LAYER_NAME': table_name_refactored,
+                    'ACTION_ON_EXISTING_FILE': 1
+                })
+
+                # rename table to original name
+                # processing.run("qgis:spatialiteexecutesql", {
+                #     'DATABASE': result["OUTPUT"],
+                #     'SQL': f'ALTER TABLE {table_name_refactored} RENAME TO "{source_table}"',
+                # })
+
+                final_layer = QgsVectorLayer(result["OUTPUT"], table_name_refactored, "ogr")
+                final_layer.setName(source_table)
+                QgsProject.instance().addMapLayer(final_layer)
+
+                # copy style from original to refactored layer
+                style = QgsMapLayerStyle()
+                style.readFromLayer(layer)
+                style.writeToLayer(final_layer)
+                final_layer.triggerRepaint()
+                QgsProject.instance().removeMapLayer(layer.id())
+
+                self.parent.dlg.messageBar.pushMessage(f"Refactored structures attribute tables '{table_name_refactored}'", level=Qgis.Success)
 
 
     def read_database_config(self):
