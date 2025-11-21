@@ -231,12 +231,13 @@ class SugarTools:
         """ initial actions """
 
         # import layouts on startup
-        self.utils.import_layout("layout_sections.qpt")
-        self.utils.import_layout("layout_map.qpt")
-        self.utils.import_layout("layout_structures.qpt")
+        if self.dlg.auto_import.isChecked():
+            self.utils.import_layout("layout_sections.qpt")
+            self.utils.import_layout("layout_map.qpt")
+            self.utils.import_layout("layout_structures.qpt")
 
-        # create custom crs
-        self.utils.create_custom_crs()
+        # create custom crs, doesnt work for now
+        # self.utils.create_custom_crs()
 
 
     def unload(self):

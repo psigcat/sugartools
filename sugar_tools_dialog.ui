@@ -788,6 +788,16 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
+           <widget class="QCheckBox" name="auto_import">
+            <property name="text">
+             <string>Auto import on opening new projects</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="import_layout_sections_btn">
             <property name="text">
              <string>Import Sections layout</string>
