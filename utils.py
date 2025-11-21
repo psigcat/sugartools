@@ -411,7 +411,8 @@ class utils:
 
                 # get source file name, file extension and table name
                 source_file = source[0]
-                source_file_extension = source_file.split('.')[1]
+                source_file_extension = source_file.split('.')
+                source_file_extension = source_file_extension[len(source_file_extension)-1]
                 source_table = source[1].split('|')[0]
                 if source_file_extension != 'gpkg':
                     self.parent.dlg.messageBar.pushMessage(f"Does only work for Geopackage (*.gpkg) layers", level=Qgis.Warning, duration=3)
