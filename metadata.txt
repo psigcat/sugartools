@@ -2,7 +2,7 @@
 name=Sugar Tools
 qgisMinimumVersion=3.38
 description=Aqueological tools for QGIS
-version=0.2.1
+version=0.2.2
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -24,5 +24,6 @@ server=False
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.2 - Recalculate SHAPE_Length and SHAPE_Area (#24), Structures: Fix field order when refactoring attribute table (#23)
 	0.2.1 - Structures: Modify attribute table (#23), show active layers in layouts (#21), add version to title bar (#22)
     0.2 - First official release with the basic functions needed for excavation at Cova Gran Summer 2025.
