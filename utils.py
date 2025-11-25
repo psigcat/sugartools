@@ -9,6 +9,7 @@ import configparser
 import processing
 
 
+SYMBOLOGY_DIR = "qml"
 COMBO_SELECT = "(Select)"
 FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
@@ -452,9 +453,8 @@ class utils:
                 QgsProject.instance().addMapLayer(final_layer)
 
                 # copy style from original to refactored layer
-                style = QgsMapLayerStyle()
-                style.readFromLayer(layer)
-                style.writeToLayer(final_layer)
+                symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "structures_map.qml")
+                final_layer.loadNamedStyle(symbology_path)
                 final_layer.triggerRepaint()
                 QgsProject.instance().removeMapLayer(layer.id())
 
