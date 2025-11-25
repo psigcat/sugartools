@@ -206,6 +206,7 @@ class SugarTools:
         self.dlg.refactor_structures_attr_btn.clicked.connect(self.utils.refactor_attributes)
         self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
         self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
+        self.dlg.recalculate_shape_btn.clicked.connect(self.utils.recalculate_shape)
 
         iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)

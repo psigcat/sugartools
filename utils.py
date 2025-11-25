@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import Qt, QFile
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider
 
 import os
 import configparser
@@ -572,3 +572,51 @@ class utils:
         crs.saveAsUserCrs(PROJ_NAME)
         print(f"Added custom user projection {PROJ_NAME}")
         return crs
+
+
+    def recalculate_shape(self):
+        """ recalculate SHAPE_Length and SHAPE_Area of selected layers """
+
+        for group in self.parent.iface.layerTreeView().selectedNodes():
+
+            if isinstance(group, QgsLayerTreeLayer):
+
+                layer = QgsProject.instance().mapLayersByName(group.name())[0]
+                #print("selected layer", layer.name(), layer.source(), layer.providerType())
+
+                if not layer.providerType() == 'ogr':
+                    self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
+                    return
+
+                # check if layer has fields shape_length and shape_area
+                fields = layer.fields().names()
+                fields = [item.lower() for item in fields]
+                if not "shape_length" in fields or not "shape_area" in fields:
+                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have fields SHAPE_Length or SHAPE_Area", level=Qgis.Warning, duration=3)
+                    return
+
+                # get index of shape_length and shape_area
+                shape_length_index = fields.index("shape_length")
+                shape_area_index = fields.index("shape_area")
+
+                # check if layer is editable
+                caps = layer.dataProvider().capabilities()
+                if caps & QgsVectorDataProvider.ChangeAttributeValues:
+
+                    layer.startEditing()
+                    for feature in layer.getFeatures():
+                        geom = feature.geometry()
+                        if not geom.type() == Qgis.GeometryType.Polygon:
+                            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a Polygon geometry", level=Qgis.Warning, duration=3)
+                            return
+
+                        # overwrite with recalculated values
+                        feature.setAttribute(shape_length_index, 0)
+                        feature.setAttribute(shape_area_index, geom.area())
+                        layer.updateFeature(feature)
+
+                    layer.commitChanges()
+
+                else:
+                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)
+                    return
