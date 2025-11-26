@@ -611,7 +611,7 @@ class utils:
                             return
 
                         # overwrite with recalculated values
-                        feature.setAttribute(shape_length_index, 0)
+                        feature.setAttribute(shape_length_index, geom.length())
                         feature.setAttribute(shape_area_index, geom.area())
                         layer.updateFeature(feature)
 
