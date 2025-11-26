@@ -74,7 +74,6 @@ class SugarTools:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
 
-        QgsProject.instance().readProject.disconnect()
         QgsProject.instance().readProject.connect(self.initialLoad)
 
 
