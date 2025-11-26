@@ -616,6 +616,7 @@ class utils:
                         layer.updateFeature(feature)
 
                     layer.commitChanges()
+                    self.parent.dlg.messageBar.pushMessage(f"Recalculation of SHAPE_Length and SHAPE_Area for layer {layer.name()} done", level=Qgis.Success, duration=3)
 
                 else:
                     self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)
