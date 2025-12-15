@@ -92,6 +92,11 @@ class BlocksTool():
         """ read blocks from db and paint points """
 
         if self.connect_db() == None:
+            self.parent.dlg.messageBar.pushMessage(f"No valid database connection!", level=Qgis.Warning, duration=3)
+            return
+
+        if not os.path.exists(self.parent.dlg.blocks_workspace.filePath()):
+            self.parent.dlg.messageBar.pushMessage(f"No valid workspace path '{self.parent.dlg.blocks_workspace.filePath()}'", level=Qgis.Warning, duration=3)
             return
 
         exp = QgsExpression(self.parent.dlg.blocks_filter_expr.text())
@@ -446,7 +451,7 @@ class BlocksTool():
         # Create new PolygonZ layer
         crs = self.points_layer.crs().authid()
         dib_pieza = self.parent.dlg.blocks_dib_pieza.text()
-        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=id_bloque:integer&field=fid:integer", dib_pieza, "memory")
+        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=fid:integer&field=id_bloque:integer", dib_pieza, "memory")
         provider = hull_layer.dataProvider()
 
         hull_faces = []  # Store triangular faces
@@ -505,8 +510,8 @@ class BlocksTool():
                 #print("Geometry is now valid MultiPolygonZ, adding to layer...")
                 feature.setGeometry(merged_geom)
                 feature.setAttributes([
-                    int(dib_pieza),
-                    len(list(threed_layer.getFeatures())) + 1
+                    len(list(threed_layer.getFeatures())) + 1,
+                    int(dib_pieza)
                 ])
                 hull_layer.startEditing()
                 hull_layer.addFeature(feature)
