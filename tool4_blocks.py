@@ -80,11 +80,11 @@ class BlocksTool():
             if isinstance(layer, QgsLayerTreeLayer):
                 layer_name = layer.layer().name()
                 layer = QgsProject.instance().mapLayersByName(layer_name)[0]
-                if POLYGON_LAYER_ID in layer_name:
+                if POLYGON_LAYER_ID in layer_name or POLYGON_LAYER_ID.lower() in layer_name:
                     self.parent.dlg.blocks_polygon_layer.setLayer(layer)
-                elif LINE_LAYER_ID in layer_name:
+                elif LINE_LAYER_ID in layer_name or LINE_LAYER_ID.lower() in layer_name:
                     self.parent.dlg.blocks_lines_layer.setLayer(layer)
-                elif THREED_LAYER_ID in layer_name:
+                elif THREED_LAYER_ID in layer_name or THREED_LAYER_ID.lower() in layer_name:
                     self.parent.dlg.blocks_3d_layer.setLayer(layer)
 
 
@@ -519,7 +519,7 @@ class BlocksTool():
             return
 
         QgsProject.instance().addMapLayer(hull_layer)
-        self.utils.save_layer_gpkg(hull_layer, self.parent.dlg.blocks_workspace.filePath())
+        self.utils.save_layer_gpkg(hull_layer, os.path.join(self.parent.dlg.blocks_workspace.filePath(), "structures3d"))
 
         # for now we can't merge the new block into the 3d layer
         # result = processing.run("native:mergevectorlayers", {
