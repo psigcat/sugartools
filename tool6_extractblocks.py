@@ -57,21 +57,38 @@ class ExtractblocksTool():
         restricted_uas = self.parent.dlg.extract_restrict.text().split(",")
 
         feature_count = len(list(extract_layer.getFeatures()))
-        self.progress = self.utils.initProgressBar("Process extractioin...", feature_count)
-        #print(extract_table, feature_count)
+
+        i = 0
 
         for feature in extract_layer.getFeatures():
             attributes = feature.attributes()
 
-            id_bloque = str(feature.attribute("id_bloque"))
-            ua = str(feature.attribute("id_UA"))
-            position = str(feature.attribute("posicion"))
+            try:
+                id_bloque = feature.attribute("id_bloque")
+                ua = feature.attribute("id_UA")
+                position = feature.attribute("posicion")
+            except KeyError as e:
+                self.parent.dlg.messageBar.pushMessage(f"Missing attributes in relations table", level=Qgis.Warning, duration=3)
+                return
+
+            if id_bloque:
+                id_bloque = str(id_bloque)
+            if id_bloque:
+                ua = str(ua)
+            if position:
+                position = str(position)
+
+            if i == 0:
+                self.progress = self.utils.initProgressBar("Process extraction...", feature_count)
+                #print(extract_table, feature_count)
 
             #print(id_bloque, position, ua, restricted_uas, ua in restricted_uas)
 
             if len(restricted_uas) == 0 or restricted_uas[0].strip() == "" or ua in restricted_uas:
                 self.add_features(id_bloque, ua, position)
                 self.progress.setValue(self.progress.value() + 1)
+
+            i += 1
 
         #self.reload_layers()
 
