@@ -91,7 +91,7 @@ class BlocksTool():
     def load_blocks(self):
         """ read blocks from db and paint points """
 
-        if self.connect_db() == None:
+        if not self.connect_db() or self.connect_db() == None:
             self.parent.dlg.messageBar.pushMessage(f"No valid database connection!", level=Qgis.Warning, duration=3)
             return
 
@@ -112,7 +112,7 @@ class BlocksTool():
         sql = f"SELECT * FROM view_arcmap_edit WHERE {exp.dump()}"
         rows = self.blocks_db_obj.get_rows(sql)
         if not rows or rows == None or len(rows) == 0:
-            self.parent.dlg.messageBar.pushMessage(f"No registers for expression '{sql}'", level=Qgis.Warning, duration=3)
+            self.parent.dlg.messageBar.pushMessage(f"No registers for expression '{sql}'", level=Qgis.Warning)
             return
 
         self.draw_blocks(rows)
@@ -245,13 +245,13 @@ class BlocksTool():
 
         # insert field dib_pieza as id_bloque
         layer.startEditing()
-        new_field = QgsField("id_bloque", QVariant.Int)
+        new_field = QgsField("id_bloque", QVariant.String)
         layer.dataProvider().addAttributes([new_field])
         layer.updateFields()
 
         field_index_id = layer.fields().indexFromName("id_bloque")
         feature = list(layer.getFeatures())[0]
-        layer.changeAttributeValue(feature.id(), field_index_id, int(self.parent.dlg.blocks_dib_pieza.text()))
+        layer.changeAttributeValue(feature.id(), field_index_id, self.parent.dlg.blocks_dib_pieza.text())
         
         field_index_area = layer.fields().indexFromName("area")
         if field_index_area != -1:
@@ -301,7 +301,7 @@ class BlocksTool():
             return
 
         # create line layer
-        line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:integer"
+        line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:string(10)"
         line_layer = QgsVectorLayer(line_layer_uri, "linestring", "memory")
 
         line_layer.startEditing()
@@ -310,7 +310,7 @@ class BlocksTool():
         feature = QgsFeature()
         geom = QgsGeometry.fromPolyline([top_points[1], top_points[0], top_points[2]])
         feature.setGeometry(geom)
-        feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
 
         # field_index_permiter = line_layer.fields().indexFromName("perimeter")
         # if field_index_permiter != -1:
@@ -416,7 +416,7 @@ class BlocksTool():
                 # Create a line feature
                 line_feature = QgsFeature()
                 line_feature.setGeometry(QgsGeometry.fromPolyline([p, closest_hull_point]))
-                line_feature.setAttributes([int(self.parent.dlg.blocks_dib_pieza.text())])
+                line_feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
                 line_features.append(line_feature)
 
         return line_features
@@ -451,7 +451,7 @@ class BlocksTool():
         # Create new PolygonZ layer
         crs = self.points_layer.crs().authid()
         dib_pieza = self.parent.dlg.blocks_dib_pieza.text()
-        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=fid:integer&field=id_bloque:integer", dib_pieza, "memory")
+        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=fid:integer&field=id_bloque:string(10)", dib_pieza, "memory")
         provider = hull_layer.dataProvider()
 
         hull_faces = []  # Store triangular faces
@@ -511,7 +511,7 @@ class BlocksTool():
                 feature.setGeometry(merged_geom)
                 feature.setAttributes([
                     len(list(threed_layer.getFeatures())) + 1,
-                    int(dib_pieza)
+                    dib_pieza
                 ])
                 hull_layer.startEditing()
                 hull_layer.addFeature(feature)
