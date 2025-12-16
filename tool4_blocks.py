@@ -423,7 +423,7 @@ class BlocksTool():
 
 
     def draw_polygon3d(self):
-        """ draw 3d convex hull """
+        """ draw 3d convex hull and append directly to the target layer provider """
 
         threed_layer_name = self.parent.dlg.blocks_3d_layer.currentText()
         threed_layer = QgsProject.instance().mapLayersByName(threed_layer_name)[0]
@@ -432,214 +432,78 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
             return False
 
-        # if not self.all_points_valid():
-        #     self.parent.dlg.messageBar.pushMessage(f"Given 'dib_pieza' different to attribute of at least one point.", level=Qgis.Critical, duration=3)
-        #     return False
+        # Layer validation checks are the same
+        if threed_layer.wkbType() != QgsWkbTypes.MultiPolygonZ:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
+            return False
 
         points = self.get_points_3d()
 
         if not points or len(points) < 4:
-            self.parent.dlg.messageBar.pushMessage("A 3D convex hull requires at least 4 unique points.", level=Qgis.Warning, duration=3)
+            self.parent.dlg.messageBar.pushMessage(f"A 3D convex hull requires at least 4 unique points.", level=Qgis.Critical, duration=3)
             return False
 
-        # Convert list to NumPy array for SciPy processing
         points_array = np.array(points)
-
-        # Compute 3D convex hull
         hull = ConvexHull(points_array)
 
-        # Create new PolygonZ layer
-        crs = self.points_layer.crs().authid()
-        dib_pieza = self.parent.dlg.blocks_dib_pieza.text()
-        hull_layer = QgsVectorLayer("MultiPolygonZ?crs=" + crs + "&field=fid:integer&field=id_bloque:string(10)", dib_pieza, "memory")
-        provider = hull_layer.dataProvider()
-
-        hull_faces = []  # Store triangular faces
+        # GeometryCollection Z WKT construction
+        polygon_components = [] # List to hold the WKT for each component: '((ring))'
 
         # Iterate through hull simplices (triangular faces)
         for simplex in hull.simplices:
-            hull_points = [f"{points_array[i, 0]} {points_array[i, 1]} {points_array[i, 2]}" for i in simplex]
+            ring_points_wkt = []
+            for i in simplex:
+                x, y, z = points_array[i]
+                ring_points_wkt.append(f"{x} {y} {z}") 
 
-            # Convert to WKT (Well-Known Text) for 3D surface representation
-            wkt_triangle = f"POLYGONZ(({', '.join(hull_points)}, {hull_points[0]}))"  # Close the ring
+            # Close the ring
+            ring_points_wkt.append(ring_points_wkt[0])
 
-            hull_faces.append(wkt_triangle)
+            # Component format for MultiPolygon Z is ((ring))
+            component_wkt = f"(({', '.join(ring_points_wkt)}))"
+            polygon_components.append(component_wkt)
 
-        # Create a MultiPolygonZ to hold all faces
-        merged_wkt = f"MULTIPOLYGONZ({', '.join(hull_faces)})"
+        # 3. Combine components into the final WKT
+        # WKT format: MULTIPOLYGON Z (((r1)), ((r2)), ...)
+        merged_wkt = f"MULTIPOLYGON Z ({', '.join(polygon_components)})"
+
+        # Parse the final WKT string
         merged_geom = QgsGeometry.fromWkt(merged_wkt)
 
         if not merged_geom or merged_geom.isEmpty():
-            print("Merged geometry is empty!")
+            self.parent.dlg.messageBar.pushMessage(f"CRITICAL ERROR: Failed to parse GEOMETRYCOLLECTION Z WKT.", level=Qgis.Critical, duration=3)
+            return False
 
-        # validator = QgsGeometryValidator(merged_geom)
-        # errors = validator.validateGeometry(merged_geom)
+        # Append to Target Layer Provider
+        provider = threed_layer.dataProvider()
+        new_feature = QgsFeature(threed_layer.fields())
+        new_feature.setGeometry(merged_geom) 
+        dib_pieza = self.parent.dlg.blocks_dib_pieza.text()
 
-        # if errors:
-        #     print("Geometry errors found:")
-        #     for error in errors:
-        #         print(error.what())
+        # Find the field indices based on the target layer's field names
+        fid_field_idx = threed_layer.fields().indexFromName('fid')
+        id_bloque_field_idx = threed_layer.fields().indexFromName('id_bloque')
 
-        # if merged_geom and not merged_geom.isEmpty() and merged_geom.isGeosValid():
-        #     fixed_geom = merged_geom
-        # else:
-        #     print("Geometry is empty or invalid, attempting to fix...")
-        #     fixed_geom = merged_geom.makeValid()
-        #     if not fixed_geom or not fixed_geom.isGeosValid():
-        #         print("Failed to fix the geometry.")
-        #         return
+        # Ensure attributes are set correctly for the target layer's schema
+        if fid_field_idx != -1:
+             all_fids = list(provider.allFeatureIds())
+             max_fid = max(all_fids) if all_fids else 0
+             new_feature[fid_field_idx] = max_fid + 1
+        if id_bloque_field_idx != -1:
+             new_feature[id_bloque_field_idx] = dib_pieza
 
-        # Add the merged feature to the new layer
-        feature = QgsFeature()
+        threed_layer.startEditing()
+        success = provider.addFeatures([new_feature])
 
-        # Ensure the geometry is not empty before adding
-        if merged_geom and not merged_geom.isEmpty():
-            # Check the validity of the geometry
-            if not merged_geom.isGeosValid():
-                #print("Invalid geometry detected. Forcing valid MultiPolygonZ...")
-
-                # Reconstruct as MultiPolygonZ without losing Z values
-                merged_geom = QgsGeometry.fromWkt(merged_geom.asWkt())  # Force re-parsing
-
-                # Optional: Convert it explicitly to MultiPolygonZ
-                if merged_geom.isMultipart():
-                    merged_geom.convertToMultiType()
-
-            # Double-check that the geometry is still MultiPolygonZ
-            if merged_geom.wkbType() == QgsWkbTypes.MultiPolygonZ:
-                #print("Geometry is now valid MultiPolygonZ, adding to layer...")
-                feature.setGeometry(merged_geom)
-                feature.setAttributes([
-                    len(list(threed_layer.getFeatures())) + 1,
-                    dib_pieza
-                ])
-                hull_layer.startEditing()
-                hull_layer.addFeature(feature)
-                hull_layer.commitChanges()
-            else:
-                print("Failed to ensure MultiPolygonZ format, skipping feature.")
-
+        if success:
+            threed_layer.commitChanges()
+            self.parent.dlg.messageBar.pushMessage(f"SUCCESS: Feature successfully appended to GeoPackage layer '{threed_layer_name}' via data provider.", level=Qgis.Success, duration=3)
+            threed_layer.triggerRepaint()
+            return True
         else:
-            print("Merged geometry is empty, skipping.")
-            return
-
-        QgsProject.instance().addMapLayer(hull_layer)
-        self.utils.save_layer_gpkg(hull_layer, os.path.join(self.parent.dlg.blocks_workspace.filePath(), "structures3d"))
-
-        # for now we can't merge the new block into the 3d layer
-        # result = processing.run("native:mergevectorlayers", {
-        #     'LAYERS': [hull_layer, threed_layer],
-        #     'OUTPUT': 'TEMPORARY_OUTPUT'
-        #     #'INVALID_FEATURES': 'IGNORE'
-        # })
-
-        # merged_layer = result['OUTPUT']
-        # merged_layer.setName(self.parent.dlg.blocks_3d_layer.currentText())
-
-        # QgsProject.instance().addMapLayer(merged_layer)
-
-        # # delete fields
-        # fid_field = merged_layer.fields().indexFromName('fid')
-        # layer_field = merged_layer.fields().indexFromName('layer')
-        # path_field = merged_layer.fields().indexFromName('path')
-        # merged_layer.startEditing()
-        # merged_layer.dataProvider().deleteAttributes([fid_field, layer_field, path_field])
-        # merged_layer.commitChanges()
-        # merged_layer.updateFields()
-
-        # threed_layer_path = QgsProviderRegistry.instance().decodeUri(threed_layer.dataProvider().name(), threed_layer.publicSource())['path']
-        # layer_name = self.parent.dlg.blocks_3d_layer.currentText()
-
-        # path = os.path.dirname(threed_layer_path)
-        # self.utils.save_layer_gpkg(merged_layer, path)
-        # #QgsProject.instance().addMapLayer(merged_layer)
-
-        #Save the new layer to the GeoPackage (mandatory has to be a separate gpkg file with only that layer with a Multipolygon3D geometry)
-        # params = {
-        #     'INPUT': merged_layer,
-        #     #'OUTPUT': threed_layer_path,
-        #     'ACTION_ON_EXISTING_FILE': 0
-        # }
-        # processing.run("native:savefeatures", params)
-
-        # new_layer = QgsVectorLayer(threed_layer_path, layer_name, "ogr")
-
-        #threed_layer.dataProvider().setDataSourceUri(threed_layer_path)
-        #threed_layer.dataProvider().reloadData()
-        #threed_layer.triggerRepaint()
-        #threed_layer.reload()
-
-        #self.refresh_datasources(new_layer_path)
-
-
-        # unsuccessfull test in order to write merged layer in existing multilayer gpkg
-
-        #Delete existing layer using GDAL's ogr2ogr (not necessary because overwriting file)
-        # try:
-        #     conn = sqlite3.connect(threed_layer_path)
-        #     cursor = conn.cursor()
-        #     cursor.execute(f"DROP TABLE IF EXISTS \"{layer_name}\"") 
-        #     cursor.execute(f"DELETE FROM gpkg_contents WHERE table_name = \"{layer_name}\"")
-        #     cursor.execute(f"DELETE FROM gpkg_geometry_columns WHERE table_name = \"{layer_name}\"")
-        #     conn.commit()
-        #     conn.close()
-        #     print(f"Deleted existing layer: {layer_name}")
-        # except Exception as e:
-        #     print(f"Error deleting existing layer: {e}")
-
-        # saved_layer = QgsVectorLayer(threed_layer_path + f"|layername={layer_name}", layer_name, "ogr")
-
-        #Save the new layer to the GeoPackage
-        # params = {'INPUT': saved_layer,
-        #           'OUTPUT': f"{threed_layer_path}|layername={layer_name}",
-        #           #'OUTPUT': threed_layer_path,
-        #           #'LAYER_NAME': layer_name,
-        #           'ACTION_ON_EXISTING_FILE':1
-        # }
-        # processing.run("native:savefeatures", params)
-
-        # params = {'INPUT': merged_layer,
-        #           'OPTIONS': '-update -nln ' + layer_name,
-        #           'OUTPUT': threed_layer_path,
-        #           'DRIVER_NAME': 'GPKG'
-        # }
-        # processing.run("gdal:convertformat", params)
-
-        # write output to selected layer
-        # params = {
-        #     'SOURCE_LAYER': merged_layer,
-        #     'TARGET_LAYER': threed_layer_path,
-        #     'ACTION_ON_DUPLICATE': 0,
-        #     'INVALID_FEATURES': 'IGNORE'
-        # }
-        # processing.run("etl_load:appendfeaturestolayer", params)
-
-        #QgsProject.instance().removeMapLayer(hull_layer)
-
-        return True
-
-
-    # def refresh_datasources(self, file_path):
-    #     """ refresh data sources of loaded layers """
-
-    #     #self.refresh_datasource(file_path, self.parent.dlg.blocks_polygon_layer.currentText())
-    #     #self.refresh_datasource(file_path, self.parent.dlg.blocks_lines_layer.currentText())
-    #     self.refresh_datasource(file_path, self.parent.dlg.blocks_3d_layer.currentText())
-
-
-    # def refresh_datasource(self, file_path, layer_name):
-    #     """ refresh data sources of loaded layers """
-
-    #     print(layer_name, file_path)
-    #     refresh_layer = QgsProject.instance().mapLayersByName(layer_name)[0]
-    #     print(refresh_layer)
-
-    #     refresh_layer.dataProvider().setDataSourceUri(file_path)
-    #     refresh_layer.dataProvider().reloadData()
-    #     refresh_layer.triggerRepaint()
-    #     refresh_layer.reload()
-
-    #     self.parent.iface.mapCanvas().refresh()
+            threed_layer.rollBack()
+            self.parent.dlg.messageBar.pushMessage(f"FAILURE: Provider failed to add feature. The GeoPackage rejected the geometry during the edit commit.", level=Qgis.Critical, duration=3)
+            return False
 
 
     def all_points_valid(self):
@@ -658,17 +522,31 @@ class BlocksTool():
         """ get all points from PointZ vector layer """
 
         points = []
+        # Define the acceptable WKB types for points
+        point_types = [QgsWkbTypes.Point, QgsWkbTypes.PointZ, QgsWkbTypes.MultiPoint, QgsWkbTypes.MultiPointZ]
+
         for feature in self.points_layer.getFeatures():
             geom = feature.geometry()
+            wkb_type = geom.wkbType()
             
-            # Extract Z values properly
+            # 1. Skip the feature if it's not a point or multipoint type
+            if wkb_type not in point_types:
+                # print(f"Skipping non-point geometry type: {QgsWkbTypes.displayString(wkb_type)}")
+                continue
+
+            # 2. Handle MultiPoint/MultiPointZ features
             if geom.isMultipart():
+                # Safe call to asMultiPoint() because we checked the type above
                 for pt in geom.asMultiPoint():
-                    if isinstance(pt, QgsPoint) and pt.is3D():
+                    # Check for 3D capability using pt.is3D()
+                    if pt.is3D():
                         points.append((pt.x(), pt.y(), pt.z()))
+            # 3. Handle single Point/PointZ features
             else:
                 pt = geom.constGet()
-                points.append((pt.x(), pt.y(), pt.z()))
+                # Ensure the point is 3D before extracting coordinates
+                if pt.is3D():
+                    points.append((pt.x(), pt.y(), pt.z()))
 
         return points
 
