@@ -130,7 +130,7 @@ class BlocksTool():
         """ open QGIS Query Builder"""
 
         expr_dialog = QgsExpressionBuilderDialog(self.parent.iface.activeLayer())
-        if expr_dialog.exec_():
+        if expr_dialog.exec():
             self.parent.dlg.blocks_filter_expr.setText(expr_dialog.expressionText())
 
 
@@ -198,7 +198,7 @@ class BlocksTool():
 
             self.points_layer = active_layer
 
-        if self.points_layer.wkbType() not in [QgsWkbTypes.PointZ, QgsWkbTypes.MultiPointZ]:
+        if self.points_layer.wkbType() not in [QgsWkbTypes.Type.PointZ, QgsWkbTypes.Type.MultiPointZ]:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.", level=Qgis.Critical, duration=3)
             return
 
@@ -228,7 +228,7 @@ class BlocksTool():
             polygon_layer.commitChanges()
             #polygon_layer.rollBack()
 
-        if not polygon_layer or polygon_layer.wkbType() != QgsWkbTypes.MultiPolygon:
+        if not polygon_layer or polygon_layer.wkbType() != QgsWkbTypes.Type.MultiPolygon:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygon layer.", level=Qgis.Critical, duration=3)
             return
 
@@ -290,7 +290,7 @@ class BlocksTool():
             line_layer.commitChanges()
             #line_layer.rollBack()
 
-        if not line_layer or line_layer.wkbType() != QgsWkbTypes.MultiLineString:
+        if not line_layer or line_layer.wkbType() != QgsWkbTypes.Type.MultiLineString:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiLineString layer.", level=Qgis.Critical, duration=3)
             return
 
@@ -428,12 +428,12 @@ class BlocksTool():
         threed_layer_name = self.parent.dlg.blocks_3d_layer.currentText()
         threed_layer = QgsProject.instance().mapLayersByName(threed_layer_name)[0]
 
-        if not threed_layer or threed_layer.wkbType() != QgsWkbTypes.MultiPolygonZ:
+        if not threed_layer or threed_layer.wkbType() != QgsWkbTypes.Type.MultiPolygonZ:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
             return False
 
         # Layer validation checks are the same
-        if threed_layer.wkbType() != QgsWkbTypes.MultiPolygonZ:
+        if threed_layer.wkbType() != QgsWkbTypes.Type.MultiPolygonZ:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
             return False
 
@@ -523,7 +523,7 @@ class BlocksTool():
 
         points = []
         # Define the acceptable WKB types for points
-        point_types = [QgsWkbTypes.Point, QgsWkbTypes.PointZ, QgsWkbTypes.MultiPoint, QgsWkbTypes.MultiPointZ]
+        point_types = [QgsWkbTypes.Type.Point, QgsWkbTypes.Type.PointZ, QgsWkbTypes.Type.MultiPoint, QgsWkbTypes.Type.MultiPointZ]
 
         for feature in self.points_layer.getFeatures():
             geom = feature.geometry()

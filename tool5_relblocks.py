@@ -1,5 +1,5 @@
 from qgis.core import Qgis, QgsProject, QgsLayerTreeLayer, QgsFeature
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QPushButton, QWidget, QHBoxLayout
+from qgis.PyQt.QtWidgets import QTableWidget, QTableWidgetItem, QPushButton, QWidget, QHBoxLayout
 
 import os
 

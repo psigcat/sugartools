@@ -309,7 +309,7 @@ class SugarTools:
         self.extractblocks_tool = ExtractblocksTool(self)
 
         # Run the dialog event loop
-        result = self.dlg.exec_()
+        result = self.dlg.exec()
 
         # See if OK was pressed
         if result:

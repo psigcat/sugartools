@@ -685,7 +685,7 @@ class SectionsTool():
         """ open QGIS Query Builder"""
 
         expr_dialog = QgsExpressionBuilderDialog(self.parent.iface.activeLayer())
-        if expr_dialog.exec_():
+        if expr_dialog.exec():
             self.parent.dlg.filter_expr.setText(expr_dialog.expressionText())
 
 

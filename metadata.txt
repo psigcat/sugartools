@@ -1,6 +1,7 @@
 [general]
 name=Sugar Tools
 qgisMinimumVersion=3.38
+qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
 version=0.2.3
 author=PSIG
@@ -20,6 +21,7 @@ icon=icon.png
 experimental=False
 deprecated=False
 server=False
+supportsQt6=True
 
 plugin_dependencies=qpip,Append Features to Layer
 

@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtSql import QSqlDatabase, QSqlQuery
+from qgis.PyQt.QtSql import QSqlDatabase, QSqlQuery
 
 
 class utils_database:

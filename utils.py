@@ -601,7 +601,7 @@ class utils:
 
                 # check if layer is editable
                 caps = layer.dataProvider().capabilities()
-                if caps & QgsVectorDataProvider.ChangeAttributeValues:
+                if caps & QgsVectorDataProvider.Capability.ChangeAttributeValues:
 
                     layer.startEditing()
                     for feature in layer.getFeatures():
