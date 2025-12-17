@@ -19,7 +19,7 @@ SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_BLOCKS = ["blocks_db", "blocks_workspace"]
 FIELDS_MANDATORY_PROCESS = ["blocks_workspace", "blocks_dib_pieza", "blocks_polygon_layer", "blocks_lines_layer", "blocks_3d_layer"]
 POLYGON_LAYER_ID = "_2D"
-LINE_LAYER_ID = "_lin2D"
+LINE_LAYER_ID = "_Lin2D"
 THREED_LAYER_ID = "_3D"
 
 
