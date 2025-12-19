@@ -76,11 +76,21 @@ class StructuresTool():
         rows_ns = self.create_structure(name, "ns", group_ns_helper)
 
         if not rows_ew and not rows_ns:
-            self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning, duration=3)
-            self.utils.remove_group(group_map)
-            self.utils.remove_group(group_ew)
-            self.utils.remove_group(group_ns)
-            return
+            # trying without ew and ns
+            rows = self.create_structure(name, "no", group_map_helper)
+            self.active_structure = name
+
+            if not rows_ew and not rows_ns:
+                self.utils.remove_group(group_ew)
+                self.utils.remove_group(group_ns)
+
+                if rows:
+                    self.create_structure_empty(name, "map", group_map)
+                else:
+                    self.utils.remove_group(group_map)
+                    self.parent.dlg.messageBar.pushMessage(f"No structures found with name '{name}{type}'", level=Qgis.Warning, duration=3)
+
+                return
 
         # create containers
         self.create_structure_empty(name, "ew", group_ew)
@@ -104,13 +114,17 @@ class StructuresTool():
         """ get structure from db and create as layer """
 
         db_type = type
-        if type == "map":
+        if type == "map" or type == "no":
             db_type = ""
 
         sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}{db_type}'"
         rows = self.structures_db_obj.get_rows(sql)
         if not rows or rows == None or len(rows) == 0:
             return False
+
+        if type == "no":
+            type = "map"
+
         layer = self.create_structures_points(name, group, rows, type)
         self.create_structures_points(name, group, rows, "label", type)
         bookmark = self.create_spatial_bookmark(name, type, layer)
@@ -133,7 +147,7 @@ class StructuresTool():
     def create_structures_empty(self, name, type, geom_type, group):
         """ create empty vector layer with given geom type """
 
-        if type == "ns" or type == "ew":
+        if type == "" or type == "ns" or type == "ew":
             field_names = FIELDS_NS_EW_EMPTY
         elif type == "map":
             field_names = FIELDS_MAP_EMPTY
