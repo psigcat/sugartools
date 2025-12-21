@@ -115,13 +115,14 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"No registers for expression '{sql}'", level=Qgis.Warning)
             return
 
-        self.draw_blocks(rows)
-        self.parent.dlg.blocks_draw_box.setEnabled(True)
-        self.preselect_layers()
         dib_pieza = self.parent.dlg.blocks_filter_expr.text()
         dib_pieza = dib_pieza.replace(r""""dib_pieza" = """, "")
         dib_pieza = dib_pieza.replace("'", "").replace('"', "").strip()
         self.parent.dlg.blocks_dib_pieza.setText(dib_pieza)
+
+        self.draw_blocks(dib_pieza, rows)
+        self.parent.dlg.blocks_draw_box.setEnabled(True)
+        self.preselect_layers()
 
         self.parent.dlg.messageBar.pushMessage(f"Blocks selected", level=Qgis.Success)
 
@@ -134,21 +135,14 @@ class BlocksTool():
             self.parent.dlg.blocks_filter_expr.setText(expr_dialog.expressionText())
 
 
-    def draw_blocks(self, rows):
+    def draw_blocks(self, dib_pieza, rows):
         """ draw blocks from given database rows """
 
-        layer_name = "points"
-
-        # remove previously imported points layer if exists
-        points_layer = self.utils.get_layer_from_tree(layer_name)
-        if points_layer:
-            QgsProject.instance().removeMapLayer(points_layer)
+        layer_name = dib_pieza
         
         blocks_layer_uri = "PointZ?crs=epsg:25831&field=cod_pieza:integer&field=num_pieza:integer&field=nom_nivel:string(10)&field=cod_tnivel:string(2)&field=dib_pieza:string(10)"
         blocks_layer = QgsVectorLayer(blocks_layer_uri, layer_name, "memory")
-
         QgsProject.instance().addMapLayer(blocks_layer)
-        #group.addChildNode(QgsLayerTreeLayer(blocks_layer))
 
         blocks_layer.startEditing()
 
@@ -174,7 +168,7 @@ class BlocksTool():
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_points.qml")
         blocks_layer.loadNamedStyle(symbology_path)
 
-        #self.utils.save_layer_gpkg(blocks_layer, self.parent.dlg.blocks_workspace.filePath())
+        self.utils.save_layer_gpkg(blocks_layer, os.path.join(self.parent.dlg.blocks_workspace.filePath(), "helper"))
 
         self.points_layer = blocks_layer
 
@@ -186,13 +180,13 @@ class BlocksTool():
             return False
 
         if sip.isdeleted(self.points_layer):
-            self.parent.dlg.messageBar.pushMessage(f"No block points available, load blocks first (or select 'points' layer if available) in order to draw a polygon.", level=Qgis.Critical, duration=10)
+            self.parent.dlg.messageBar.pushMessage(f"No block points available, load blocks first (or select points layer with name <dib_pieza> if available) in order to draw a polygon.", level=Qgis.Critical, duration=10)
             return
 
         if self.points_layer is None:
             active_layer = self.parent.iface.activeLayer()
 
-            if not active_layer or active_layer.name() != "points":
+            if not active_layer or active_layer.name() != self.parent.dlg.blocks_dib_pieza.text():
                 self.parent.dlg.messageBar.pushMessage(f"No block points available, select blocks first in order to draw a polygon.", level=Qgis.Critical, duration=3)
                 return
 
@@ -213,8 +207,9 @@ class BlocksTool():
 
         # reset for next round of loading points and drawing forms
         self.parent.dlg.blocks_draw_box.setEnabled(False)
-        #QgsProject.instance().removeMapLayer(self.points_layer)
-        #self.points_layer = None
+
+        # remove previously imported points layer if exists
+        QgsProject.instance().removeMapLayer(self.points_layer)
 
 
     def draw_polygon(self):
