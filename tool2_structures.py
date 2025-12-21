@@ -10,9 +10,7 @@ from .utils import utils
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
 
-#FIELDS = "&field=nom_nivel:string(8)&field=des_nivel:string(50)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
 FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
-#FIELDS_MAP_EMPTY = "&field=cod_est:integer&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=t_est2:string(10)&field=t_forma:string(10)&field=princip:string(10)"
 FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)&field=SHAPE_length:float&field=SHAPE_area:float"
 FIELDS_NS_EW_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
 
@@ -363,31 +361,3 @@ class StructuresTool():
                 name = self.parent.iface.activeLayer().name()
                 name = name.split("_")[0]
                 QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
-
-
-    # def create_structures_polygon(self, name, rows):
-    #     """ make vector layer with points """
-
-    #     polygon_layer_uri = "Polygon?crs=epsg:25831&field=id:integer"
-    #     polygon_layer = QgsVectorLayer(polygon_layer_uri, name, "memory")
-
-    #     QgsProject.instance().addMapLayer(polygon_layer)
-    #     polygon_layer.startEditing()
-
-    #     #for i in range(rows):
-    #     point_list = []
-    #     pos_x = 3
-    #     pos_y = 4
-    #     first_point = QgsPointXY(rows[0][pos_x], rows[0][pos_y])
-    #     for row in rows:
-    #         point_list.append(QgsPointXY(row[pos_x], row[pos_y]))
-    #     point_list.append(first_point)
-           
-    #     geometry = QgsGeometry.fromPolygonXY([point_list])
-    #     feature = QgsFeature()
-    #     feature.setGeometry(geometry)
-    #     feature.setAttributes([row[2]])
-    #     polygon_layer.addFeature(feature)
-    #     polygon_layer.commitChanges()
-    #     self.parent.iface.setActiveLayer(polygon_layer)
-    #     self.parent.iface.zoomToActiveLayer()
