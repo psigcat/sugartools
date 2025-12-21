@@ -428,12 +428,6 @@ class utils:
                 table_name_refactored = f"{source_table}_refactored"
                 source_refactored = f"{source_file}|layername={table_name_refactored}"
 
-                # delete original table inside the gpkg
-                # processing.run("qgis:spatialiteexecutesql", {
-                #     'DATABASE': layer.source(),
-                #     'SQL': f'DROP TABLE "{source_table}"',
-                # })
-
                 # save new layer to gpkg
                 result = processing.run("native:savefeatures", {
                     'INPUT': layer_refactored,
@@ -442,23 +436,49 @@ class utils:
                     'ACTION_ON_EXISTING_FILE': 1
                 })
 
-                # rename table to original name
-                # processing.run("qgis:spatialiteexecutesql", {
-                #     'DATABASE': result["OUTPUT"],
-                #     'SQL': f'ALTER TABLE {table_name_refactored} RENAME TO "{source_table}"',
-                # })
+                # delete original table inside the gpkg
+                processing.run("qgis:spatialiteexecutesql", {
+                    'DATABASE': layer.source(),
+                    'SQL': f'DROP TABLE "{source_table}"',
+                })
 
-                final_layer = QgsVectorLayer(result["OUTPUT"], table_name_refactored, "ogr")
-                final_layer.setName(source_table)
-                QgsProject.instance().addMapLayer(final_layer)
+                # rename table to original name
+                processing.run("qgis:spatialiteexecutesql", {
+                    'DATABASE': layer.source(),
+                    'SQL': f'ALTER TABLE {table_name_refactored} RENAME TO "{source_table}"',
+                })
+
+                final_layer = QgsVectorLayer(layer.source(), source_table, "ogr")
+                QgsProject.instance().addMapLayer(final_layer, False)
+                parent_group = self.get_group_by_name(layer)
+                if parent_group:
+                    parent_group.addLayer(final_layer)
+                QgsProject.instance().removeMapLayer(layer)
 
                 # copy style from original to refactored layer
                 symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "structures_map.qml")
                 final_layer.loadNamedStyle(symbology_path)
                 final_layer.triggerRepaint()
-                QgsProject.instance().removeMapLayer(layer.id())
 
-                self.parent.dlg.messageBar.pushMessage(f"Refactored structures attribute tables '{table_name_refactored}'", level=Qgis.Success)
+                self.parent.dlg.messageBar.pushMessage(f"Refactored structures attribute tables '{source_table}'", level=Qgis.Success)
+
+
+    def get_group_by_name(self, layer):
+        """ return group by name """
+
+        root = QgsProject.instance().layerTreeRoot()
+        layer_node = root.findLayer(layer.id())
+        
+        if layer_node:
+            parent = layer_node.parent()
+            
+            if isinstance(parent, QgsLayerTreeGroup):
+                if parent == root:
+                    return root
+                else:
+                    return parent
+
+        return False
 
 
     def read_database_config(self):
