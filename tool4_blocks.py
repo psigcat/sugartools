@@ -257,13 +257,24 @@ class BlocksTool():
             layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
         
         layer.commitChanges()
+        write_layer = layer
 
-        # QgsProject.instance().addMapLayer(layer)
-        # self.utils.save_layer_gpkg(layer, self.parent.dlg.blocks_workspace.filePath())
+        # smooth polygon
+        if self.parent.dlg.blocks_smooth_polygons.isChecked():
+            params = {
+                'INPUT': layer,
+                'ITERATIONS': 1,
+                'OFFSET': 0.25,
+                'MAX_ANGLE': 180,
+                'OUTPUT': 'TEMPORARY_OUTPUT'
+            }
+            result = processing.run("native:smoothgeometry", params)
+            write_layer = result['OUTPUT']
 
         # write output to selected layer
         params = {
-            'SOURCE_LAYER': layer,
+            #'SOURCE_LAYER': layer,
+            'SOURCE_LAYER': write_layer,
             'SOURCE_FIELD': '',
             'TARGET_LAYER': self.parent.dlg.blocks_polygon_layer.currentText(),
             'TARGET_FIELD': '',
