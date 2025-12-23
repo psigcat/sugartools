@@ -572,13 +572,10 @@
           <string>Draw Geometries</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_13">
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="blocks_dib_pieza"/>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_27">
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_25">
             <property name="text">
-             <string>Polygons layer:</string>
+             <string>Lines layer:</string>
             </property>
            </widget>
           </item>
@@ -589,28 +586,38 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="0">
+          <item row="7" column="0">
            <widget class="QLabel" name="label_26">
             <property name="text">
              <string>3D layer:</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="label_25">
+          <item row="6" column="2">
+           <widget class="QgsMapLayerComboBox" name="blocks_lines_layer"/>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="blocks_dib_pieza"/>
+          </item>
+          <item row="4" column="2">
+           <widget class="QgsMapLayerComboBox" name="blocks_polygon_layer"/>
+          </item>
+          <item row="7" column="2">
+           <widget class="QgsMapLayerComboBox" name="blocks_3d_layer"/>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_27">
             <property name="text">
-             <string>Lines layer:</string>
+             <string>Polygons layer:</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
-           <widget class="QgsMapLayerComboBox" name="blocks_3d_layer"/>
-          </item>
-          <item row="5" column="1">
-           <widget class="QgsMapLayerComboBox" name="blocks_lines_layer"/>
-          </item>
-          <item row="4" column="1">
-           <widget class="QgsMapLayerComboBox" name="blocks_polygon_layer"/>
+          <item row="5" column="2">
+           <widget class="QCheckBox" name="blocks_smooth_polygons">
+            <property name="text">
+             <string>Smooth polygon</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
