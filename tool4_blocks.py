@@ -18,9 +18,9 @@ from .utils import utils
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_BLOCKS = ["blocks_db", "blocks_workspace"]
 FIELDS_MANDATORY_PROCESS = ["blocks_workspace", "blocks_dib_pieza", "blocks_polygon_layer", "blocks_lines_layer", "blocks_3d_layer"]
-POLYGON_LAYER_ID = "_2D"
-LINE_LAYER_ID = "_Lin2D"
-THREED_LAYER_ID = "_3D"
+POLYGON_LAYER_ID = "_2d"
+LINE_LAYER_ID = "_lin2d"
+THREED_LAYER_ID = "_3d"
 
 
 class BlocksTool():
@@ -37,13 +37,15 @@ class BlocksTool():
     def setup(self):
         """ load initial parameters """
 
+        self.parent.dlg.blocks_polygon_layer.setAllowEmptyLayer(True, "None")
+        self.parent.dlg.blocks_lines_layer.setAllowEmptyLayer(True, "None")
+        self.parent.dlg.blocks_3d_layer.setAllowEmptyLayer(True, "None")
+
         self.parent.dlg.blocks_draw_box.setEnabled(False)
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.blocks_db, self.databases)
         self.preselect_layers()
 
-        #self.parent.dlg.blocks_polygon_layer.setFilters(QgsMapLayerProxyModel.VectorLayer)
-        #print(self.parent.dlg.blocks_polygon_layer.filters())
         self.parent.dlg.blocks_filter_expr_btn.clicked.connect(self.open_expr_builder)
         self.parent.dlg.blocks_filter_expr_select_btn.clicked.connect(self.load_blocks)
 
@@ -80,11 +82,11 @@ class BlocksTool():
             if isinstance(layer, QgsLayerTreeLayer):
                 layer_name = layer.layer().name()
                 layer = QgsProject.instance().mapLayersByName(layer_name)[0]
-                if POLYGON_LAYER_ID in layer_name or POLYGON_LAYER_ID.lower() in layer_name:
+                if POLYGON_LAYER_ID.lower() in layer_name.lower():
                     self.parent.dlg.blocks_polygon_layer.setLayer(layer)
-                elif LINE_LAYER_ID in layer_name or LINE_LAYER_ID.lower() in layer_name:
+                elif LINE_LAYER_ID.lower() in layer_name.lower():
                     self.parent.dlg.blocks_lines_layer.setLayer(layer)
-                elif THREED_LAYER_ID in layer_name or THREED_LAYER_ID.lower() in layer_name:
+                elif THREED_LAYER_ID.lower() in layer_name.lower():
                     self.parent.dlg.blocks_3d_layer.setLayer(layer)
 
 
@@ -196,7 +198,8 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a PointZ or MultiPointZ layer.", level=Qgis.Critical, duration=3)
             return
 
-        convex_hull = self.draw_polygon()
+        convex_hull = self.get_convex_hull()
+        self.draw_polygon(convex_hull)
         self.draw_line(convex_hull)
         
         if not self.draw_polygon3d():
@@ -212,22 +215,9 @@ class BlocksTool():
         QgsProject.instance().removeMapLayer(self.points_layer)
 
 
-    def draw_polygon(self):
-        """ draw polygon from convex hull """
+    def get_convex_hull(self):
+        """ get convex hull from points layer """
 
-        polygon_layer_name = self.parent.dlg.blocks_polygon_layer.currentText()
-        polygon_layer = QgsProject.instance().mapLayersByName(polygon_layer_name)[0]
-
-        # save layer before processing
-        if polygon_layer.isEditable():
-            polygon_layer.commitChanges()
-            #polygon_layer.rollBack()
-
-        if not polygon_layer or polygon_layer.wkbType() != QgsWkbTypes.Type.MultiPolygon:
-            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygon layer.", level=Qgis.Critical, duration=3)
-            return
-
-        # apply geoprocess convex hull
         params = {
             'INPUT': self.points_layer,
             #'FIELD': 'dib_pieza',
@@ -257,7 +247,27 @@ class BlocksTool():
             layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
         
         layer.commitChanges()
-        write_layer = layer
+
+        return layer
+
+
+    def draw_polygon(self, convex_hull):
+        """ draw polygon from convex hull """
+
+        polygon_layer = self.parent.dlg.blocks_polygon_layer.currentLayer()
+        if polygon_layer is None:
+            return
+
+        # save layer before processing
+        if polygon_layer.isEditable():
+            polygon_layer.commitChanges()
+            #polygon_layer.rollBack()
+
+        if not polygon_layer or polygon_layer.wkbType() != QgsWkbTypes.Type.MultiPolygon:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygon layer.", level=Qgis.Critical, duration=3)
+            return
+
+        write_layer = convex_hull
 
         # smooth polygon
         if self.parent.dlg.blocks_smooth_polygons.isChecked():
@@ -282,14 +292,13 @@ class BlocksTool():
         }
         processing.run("etl_load:appendfeaturestolayer", params)
 
-        return layer
-
 
     def draw_line(self, convex_hull):
         """ draw line """
 
-        line_layer_name = self.parent.dlg.blocks_lines_layer.currentText()
-        line_layer = QgsProject.instance().mapLayersByName(line_layer_name)[0]
+        line_layer = self.parent.dlg.blocks_lines_layer.currentLayer()
+        if line_layer is None:
+            return
 
         # save layer before processing
         if line_layer.isEditable():
@@ -431,8 +440,9 @@ class BlocksTool():
     def draw_polygon3d(self):
         """ draw 3d convex hull and append directly to the target layer provider """
 
-        threed_layer_name = self.parent.dlg.blocks_3d_layer.currentText()
-        threed_layer = QgsProject.instance().mapLayersByName(threed_layer_name)[0]
+        threed_layer = self.parent.dlg.blocks_3d_layer.currentLayer()
+        if threed_layer is None:
+            return
 
         if not threed_layer or threed_layer.wkbType() != QgsWkbTypes.Type.MultiPolygonZ:
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
@@ -503,7 +513,7 @@ class BlocksTool():
 
         if success:
             threed_layer.commitChanges()
-            self.parent.dlg.messageBar.pushMessage(f"SUCCESS: Feature successfully appended to GeoPackage layer '{threed_layer_name}' via data provider.", level=Qgis.Success, duration=3)
+            self.parent.dlg.messageBar.pushMessage(f"SUCCESS: Feature successfully appended to GeoPackage layer '{threed_layer.name()}' via data provider.", level=Qgis.Success, duration=3)
             threed_layer.triggerRepaint()
             return True
         else:

@@ -22,10 +22,11 @@
  ***************************************************************************/
 """
 
-import os
-
+from qgis.core import Qgis
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
+
+import os
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -42,3 +43,8 @@ class SugarToolsDialog(QtWidgets.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+
+        # Set QgsMapComboBox filters
+        self.blocks_polygon_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
+        self.blocks_lines_layer.setFilters(Qgis.LayerFilter.LineLayer)
+        self.blocks_3d_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
