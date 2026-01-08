@@ -15,7 +15,6 @@ FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_n
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
-FIELDS_MANDATORY_SHAPEFILES = ["shapefiles_folder"]
 
 STRUCTURES_FIELD_MAPPINGS = [
     {
@@ -325,38 +324,6 @@ class utils:
         self.parent.dlg.messageBar.pushMessage(f"At least one section has to be selected", level=Qgis.Warning, duration=3)
 
         return False
-        
-
-    def import_shapefiles(self):
-        """ import all shapefiles from a folder """
-
-        if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_SHAPEFILES):
-            return False
-
-        shp_group = self.utils.create_group("Map")
-        shp_path = self.parent.dlg.shapefiles_folder.filePath()
-        for file in os.listdir(shp_path):
-            if file.endswith(".shp"):
-                file_path = os.path.join(shp_path, file)
-                print(file_path, file)
-                shp_layer = QgsVectorLayer(file_path, file, "ogr")
-                QgsProject.instance().addMapLayer(shp_layer, False)
-                #shp_group.insertChildNode(1, QgsLayerTreeLayer(shp_layer))
-                shp_group.addChildNode(QgsLayerTreeLayer(shp_layer))
-
-        # create spatial bookmark
-
-
-        # create map theme
-        mapThemesCollection = QgsProject.instance().mapThemeCollection()
-        mapThemes = mapThemesCollection.mapThemes()
-        mapThemeRecord = QgsMapThemeCollection.createThemeFromCurrentState(
-            QgsProject.instance().layerTreeRoot(),
-            self.parent.iface.layerTreeView().layerTreeModel()
-        )
-        mapThemesCollection.insert("Map", mapThemeRecord)
-        
-        # apply spatial bookmark once layout "map" is opened
 
 
     def import_layout(self, template):

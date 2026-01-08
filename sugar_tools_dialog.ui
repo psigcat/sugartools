@@ -837,38 +837,17 @@
           <item>
            <widget class="QGroupBox" name="groupBox_3">
             <property name="title">
-             <string>Import Map geometries</string>
+             <string>Recalculate selected layers</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <item>
-              <widget class="QLabel" name="label_5">
+              <widget class="QPushButton" name="recalculate_shape_btn">
                <property name="text">
-                <string>Select folder containing shapefiles:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QgsFileWidget" name="shapefiles_folder">
-               <property name="storageMode">
-                <enum>QgsFileWidget::GetDirectory</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="import_shapefiles_btn">
-               <property name="text">
-                <string>Import Map shapefiles</string>
+                <string>Recalculate SHAPE_Length and SHAPE_Area</string>
                </property>
               </widget>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="recalculate_shape_btn">
-            <property name="text">
-             <string>Recalculate SHAPE_Length and SHAPE_Area of selected layers</string>
-            </property>
            </widget>
           </item>
          </layout>
@@ -918,10 +897,19 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_10">
           <item>
-           <widget class="QPushButton" name="refactor_structures_attr_btn">
-            <property name="text">
-             <string>Refactor attribute table of selected layers</string>
+           <widget class="QGroupBox" name="groupBox_12">
+            <property name="title">
+             <string>Refactor selected layers</string>
             </property>
+            <layout class="QVBoxLayout" name="verticalLayout_12">
+             <item>
+              <widget class="QPushButton" name="refactor_structures_attr_btn">
+               <property name="text">
+                <string>Refactor attribute table</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
