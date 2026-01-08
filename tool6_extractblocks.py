@@ -24,6 +24,10 @@ class ExtractblocksTool():
 
         self.utils = utils(self.parent)
 
+        self.parent.dlg.extract_polygon_layer.setAllowEmptyLayer(True, "None")
+        self.parent.dlg.extract_lines_layer.setAllowEmptyLayer(True, "None")
+        self.parent.dlg.extract_3d_layer.setAllowEmptyLayer(True, "None")
+
         self.preselect_layer()
 
 
