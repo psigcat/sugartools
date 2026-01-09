@@ -49,6 +49,7 @@ class SugarToolsDialog(QtWidgets.QDialog, FORM_CLASS):
         self.blocks_lines_layer.setFilters(Qgis.LayerFilter.LineLayer)
         self.blocks_3d_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
 
+        self.extract_table.setFilters(Qgis.LayerFilter.NoGeometry)
         self.extract_polygon_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
         self.extract_lines_layer.setFilters(Qgis.LayerFilter.LineLayer)
         self.extract_3d_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
