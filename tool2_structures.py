@@ -1,4 +1,5 @@
-from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle
+from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle, QgsDefaultValue, QgsField
+from qgis.PyQt.QtCore import QVariant
 
 import os
 import json
@@ -10,8 +11,8 @@ from .utils import utils
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
 
-FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:float&field=coord_y:float&field=coord_z:float"
-FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)&field=SHAPE_length:float&field=SHAPE_area:float"
+FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:real&field=coord_y:real&field=coord_z:real"
+FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)"
 FIELDS_NS_EW_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
 
 
@@ -156,6 +157,21 @@ class StructuresTool():
 
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_{geom_type}.qml")
         layer.loadNamedStyle(symbology_path)
+
+        # autoupdate fields SHAPE_length and SHAPE_area
+        if type == "map":
+            provider = layer.dataProvider()
+            provider.addAttributes([
+                QgsField("SHAPE_length", QVariant.Double),
+                QgsField("SHAPE_area", QVariant.Double)
+            ])
+            layer.updateFields()
+            idx_length = layer.fields().indexOf("SHAPE_length")
+            idx_area = layer.fields().indexOf("SHAPE_area")
+            length_default = QgsDefaultValue("$length", True)
+            area_default = QgsDefaultValue("$area", True)
+            layer.setDefaultValueDefinition(idx_length, length_default)
+            layer.setDefaultValueDefinition(idx_area, area_default)
 
 
     def create_structures_points(self, name, group, rows, type, label_type=None):
