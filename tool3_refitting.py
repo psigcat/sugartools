@@ -492,6 +492,12 @@ class RefittingTool():
 
         if not os.path.exists(path):
             os.makedirs(path)
+
+        # add info about coords to file name
+        coordx_val = self.parent.dlg.refitting_coordx.currentText()[-1]
+        coordy_val = self.parent.dlg.refitting_coordy.currentText()[-1]
+        if coordx_val and coordy_val:
+            file_name += " - " + coordx_val + coordy_val
         file = os.path.join(path, file_name + ".csv")
 
         with open(file, 'w', newline='') as csvfile:
