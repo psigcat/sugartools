@@ -458,9 +458,10 @@ class RefittingTool():
         """ fill column combo boxes """
 
         self.parent.dlg.refitting_part.addItem(name)
-        self.parent.dlg.refitting_coordx.addItem(name)
-        self.parent.dlg.refitting_coordy.addItem(name)
-        self.parent.dlg.refitting_coordz.addItem(name)
+        if name.startswith("coord"):
+            self.parent.dlg.refitting_coordx.addItem(name)
+            self.parent.dlg.refitting_coordy.addItem(name)
+            self.parent.dlg.refitting_coordz.addItem(name)
         self.parent.dlg.refitting_origin.addItem(name)
         self.parent.dlg.refitting_target.addItem(name)
         self.parent.dlg.refitting_class.addItem(name)
