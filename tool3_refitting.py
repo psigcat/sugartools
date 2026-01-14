@@ -484,7 +484,8 @@ class RefittingTool():
         base_path = os.path.basename(self.parent.dlg.refitting_excel.filePath())
         file_path = base_path.split(".")[0]
         file_name = file_path
-        if self.sheet_name != "":
+
+        if self.sheet_name != "" and self.sheet_name is not None:
             file_name += " - " + self.sheet_name
         path = os.path.join(dir_name, file_name)
 
