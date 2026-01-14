@@ -858,36 +858,7 @@
          <property name="title">
           <string>Sections</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_9">
-          <item>
-           <widget class="QLabel" name="label_28">
-            <property name="text">
-             <string>Points Symbology folders</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QgsFileWidget" name="symbology_folder">
-            <property name="storageMode">
-             <enum>QgsFileWidget::GetDirectory</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_38">
-            <property name="text">
-             <string>Overlay Symbology folders</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QgsFileWidget" name="symbology_overlay_folder">
-            <property name="storageMode">
-             <enum>QgsFileWidget::GetDirectory</enum>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <layout class="QVBoxLayout" name="verticalLayout_9"/>
         </widget>
        </item>
        <item>

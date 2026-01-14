@@ -202,8 +202,6 @@ class SugarTools:
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.utils.import_layout("layout_map.qpt"))
         self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures.qpt"))
         self.dlg.refactor_structures_attr_btn.clicked.connect(self.utils.refactor_attributes)
-        self.dlg.symbology_folder.fileChanged.connect(self.sections_tool.fill_symbology)
-        self.dlg.symbology_overlay_folder.fileChanged.connect(self.sections_tool.fill_symbology_overlay)
         self.dlg.recalculate_shape_btn.clicked.connect(self.utils.recalculate_shape)
 
         iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
@@ -292,7 +290,6 @@ class SugarTools:
 
         # show the dialog
         self.sections_tool.point_or_block()
-        self.sections_tool.preset_fields()
         self.sections_tool.fill_symbology()
         self.sections_tool.fill_symbology_overlay()
         self.dlg.show()

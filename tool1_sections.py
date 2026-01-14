@@ -92,24 +92,17 @@ class SectionsTool():
         self.parent.dlg.symbology.setVisible(self.parent.dlg.radioPoints.isChecked() or self.parent.dlg.radioPointsBlocks.isChecked())
 
 
-    def preset_fields(self):
-        """ show all symbologies (but starting with overlay) in combobox """
-
-        self.parent.dlg.symbology_folder.setFilePath(os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR))
-        self.parent.dlg.symbology_overlay_folder.setFilePath(os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR))
-
-
     def fill_symbology(self):
         """ show all symbologies (but starting with levels) in combobox """
 
-        symbology_path = self.parent.dlg.symbology_folder.filePath()
+        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
         self.fill_symbology_files(self.parent.dlg.symbology, "levels", symbology_path)
 
 
     def fill_symbology_overlay(self):
         """ show all symbologies (but starting with overlay) in combobox """
 
-        symbology_path = self.parent.dlg.symbology_overlay_folder.filePath()
+        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
         self.fill_symbology_files(self.parent.dlg.symbology_overlay, "overlay", symbology_path)
 
 
