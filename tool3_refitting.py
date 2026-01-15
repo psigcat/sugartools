@@ -109,16 +109,27 @@ class RefittingTool():
         self.sheetrows = self.sheet.nrows
         print("Sheet '{0}' has {1} rows and {2} columns".format(self.sheet_name, self.sheet.nrows, self.sheet.ncols))
 
-        # load column indexes
+        self.load_xls_indexes()
+        self.select_default()
+
+
+    def load_xls_indexes(self):
+        """ load column indexes """
+
+        self.col_indexes = {}
         for column_index in range(self.sheet.ncols):
             name = self.sheet.cell_value(0, column_index)
             self.col_indexes[name] = column_index
             self.fill_parts(name)
 
-        self.select_default()
 
-        # load all data into dict in order to save it later to csv file
+    def load_xls_data(self):
+        """ load all data into dict in order to save it later to csv file """
+
+        self.load_xls_indexes()
         self.tablekeys = list(self.col_indexes.keys())
+        self.table = []
+
         for rx in range(1, self.sheet.nrows):
             row = {}
             for ry in range(self.sheet.ncols):
@@ -133,7 +144,7 @@ class RefittingTool():
 
 
     def load_xlsx(self, file_path):
-        """ load sheets from XLS """
+        """ load sheets from XLSX excel sheet """
 
         self.book = openpyxl.load_workbook(file_path)
         print("The number of worksheets is {0}".format(len(self.book.sheetnames)))
@@ -146,7 +157,7 @@ class RefittingTool():
 
 
     def load_xlsx_sheet(self):
-        """ load data from excel sheet """
+        """ load data from XLSX excel sheet """
 
         index = self.parent.dlg.refitting_sheet.currentIndex() - 1
         self.sheet = self.book.worksheets[index]
@@ -154,18 +165,28 @@ class RefittingTool():
         self.sheetrows = self.sheet.max_row
         print("Sheet '{0}' has {1} rows and {2} columns".format(self.sheet_name, self.sheet.max_row, self.sheet.max_column))
 
-        # load column indexes
+        self.load_xlsx_indexes()
+        self.select_default()
+
+
+    def load_xlsx_indexes(self):
+        """ load column indexes """
+
+        self.col_indexes = {}
         for column_index in range(self.sheet.max_column):
             cell_obj = self.sheet.cell(1, column_index + 1)
             name = cell_obj.value
             self.col_indexes[name] = column_index
             self.fill_parts(name)
-        #print(self.col_indexes)
 
-        self.select_default()
 
-        # load all data into dict in order to save it later to csv file
+    def load_xlsx_data(self):
+        """ load all data into dict in order to save it later to csv file """
+
+        self.load_xlsx_indexes()
         self.tablekeys = list(self.col_indexes.keys())
+        self.table = []
+
         for rx in range(1, self.sheet.max_row + 1):
             row = {}
             for ry in range(1, self.sheet.max_column + 1):
@@ -177,7 +198,6 @@ class RefittingTool():
                     val = int(val)
                 row[col] = val
             self.table.append(row)
-        #print(self.table)
 
 
     def load_csv(self, file_path):
@@ -235,13 +255,29 @@ class RefittingTool():
 
         print("process")
 
+        if self.extension == "xls":
+            self.load_xls_data()
+        elif self.extension == "xlsx":
+            self.load_xlsx_data()
+        elif self.extension == "csv":
+            self.load_csv_data()
+
         self.read_parts()
+        self.write_parts_to_table()
+
+        # reset vars
+        self.points = {}
+        self.lines = []
+        self.lines_attr = []
+
         self.process_parts()
         path = self.write_csv()
 
         group_name = self.sheet_name
-        if group_name == "":
+        if group_name == "" or group_name == None:
             group_name = os.path.basename(self.parent.dlg.refitting_excel.filePath()).split(".")[0]
+
+        group_name = self.append_coords_to_name(group_name)
         group = self.utils.create_group(group_name)
         self.create_point_layer(path, group)
         self.create_line_layer(path, group)
@@ -249,6 +285,8 @@ class RefittingTool():
 
     def read_parts(self):
         """ read parts row by row """
+
+        self.parts = []
 
         for rx in range(1, self.sheetrows):
             #print(rx, self.sheet.row(rx))
@@ -313,6 +351,27 @@ class RefittingTool():
                 "labels": labels,
                 "color": color
             })
+
+
+    def write_parts_to_table(self):
+        """ calculate parts """
+
+        for part in self.parts:
+            if self.extension == "xls" or self.extension == "csv":
+                row = part["row_num"]
+            elif self.extension == "xlsx":
+                row = part["row_num"]-1
+
+            # rewrite UI dropdown selectable fields in order to remap
+            self.table[row][FIELDS_DEFAULT["refitting_part"]] = part["part_num"]
+            self.table[row][FIELDS_DEFAULT["refitting_coordx"]] = part["coordx"]
+            self.table[row][FIELDS_DEFAULT["refitting_coordy"]] = part["coordy"]
+            self.table[row][FIELDS_DEFAULT["refitting_coordz"]] = part["coordz"]
+            self.table[row][FIELDS_DEFAULT["refitting_origin"]] = part["origin"]
+            self.table[row][FIELDS_DEFAULT["refitting_target"]] = part["target"]
+            self.table[row][FIELDS_DEFAULT["refitting_class"]] = part["rclass"]
+            self.table[row][FIELDS_DEFAULT["refitting_labels"]] = part["labels"]
+            self.table[row][FIELDS_DEFAULT["refitting_colors"]] = part["color"]
 
 
     def process_parts(self):
@@ -493,11 +552,7 @@ class RefittingTool():
         if not os.path.exists(path):
             os.makedirs(path)
 
-        # add info about coords to file name
-        coordx_val = self.parent.dlg.refitting_coordx.currentText()[-1]
-        coordy_val = self.parent.dlg.refitting_coordy.currentText()[-1]
-        if coordx_val and coordy_val:
-            file_name += " - " + coordx_val + coordy_val
+        file_name = self.append_coords_to_name(file_name)
         file = os.path.join(path, file_name + ".csv")
 
         with open(file, 'w', newline='') as csvfile:
@@ -511,10 +566,21 @@ class RefittingTool():
             return os.path.dirname(file)
 
 
+    def append_coords_to_name(self, name):
+        """ add info about coords to file name """
+
+        coordx_val = self.parent.dlg.refitting_coordx.currentText()[-1]
+        coordy_val = self.parent.dlg.refitting_coordy.currentText()[-1]
+        if coordx_val and coordy_val:
+            name += " - " + coordx_val + coordy_val
+
+        return name
+
+
     def create_point_layer(self, path, group):
         """ create line layer """
 
-        layer = self.utils.create_vector_layer("points", "point", group, "&field=id:integer&field=color:string(7)")
+        layer = self.utils.create_vector_layer("points " + group.name(), "point", group, "&field=id:integer&field=color:string(7)")
 
         layer.startEditing()
         i=0
@@ -538,11 +604,14 @@ class RefittingTool():
 
         self.utils.save_layer_gpkg(layer, path)
 
+        self.parent.iface.setActiveLayer(layer)
+        self.parent.iface.zoomToActiveLayer()
+
 
     def create_line_layer(self, path, group):
         """ create point layer """
 
-        layer = self.utils.create_vector_layer("lines", "linestring", group, "&field=origin:integer&field=target:integer&field=color:string(7)&field=class:integer")
+        layer = self.utils.create_vector_layer("lines " + group.name(), "linestring", group, "&field=origin:integer&field=target:integer&field=color:string(7)&field=class:integer")
 
         layer.startEditing()
         i=0
