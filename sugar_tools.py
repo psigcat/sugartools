@@ -210,7 +210,7 @@ class SugarTools:
 
         # Get plugin version from metadata
         version = self.utils.get_metadata_parameter(self.plugin_dir)
-        self.dlg.setWindowTitle(f"SugarTools v{version}")
+        self.dlg.setWindowTitle(f"SugarTools {version}")
 
         # sections
         # self.sections_tool.fill_layer()
