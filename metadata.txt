@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.7
+version=0.2.8
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,8 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.8 - automatically classify arrows in refitting tool, add legend to map layout (#45)
+	0.2.7 - fix refitting tool (#46)
 	0.2.6 - autocalc area and length in structures, allow none layer in extract tool, add empty layer to dropdowns in order to allow not drawing layer in forms
 	0.2.5 - Rename refactored attributes layer, Forms: Save helper points, Smooth polygon
 	0.2.4 - Qt6/Qgis 4 compability, fix structures without ns nor ew

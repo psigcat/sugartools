@@ -658,7 +658,7 @@ class SectionsTool():
     def onLayoutLoaded(self):
         """ set layout vars when layout designer is opened """
 
-        print("onLayoutLoaded")
+        #print("onLayoutLoaded")
 
         layout_manager = QgsProject.instance().layoutManager()
         layout = layout_manager.layoutByName(SECTIONS_LAYOUT_NAME)
