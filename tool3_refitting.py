@@ -414,12 +414,12 @@ class RefittingTool():
         if azimut > 180:
             eje = azimut - 180
 
-        distvertical = target["coordz"] - origin["coordz"]
-        distvertical = abs(distvertical)
+        distvertical =  origin["coordz"] - target["coordz"]
+        #distvertical = abs(distvertical)
 
         inclinacion = math.atan2(distvertical, disthorizontal)
         inclinacion = 180 * (inclinacion / math.pi)
-        inclinacion = abs(inclinacion)
+        #inclinacion = abs(inclinacion)
 
         # print(part["row_num"], part["part_num"], incx, incy, incxmo, incymo, disthorizontal, azimut)
 
