@@ -1,6 +1,7 @@
+from qgis.core import Qgis, QgsProject, QgsPointXY, QgsDistanceArea, QgsVectorLayer, QgsFeature, QgsGeometry, QgsLayerTreeLayer, QgsFields, QgsField, QgsFeatureRequest, QgsCategorizedSymbolRenderer, QgsRendererCategory, QgsSimpleFillSymbolLayer, QgsFillSymbol, QgsArrowSymbolLayer, QgsLineSymbol
+from qgis.PyQt.QtCore import Qt, QVariant
+from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import QComboBox
-from qgis.core import Qgis, QgsProject, QgsPointXY, QgsDistanceArea, QgsVectorLayer, QgsFeature, QgsGeometry, QgsLayerTreeLayer, QgsFields, QgsField
-from qgis.PyQt.QtCore import QVariant
 
 import os
 import math
@@ -35,6 +36,12 @@ class RefittingTool():
         """Constructor."""
 
         self.parent = parent
+        self.utils = utils(self.parent)
+
+
+    def setup(self):
+        """ load initial parameters """
+
         self.extension = None
         self.book = None
         self.sheet = None
@@ -48,11 +55,9 @@ class RefittingTool():
         self.lines = []
         self.lines_attr = []
 
-        self.utils = utils(self.parent)
-
-
-    def setup(self):
-        """ load initial parameters """
+        self.parent.dlg.refitting_excel.setFilePath(None)
+        self.parent.dlg.refitting_sheet.clear()
+        self.clear_parts()
 
         self.parent.dlg.refitting_excel.fileChanged.connect(self.load_excel)
 
@@ -73,8 +78,10 @@ class RefittingTool():
         self.clear_parts()
 
         file_path = self.parent.dlg.refitting_excel.filePath()
-        self.extension = os.path.basename(file_path).split(".")[1]
+        if file_path == "" or "." not in file_path or not os.path.exists(file_path):
+            return
 
+        self.extension = os.path.basename(file_path).split(".")[1]
         if self.extension == "xls":
             self.load_xls(file_path)
         elif self.extension == "xlsx":
@@ -630,8 +637,72 @@ class RefittingTool():
             i+=1
         layer.commitChanges()
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "refitting_lines.qml")
-        layer.loadNamedStyle(symbology_path)
+        #symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "refitting_lines.qml")
+        #layer.loadNamedStyle(symbology_path)
         #layer.triggerRepaint()
 
+        self.categorize_symbology(layer)
+
         self.utils.save_layer_gpkg(layer, path)
+
+
+    def categorize_symbology(self, layer):
+        """ Categorize by class field but use color field to create arrows """
+
+        target_field = 'class'  # Field to classify by
+        color_lookup_field = 'color'  # Field containing the color
+
+        # Create categories by looking up the color for each class
+        categories = []
+        unique_values = layer.uniqueValues(layer.fields().indexFromName(target_field))
+
+        for val in sorted(unique_values):
+            # Get the color value from the "color" field for this specific class fetching first feature that matches this class
+            req = QgsFeatureRequest().setFilterExpression(f'"{target_field}" = \'{val}\'')
+            feature = next(layer.getFeatures(req), None)
+
+            if feature:
+                color_val = feature[color_lookup_field]
+                # Create symbol with the color found in the data
+                cat_symbol = self.create_arrow_symbol(color_val)
+
+                # Create and add the category
+                category = QgsRendererCategory(str(val), cat_symbol, str(val))
+                categories.append(category)
+
+        # Apply Renderer and refresh
+        renderer = QgsCategorizedSymbolRenderer(target_field, categories)
+        layer.setRenderer(renderer)
+        layer.triggerRepaint()
+        self.parent.iface.layerTreeView().refreshLayerSymbology(layer.id())
+
+
+    def create_arrow_symbol(self, color_hex):
+        """ Define the Symbol Template (now including Start Width) """
+
+        color = QColor(color_hex)
+
+        # Inner Fill Layer (The Arrow head/body)
+        fill_layer = QgsSimpleFillSymbolLayer()
+        fill_layer.setBrushStyle(Qt.NoBrush)
+        fill_layer.setStrokeColor(color)
+        fill_layer.setStrokeWidth(0.26)
+
+        # Fill Symbol
+        arrow_fill_symbol = QgsFillSymbol()
+        arrow_fill_symbol.changeSymbolLayer(0, fill_layer)
+
+        # Arrow Line Layer
+        arrow_layer = QgsArrowSymbolLayer()
+        arrow_layer.setArrowWidth(0.26)
+        arrow_layer.setArrowStartWidth(0.26)
+        arrow_layer.setHeadLength(2.5)
+        arrow_layer.setHeadThickness(2.5)
+        arrow_layer.setIsRepeated(True)
+        arrow_layer.setSubSymbol(arrow_fill_symbol)
+
+        # Final Line Symbol
+        line_symbol = QgsLineSymbol()
+        line_symbol.changeSymbolLayer(0, arrow_layer)
+
+        return line_symbol
