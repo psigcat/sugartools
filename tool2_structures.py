@@ -1,4 +1,4 @@
-from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle, QgsDefaultValue, QgsField
+from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle, QgsDefaultValue, QgsField, QgsEditorWidgetSetup
 from qgis.PyQt.QtCore import QVariant
 
 import os
@@ -14,7 +14,15 @@ FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structu
 FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:real&field=coord_y:real&field=coord_z:real"
 FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)"
 FIELDS_NS_EW_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
-
+FIELDS_MAP_OPTIONS = {
+    't_est1': ["hogar", "mancha", "vaciado ok"],
+    'planta': ["inicial", "final"],
+    'morfologia_3d': ["plano", "cubeta"],
+    'forma_2d': ["irregular", "circular", "oval", "elipsoidal"],
+    'white_layer': ["si", "no"],
+    'black_layer': ["si", "no"],
+    'rubefaccion': ["si", "no"]
+}
 
 class StructuresTool():
     def __init__(self, parent):
@@ -158,8 +166,20 @@ class StructuresTool():
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_{geom_type}.qml")
         layer.loadNamedStyle(symbology_path)
 
-        # autoupdate fields SHAPE_length and SHAPE_area
         if type == "map":
+
+            # apply dictionary to layer fields
+            for field_name, options in FIELDS_MAP_OPTIONS.items():
+                field_index = layer.fields().indexOf(field_name)
+                
+                if field_index != -1:
+                    config_map = {opt: opt for opt in options}
+                    widget_setup = QgsEditorWidgetSetup('ValueMap', {'map': config_map})
+                    layer.setEditorWidgetSetup(field_index, widget_setup)
+                else:
+                    print(f"Warning: Field '{field_name}' not found in layer.")
+
+            # autoupdate fields SHAPE_length and SHAPE_area
             provider = layer.dataProvider()
             provider.addAttributes([
                 QgsField("SHAPE_length", QVariant.Double),
