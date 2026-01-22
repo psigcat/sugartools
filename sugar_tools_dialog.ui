@@ -915,6 +915,13 @@
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QPushButton" name="refactor_structures_dict_btn">
+               <property name="text">
+                <string>Apply dictionaries</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
