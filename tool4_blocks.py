@@ -1,6 +1,6 @@
 from qgis.core import Qgis, QgsProject, QgsSettings, QgsExpression, QgsVectorLayer, QgsPoint, QgsPointXY, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsMapLayerProxyModel, QgsWkbTypes, QgsLayerTreeLayer, QgsGeometryValidator, QgsProviderRegistry
 from qgis.gui import QgsExpressionBuilderDialog
-from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtCore import QMetaType
 
 import os
 import processing
@@ -150,11 +150,11 @@ class BlocksTool():
 
         for row in rows:
             fields = QgsFields()
-            fields.append(QgsField("cod_pieza", QVariant.Int))
-            fields.append(QgsField("num_pieza", QVariant.Int))
-            fields.append(QgsField("nom_nivel", QVariant.String))
-            fields.append(QgsField("cod_tnivel", QVariant.String))
-            fields.append(QgsField("dib_pieza", QVariant.String))
+            fields.append(QgsField("cod_pieza", QMetaType.Int))
+            fields.append(QgsField("num_pieza", QMetaType.Int))
+            fields.append(QgsField("nom_nivel", QMetaType.QString))
+            fields.append(QgsField("cod_tnivel", QMetaType.QString))
+            fields.append(QgsField("dib_pieza", QMetaType.QString))
             feature = QgsFeature(fields)
 
             point = QgsPoint(row[4], row[5], row[6])
@@ -230,7 +230,7 @@ class BlocksTool():
 
         # insert field dib_pieza as id_bloque
         layer.startEditing()
-        new_field = QgsField("id_bloque", QVariant.String)
+        new_field = QgsField("id_bloque", QMetaType.QString)
         layer.dataProvider().addAttributes([new_field])
         layer.updateFields()
 

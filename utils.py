@@ -1,4 +1,4 @@
-from qgis.PyQt.QtCore import Qt, QFile, QVariant
+from qgis.PyQt.QtCore import Qt, QFile, QMetaType
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
@@ -477,8 +477,8 @@ class utils:
 
         provider = layer.dataProvider()
         provider.addAttributes([
-            QgsField("SHAPE_length", QVariant.Double, "", 10, 2),
-            QgsField("SHAPE_area", QVariant.Double, "", 10, 2)
+            QgsField("SHAPE_length", QMetaType.Double, "", 10, 2),
+            QgsField("SHAPE_area", QMetaType.Double, "", 10, 2)
         ])
         layer.updateFields()
         idx_length = layer.fields().indexOf("SHAPE_length")

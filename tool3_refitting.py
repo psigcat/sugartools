@@ -1,5 +1,5 @@
 from qgis.core import Qgis, QgsProject, QgsPointXY, QgsDistanceArea, QgsVectorLayer, QgsFeature, QgsGeometry, QgsLayerTreeLayer, QgsFields, QgsField, QgsFeatureRequest, QgsCategorizedSymbolRenderer, QgsRendererCategory, QgsSimpleFillSymbolLayer, QgsFillSymbol, QgsArrowSymbolLayer, QgsLineSymbol
-from qgis.PyQt.QtCore import Qt, QVariant
+from qgis.PyQt.QtCore import Qt, QMetaType
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import QComboBox
 
@@ -593,8 +593,8 @@ class RefittingTool():
         i=0
         for str_pieza in self.points:
             fields = QgsFields()
-            fields.append(QgsField("id", QVariant.Int))
-            fields.append(QgsField("color", QVariant.String))
+            fields.append(QgsField("id", QMetaType.Int))
+            fields.append(QgsField("color", QMetaType.QString))
             feature = QgsFeature(fields)
             attr = self.points[str_pieza]
             num_pieza = str_pieza[3:]
@@ -624,10 +624,10 @@ class RefittingTool():
         i=0
         for line in self.lines:
             fields = QgsFields()
-            fields.append(QgsField("origin", QVariant.Int))
-            fields.append(QgsField("target", QVariant.Int))
-            fields.append(QgsField("color", QVariant.String))
-            fields.append(QgsField("class", QVariant.Int))
+            fields.append(QgsField("origin", QMetaType.Int))
+            fields.append(QgsField("target", QMetaType.Int))
+            fields.append(QgsField("color", QMetaType.QString))
+            fields.append(QgsField("class", QMetaType.Int))
             feature = QgsFeature(fields)
             geometry = QgsGeometry.fromPolylineXY(line)
             feature.setGeometry(geometry)
