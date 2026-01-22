@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import Qt, QFile
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup
 
 import os
 import configparser
@@ -15,6 +15,16 @@ FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_n
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
+
+FIELDS_MAP_OPTIONS = {
+    't_est1': ["hogar", "mancha", "vaciado ok"],
+    'planta': ["inicial", "final"],
+    'morfologia_3d': ["plano", "cubeta"],
+    'forma_2d': ["irregular", "circular", "oval", "elipsoidal"],
+    'white_layer': ["si", "no"],
+    'black_layer': ["si", "no"],
+    'rubefaccion': ["si", "no"]
+}
 
 STRUCTURES_FIELD_MAPPINGS = [
     {
@@ -428,6 +438,38 @@ class utils:
                 final_layer.triggerRepaint()
 
                 self.parent.dlg.messageBar.pushMessage(f"Refactored structures attribute tables '{source_table}'", level=Qgis.Success)
+
+
+    def apply_dictionaries(self):
+        """ apply dictionaries to existing structures layers """
+
+        # TODO! duplicate of refactor_attributes
+        for group in self.parent.iface.layerTreeView().selectedNodes():
+
+            if isinstance(group, QgsLayerTreeLayer):
+
+                layer = QgsProject.instance().mapLayersByName(group.name())[0]
+                print(layer.name(), layer.source(), layer.providerType())
+
+                if not layer.providerType() == 'ogr':
+                    self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
+                    return
+
+                self.apply_dictionaries_to_layer(layer)
+
+
+    def apply_dictionaries_to_layer(self, layer):
+        """ apply dictionary to layer fields """
+
+        for field_name, options in FIELDS_MAP_OPTIONS.items():
+            field_index = layer.fields().indexOf(field_name)
+            
+            if field_index != -1:
+                config_map = {opt: opt for opt in options}
+                widget_setup = QgsEditorWidgetSetup('ValueMap', {'map': config_map})
+                layer.setEditorWidgetSetup(field_index, widget_setup)
+            else:
+                print(f"Warning: Field '{field_name}' not found in layer.")
 
 
     def get_group_by_name(self, layer):
