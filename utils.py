@@ -571,7 +571,7 @@ class utils:
         progressMessageBar = messageBar.createMessage(msg)
         progress = QProgressBar()
         progress.setMaximum(count)
-        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+        progress.setAlignment(Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
         progressMessageBar.layout().addWidget(progress)
         messageBar.pushWidget(progressMessageBar, Qgis.Info)
 
