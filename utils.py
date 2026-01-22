@@ -477,8 +477,8 @@ class utils:
 
         provider = layer.dataProvider()
         provider.addAttributes([
-            QgsField("SHAPE_length", QVariant.Double),
-            QgsField("SHAPE_area", QVariant.Double)
+            QgsField("SHAPE_length", QVariant.Double, "", 10, 2),
+            QgsField("SHAPE_area", QVariant.Double, "", 10, 2)
         ])
         layer.updateFields()
         idx_length = layer.fields().indexOf("SHAPE_length")
@@ -663,8 +663,8 @@ class utils:
                             return
 
                         # overwrite with recalculated values
-                        feature.setAttribute(shape_length_index, geom.length()/1000)
-                        feature.setAttribute(shape_area_index, geom.area()/1000000)
+                        feature.setAttribute(shape_length_index, round(geom.length()/1000, 2))
+                        feature.setAttribute(shape_area_index, round(geom.area()/1000000, 2))
                         layer.updateFeature(feature)
 
                     layer.commitChanges()
