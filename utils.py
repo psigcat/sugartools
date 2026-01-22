@@ -1,8 +1,8 @@
-from qgis.PyQt.QtCore import Qt, QFile
+from qgis.PyQt.QtCore import Qt, QFile, QVariant
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue
 
 import os
 import configparser
@@ -472,6 +472,29 @@ class utils:
                 print(f"Warning: Field '{field_name}' not found in layer.")
 
 
+    def calculate_length_area(self, layer):
+        """ autoupdate fields SHAPE_length and SHAPE_area """
+
+        provider = layer.dataProvider()
+        provider.addAttributes([
+            QgsField("SHAPE_length", QVariant.Double),
+            QgsField("SHAPE_area", QVariant.Double)
+        ])
+        layer.updateFields()
+        idx_length = layer.fields().indexOf("SHAPE_length")
+        idx_area = layer.fields().indexOf("SHAPE_area")
+
+        geom_type = layer.geometryType()
+        if geom_type == QgsWkbTypes.PolygonGeometry:
+            length_default = QgsDefaultValue("$perimeter/1000", True)
+        else:
+            length_default = QgsDefaultValue("$length/1000", True)
+        area_default = QgsDefaultValue("$area/1000000", True)
+
+        layer.setDefaultValueDefinition(idx_length, length_default)
+        layer.setDefaultValueDefinition(idx_area, area_default)
+
+
     def get_group_by_name(self, layer):
         """ return group by name """
 
@@ -640,8 +663,8 @@ class utils:
                             return
 
                         # overwrite with recalculated values
-                        feature.setAttribute(shape_length_index, geom.length())
-                        feature.setAttribute(shape_area_index, geom.area())
+                        feature.setAttribute(shape_length_index, geom.length()/1000)
+                        feature.setAttribute(shape_area_index, geom.area()/1000000)
                         layer.updateFeature(feature)
 
                     layer.commitChanges()

@@ -1,5 +1,4 @@
-from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle, QgsDefaultValue, QgsField
-from qgis.PyQt.QtCore import QVariant
+from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle
 
 import os
 import json
@@ -161,20 +160,7 @@ class StructuresTool():
         if type == "map":
 
             self.utils.apply_dictionaries_to_layer(layer)
-
-            # autoupdate fields SHAPE_length and SHAPE_area
-            provider = layer.dataProvider()
-            provider.addAttributes([
-                QgsField("SHAPE_length", QVariant.Double),
-                QgsField("SHAPE_area", QVariant.Double)
-            ])
-            layer.updateFields()
-            idx_length = layer.fields().indexOf("SHAPE_length")
-            idx_area = layer.fields().indexOf("SHAPE_area")
-            length_default = QgsDefaultValue("$length", True)
-            area_default = QgsDefaultValue("$area", True)
-            layer.setDefaultValueDefinition(idx_length, length_default)
-            layer.setDefaultValueDefinition(idx_area, area_default)
+            self.utils.calculate_length_area(layer)
 
 
     def create_structures_points(self, name, group, rows, type, label_type=None):

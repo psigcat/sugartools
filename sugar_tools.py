@@ -202,6 +202,7 @@ class SugarTools:
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.utils.import_layout("layout_map.qpt"))
         self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures.qpt"))
         self.dlg.refactor_structures_attr_btn.clicked.connect(self.utils.refactor_attributes)
+        self.dlg.refactor_structures_dict_btn.clicked.connect(self.utils.apply_dictionaries)
         self.dlg.recalculate_shape_btn.clicked.connect(self.utils.recalculate_shape)
 
         iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
