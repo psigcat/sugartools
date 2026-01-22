@@ -244,7 +244,10 @@ class SectionsTool():
         for root_dir, dirs, files in os.walk(self.secciones_path):
             for folder in dirs:
                 if self.parent.dlg.radioPoints.isChecked() and folder.find(POINT_PATTERN) != -1 or self.parent.dlg.radioBlocks.isChecked() and folder.find(BLOCK_PATTERN) != -1 or self.parent.dlg.radioPointsBlocks.isChecked() and folder.find(POINT_PATTERN) != -1 or self.parent.dlg.radioPointsBlocks.isChecked() and folder.find(BLOCK_PATTERN) != -1:
-                    file_list += self.return_file_list(folder, pattern)
+
+                    files = self.return_file_list(folder, pattern)
+                    if files:
+                        file_list += files
         return file_list
 
 
@@ -252,7 +255,14 @@ class SectionsTool():
         """ Build file list for given folder and pattern. """
 
         points_blocks_folder = os.path.join(self.secciones_path, folder)
-        return [os.path.join(self.secciones_path, folder, f) for f in os.listdir(points_blocks_folder) if os.path.isfile(os.path.join(points_blocks_folder, f)) and f.find(pattern) > 0]
+
+        try:
+            file_list = [os.path.join(self.secciones_path, folder, f) for f in os.listdir(points_blocks_folder) if os.path.isfile(os.path.join(points_blocks_folder, f)) and f.find(pattern) > 0]
+        except FileNotFoundError:
+            self.parent.dlg.messageBar.pushMessage(f"No files imported, workspace has to have UA folder with points data or FO folder with blocks data.", level=Qgis.Warning)
+            return None
+
+        return file_list
 
 
     def import_files(self):
