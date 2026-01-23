@@ -204,6 +204,8 @@ class SugarTools:
         self.dlg.refactor_structures_attr_btn.clicked.connect(self.utils.refactor_attributes)
         self.dlg.refactor_structures_dict_btn.clicked.connect(self.utils.apply_dictionaries)
         self.dlg.recalculate_shape_btn.clicked.connect(self.utils.recalculate_shape)
+        self.dlg.utils_add_styles_btn.clicked.connect(self.utils.add_styles)
+        self.dlg.utils_new_styles_btn.clicked.connect(self.utils.create_styles)
 
         iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
@@ -223,6 +225,9 @@ class SugarTools:
         # blocks
         self.blocks_tool = BlocksTool(self)
         self.blocks_tool.setup()
+
+        # utils
+        self.utils.fill_symbology_list()
 
 
     def initialLoad(self):

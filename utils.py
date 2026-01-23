@@ -9,8 +9,8 @@ import configparser
 import processing
 
 
-SYMBOLOGY_DIR = "qml"
 COMBO_SELECT = "(Select)"
+SYMBOLOGY_DIR = "qml"
 FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
@@ -673,3 +673,45 @@ class utils:
                 else:
                     self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)
                     return
+
+
+    def fill_symbology_list(self):
+        """ show all symbologies in combobox """
+
+        self.parent.dlg.utils_symbology_list.clear()
+        self.parent.dlg.utils_symbology_list.addItem(COMBO_SELECT)
+        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
+        filter_str = "levels_"
+
+        symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f)) and f.startswith(filter_str)]
+        symbology_files.sort()
+        for file in symbology_files:
+            self.parent.dlg.utils_symbology_list.addItem(file[len(filter_str):-4])
+
+
+    def add_styles(self):
+        """ Create new styles in selected file """
+
+        section = self.parent.dlg.utils_symbology_list.currentText()
+        if section == COMBO_SELECT:
+            self.parent.dlg.messageBar.pushMessage(f"You have to select an existing section where to add new styles to.", level=Qgis.Warning, duration=3)
+            return
+
+        print(f"Add style for section {section}")
+
+        # edit files levels_[section].qml and overlay_levels_[section].qml
+        # TODO
+
+
+    def create_styles(self):
+        """ Create new styles in new file """
+
+        section = self.parent.dlg.utils_symbology_new.text()
+        if section == "":
+            self.parent.dlg.messageBar.pushMessage(f"You have to write a new section name where to save the new styles to.", level=Qgis.Warning, duration=3)
+            return
+
+        print(f"Create style for section {section}")
+
+        # create files levels_[section].qml and overlay_levels_[section].qml
+        # TODO
