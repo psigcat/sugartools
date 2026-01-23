@@ -16,16 +16,6 @@ FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
 FIELDS_MANDATORY_LAYOUT = ["layer", "layout"]
 
-FIELDS_MAP_OPTIONS = {
-    't_est1': ["hogar", "mancha", "vaciado ok"],
-    'planta': ["inicial", "final"],
-    'morfologia_3d': ["plano", "cubeta"],
-    'forma_2d': ["irregular", "circular", "oval", "elipsoidal"],
-    'white_layer': ["si", "no"],
-    'black_layer': ["si", "no"],
-    'rubefaccion': ["si", "no"]
-}
-
 STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
@@ -185,7 +175,7 @@ class utils:
         # Check if metadata file exists
         metadata_file = os.path.join(folder, file)
         if not os.path.exists(metadata_file):
-            show_warning(f"Couldn'f find metadata file: {metadata_file}")
+            self.parent.dlg.messageBar.pushMessage(f"Couldn'f find metadata file: {metadata_file}", level=Qgis.Warning)
             return None
 
         value = None
@@ -194,7 +184,7 @@ class utils:
             metadata.read(metadata_file)
             value = metadata.get(section, parameter)
         except Exception as e:
-            show_warning(e)
+            print(e)
         finally:
             return value
 
@@ -443,22 +433,24 @@ class utils:
     def apply_dictionaries(self):
         """ apply dictionaries to existing structures layers """
 
+        FIELDS_MAP_OPTIONS = self.read_config_dict()
+
         # TODO! duplicate of refactor_attributes
         for group in self.parent.iface.layerTreeView().selectedNodes():
 
             if isinstance(group, QgsLayerTreeLayer):
 
                 layer = QgsProject.instance().mapLayersByName(group.name())[0]
-                print(layer.name(), layer.source(), layer.providerType())
+                # print(layer.name(), layer.source(), layer.providerType())
 
                 if not layer.providerType() == 'ogr':
                     self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
                     return
 
-                self.apply_dictionaries_to_layer(layer)
+                self.apply_dictionaries_to_layer(layer, FIELDS_MAP_OPTIONS)
 
 
-    def apply_dictionaries_to_layer(self, layer):
+    def apply_dictionaries_to_layer(self, layer, FIELDS_MAP_OPTIONS):
         """ apply dictionary to layer fields """
 
         for field_name, options in FIELDS_MAP_OPTIONS.items():
@@ -470,6 +462,26 @@ class utils:
                 layer.setEditorWidgetSetup(field_index, widget_setup)
             else:
                 print(f"Warning: Field '{field_name}' not found in layer.")
+
+
+    def read_config_dict(self):
+        """ read dictionaries from file structures_dictionaries.txt """
+
+        dictionary = {
+            't_est1': [],
+            'planta': [],
+            'morfologia_3d': [],
+            'forma_2d': [],
+            'white_layer': [],
+            'black_layer': [],
+            'rubefaccion': []
+        }
+
+        for key in dictionary:
+            values = self.get_metadata_parameter(self.parent.plugin_dir, "structures_dictionaries", key, "settings.txt")
+            dictionary[key] = [item.strip() for item in values.split(',')]
+
+        return dictionary
 
 
     def calculate_length_area(self, layer):

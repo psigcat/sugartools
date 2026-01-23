@@ -1,0 +1,8 @@
+[structures_dictionaries]
+t_est1=hogar, mancha, vaciado ok
+planta=inicial, final
+morfologia_3d=plano, cubeta
+forma_2d=irregular, circular, oval, elipsoidal
+white_layer=si, no
+black_layer=si, no
+rubefaccion=si, no
