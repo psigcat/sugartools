@@ -799,35 +799,35 @@
             <property name="title">
              <string>Import Layouts</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_3">
-             <item>
-              <widget class="QCheckBox" name="auto_import">
-               <property name="text">
-                <string>Auto import on opening new projects</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="import_layout_sections_btn">
-               <property name="text">
-                <string>Import Sections layout</string>
-               </property>
-              </widget>
-             </item>
-             <item>
+            <layout class="QGridLayout" name="gridLayout_12">
+             <item row="1" column="1">
               <widget class="QPushButton" name="import_layout_map_btn">
                <property name="text">
                 <string>Import Map layout</string>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="1" column="0">
+              <widget class="QPushButton" name="import_layout_sections_btn">
+               <property name="text">
+                <string>Import Sections layout</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
               <widget class="QPushButton" name="import_layout_structures_btn">
                <property name="text">
                 <string>Import Structures layout</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0" colspan="3">
+              <widget class="QCheckBox" name="auto_import">
+               <property name="text">
+                <string>Auto import on opening new projects</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -859,38 +859,76 @@
           <string>Sections</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Select symbology file to edit</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="0">
-           <widget class="QgsFileWidget" name="utils_symbology_file"/>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton">
-            <property name="text">
-             <string>Create new styles in selected file</string>
+           <widget class="QGroupBox" name="groupBox_14">
+            <property name="title">
+             <string>Create new files (level and overlay) from given section name</string>
             </property>
+            <layout class="QGridLayout" name="gridLayout_11">
+             <item row="0" column="0">
+              <widget class="QLineEdit" name="utils_sections_new"/>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="utils_new_styles_btn">
+               <property name="text">
+                <string>Create new styles in new section</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Write section name for new symbology file to create</string>
+          <item row="0" column="0">
+           <widget class="QGroupBox" name="groupBox_13">
+            <property name="title">
+             <string>Edit existing file (level and overlay)</string>
             </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLineEdit" name="utils_symbology_file_name"/>
-          </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="pushButton_2">
-            <property name="text">
-             <string>Create new styles in new file</string>
-            </property>
+            <layout class="QGridLayout" name="gridLayout_10">
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>New level name (nom_nivel):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QgsColorButton" name="utils_sections_color">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_8">
+               <property name="text">
+                <string>Choose color:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_5">
+               <property name="text">
+                <string>Select section:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="utils_sections_list"/>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="utils_sections_name"/>
+             </item>
+             <item row="4" column="0" colspan="2">
+              <widget class="QPushButton" name="utils_add_styles_btn">
+               <property name="text">
+                <string>Create new styles in selected section</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -907,15 +945,15 @@
             <property name="title">
              <string>Refactor selected layers</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_12">
-             <item>
+            <layout class="QGridLayout" name="gridLayout_16">
+             <item row="0" column="0">
               <widget class="QPushButton" name="refactor_structures_attr_btn">
                <property name="text">
                 <string>Refactor attribute table</string>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="0" column="1">
               <widget class="QPushButton" name="refactor_structures_dict_btn">
                <property name="text">
                 <string>Apply dictionaries</string>
@@ -958,6 +996,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>QgsColorButton</class>
+   <extends>QToolButton</extends>
+   <header>qgscolorbutton.h</header>
+  </customwidget>
   <customwidget>
    <class>QgsFileWidget</class>
    <extends>QWidget</extends>

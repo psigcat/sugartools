@@ -690,21 +690,21 @@ class utils:
     def fill_symbology_list(self):
         """ show all symbologies in combobox """
 
-        self.parent.dlg.utils_symbology_list.clear()
-        self.parent.dlg.utils_symbology_list.addItem(COMBO_SELECT)
+        self.parent.dlg.utils_sections_list.clear()
+        self.parent.dlg.utils_sections_list.addItem(COMBO_SELECT)
         symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
         filter_str = "levels_"
 
         symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f)) and f.startswith(filter_str)]
         symbology_files.sort()
         for file in symbology_files:
-            self.parent.dlg.utils_symbology_list.addItem(file[len(filter_str):-4])
+            self.parent.dlg.utils_sections_list.addItem(file[len(filter_str):-4])
 
 
     def add_styles(self):
         """ Create new styles in selected file """
 
-        section = self.parent.dlg.utils_symbology_list.currentText()
+        section = self.parent.dlg.utils_sections_list.currentText()
         if section == COMBO_SELECT:
             self.parent.dlg.messageBar.pushMessage(f"You have to select an existing section where to add new styles to.", level=Qgis.Warning, duration=3)
             return
@@ -718,7 +718,7 @@ class utils:
     def create_styles(self):
         """ Create new styles in new file """
 
-        section = self.parent.dlg.utils_symbology_new.text()
+        section = self.parent.dlg.utils_sections_new.text()
         if section == "":
             self.parent.dlg.messageBar.pushMessage(f"You have to write a new section name where to save the new styles to.", level=Qgis.Warning, duration=3)
             return
