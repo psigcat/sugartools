@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.10
+version=0.2.11
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.11 - config for dictionaries (#48), ui qml sections (#42)
 	0.2.10 - round SHAPE length and area to 2 decimals, fixes for Qt6
 	0.2.9 - structures: add dictionaries (#48) and calculate perimeter for polygons, also in utils (#41)
 	0.2.8 - automatically classify arrows in refitting tool, add legend to map layout (#45)
