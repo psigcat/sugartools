@@ -789,181 +789,256 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>
-        <widget class="QGroupBox" name="groupBox_11">
-         <property name="title">
-          <string>General</string>
+        <widget class="QTabWidget" name="tabWidget_11">
+         <property name="currentIndex">
+          <number>0</number>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_11">
-          <item>
-           <widget class="QGroupBox" name="groupBox_4">
-            <property name="title">
-             <string>Import Layouts</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_12">
-             <item row="1" column="1">
-              <widget class="QPushButton" name="import_layout_map_btn">
-               <property name="text">
-                <string>Import Map layout</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QPushButton" name="import_layout_sections_btn">
-               <property name="text">
-                <string>Import Sections layout</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="2">
-              <widget class="QPushButton" name="import_layout_structures_btn">
-               <property name="text">
-                <string>Import Structures layout</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0" colspan="3">
-              <widget class="QCheckBox" name="auto_import">
-               <property name="text">
-                <string>Auto import on opening new projects</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_3">
-            <property name="title">
-             <string>Recalculate selected layers</string>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_4">
-             <item>
-              <widget class="QPushButton" name="recalculate_shape_btn">
-               <property name="text">
-                <string>Recalculate SHAPE_Length and SHAPE_Area</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_6">
-         <property name="title">
-          <string>Sections</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="0">
-           <widget class="QGroupBox" name="groupBox_14">
-            <property name="title">
-             <string>Create new files (level and overlay) from given section name</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_11">
-             <item row="0" column="0">
-              <widget class="QLineEdit" name="utils_sections_new"/>
-             </item>
-             <item row="0" column="1">
-              <widget class="QPushButton" name="utils_new_styles_btn">
-               <property name="text">
-                <string>Create new styles in new section</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QGroupBox" name="groupBox_13">
-            <property name="title">
-             <string>Edit existing file (level and overlay)</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_10">
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_2">
-               <property name="text">
-                <string>New level name (nom_nivel):</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
-              <widget class="QgsColorButton" name="utils_sections_color">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="label_8">
-               <property name="text">
-                <string>Choose color:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_5">
-               <property name="text">
-                <string>Select section:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QComboBox" name="utils_sections_list"/>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="utils_sections_name"/>
-             </item>
-             <item row="4" column="0" colspan="2">
-              <widget class="QPushButton" name="utils_add_styles_btn">
-               <property name="text">
-                <string>Create new styles in selected section</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_10">
-         <property name="title">
-          <string>Structures</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_10">
-          <item>
-           <widget class="QGroupBox" name="groupBox_12">
-            <property name="title">
-             <string>Refactor selected layers</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_16">
-             <item row="0" column="0">
-              <widget class="QPushButton" name="refactor_structures_attr_btn">
-               <property name="text">
-                <string>Refactor attribute table</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QPushButton" name="refactor_structures_dict_btn">
-               <property name="text">
-                <string>Apply dictionaries</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QWidget" name="tabWidget_11Page1" native="true">
+          <attribute name="title">
+           <string>General</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_11">
+           <item>
+            <widget class="QGroupBox" name="groupBox_4">
+             <property name="title">
+              <string>Import Layouts</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_12">
+              <item>
+               <widget class="QCheckBox" name="auto_import">
+                <property name="text">
+                 <string>Auto import on opening new projects</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="import_layout_map_btn">
+                <property name="text">
+                 <string>Import Map layout</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="import_layout_sections_btn">
+                <property name="text">
+                 <string>Import Sections layout</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="import_layout_structures_btn">
+                <property name="text">
+                 <string>Import Structures layout</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_3">
+             <property name="title">
+              <string>Recalculate selected layers</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_4">
+              <item>
+               <widget class="QPushButton" name="recalculate_shape_btn">
+                <property name="text">
+                 <string>Recalculate SHAPE_Length and SHAPE_Area</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab">
+          <attribute name="title">
+           <string>Sections</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="title">
+              <string>Sections</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout">
+              <item row="0" column="0">
+               <widget class="QGroupBox" name="groupBox_13">
+                <property name="title">
+                 <string>Edit existing file (level and overlay)</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_10">
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>New level name (nom_nivel):</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QgsColorButton" name="utils_sections_color">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_8">
+                   <property name="text">
+                    <string>Choose color:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_5">
+                   <property name="text">
+                    <string>Select section:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QComboBox" name="utils_sections_list"/>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="utils_sections_name"/>
+                 </item>
+                 <item row="4" column="0" colspan="2">
+                  <widget class="QPushButton" name="utils_add_styles_btn">
+                   <property name="text">
+                    <string>Create new styles in selected section</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QGroupBox" name="groupBox_14">
+                <property name="title">
+                 <string>Create new files (level and overlay) from given section name</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_11">
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="utils_sections_new_section"/>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>Section name:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0" colspan="2">
+                  <widget class="QPushButton" name="utils_new_styles_btn">
+                   <property name="text">
+                    <string>Create new styles in new section</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_9">
+                   <property name="text">
+                    <string>New level names (nom_nivel):</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="utils_sections_new_levels"/>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_2">
+          <attribute name="title">
+           <string>Structures</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_9">
+           <item>
+            <widget class="QGroupBox" name="groupBox_10">
+             <property name="title">
+              <string>Structures</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_10">
+              <item>
+               <widget class="QGroupBox" name="groupBox_12">
+                <property name="title">
+                 <string>Apply to selected layers</string>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_13">
+                 <item>
+                  <widget class="QPushButton" name="refactor_structures_attr_btn">
+                   <property name="text">
+                    <string>Refactor attribute table</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="refactor_structures_dict_btn">
+                   <property name="text">
+                    <string>Apply dictionaries</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_11">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
        <item>
