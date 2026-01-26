@@ -793,7 +793,7 @@
          <property name="currentIndex">
           <number>0</number>
          </property>
-         <widget class="QWidget" name="tabWidget_11Page1" native="true">
+         <widget class="QWidget" name="tabWidget_11Page1">
           <attribute name="title">
            <string>General</string>
           </attribute>
@@ -886,14 +886,41 @@
                  <string>Edit existing file (level and overlay)</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_10">
-                 <item row="1" column="0">
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="utils_sections_name"/>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QComboBox" name="utils_sections_list"/>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_5">
+                   <property name="text">
+                    <string>Select section:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0" colspan="2">
+                  <widget class="QPushButton" name="utils_add_styles_btn">
+                   <property name="text">
+                    <string>Create new styles in selected section</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
                   <widget class="QLabel" name="label_2">
                    <property name="text">
                     <string>New level name (nom_nivel):</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="1">
+                 <item row="4" column="0">
+                  <widget class="QLabel" name="label_8">
+                   <property name="text">
+                    <string>Choose color:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="1">
                   <widget class="QgsColorButton" name="utils_sections_color">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -903,30 +930,17 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="0">
-                  <widget class="QLabel" name="label_8">
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_28">
                    <property name="text">
-                    <string>Choose color:</string>
+                    <string>Existing levels:</string>
                    </property>
                   </widget>
-                 </item>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_5">
-                   <property name="text">
-                    <string>Select section:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QComboBox" name="utils_sections_list"/>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="utils_sections_name"/>
-                 </item>
-                 <item row="4" column="0" colspan="2">
-                  <widget class="QPushButton" name="utils_add_styles_btn">
-                   <property name="text">
-                    <string>Create new styles in selected section</string>
+                  <widget class="QLineEdit" name="utils_sections_existing">
+                   <property name="readOnly">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -1040,19 +1054,6 @@
           </layout>
          </widget>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>525</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>
