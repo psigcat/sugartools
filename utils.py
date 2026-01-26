@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import Qt, QFile, QMetaType
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue, QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory
 
 import os
 import configparser
@@ -701,18 +701,114 @@ class utils:
             self.parent.dlg.utils_sections_list.addItem(file[len(filter_str):-4])
 
 
+    def load_existing_levels(self, level=True):
+        """ load all nom_nivel from selected section """
+
+        print("level", level)
+        section = self.parent.dlg.utils_sections_list.currentText()
+        if section == COMBO_SELECT:
+            self.parent.dlg.utils_sections_existing.setText("")
+            return
+
+        file_name = f"levels_{section}.qml"
+        if not level:
+            file_name = "overlay_" + file_name
+
+        qml_path = os.path.join(self.parent.plugin_dir, "qml", file_name)
+        existing_levels = self.get_categories(qml_path)
+        print(existing_levels)
+
+        print("level", not level, level == False)
+        if level:
+            existing_levels_str = ', '.join(existing_levels)
+            print(existing_levels_str)
+            self.parent.dlg.utils_sections_existing.setText(existing_levels_str)
+
+        return existing_levels, qml_path
+
+
+    def get_categories(self, path):
+        """ get list of categories from given QML file """
+
+        print(path)
+        layer = self.get_qml_layer(path)
+        renderer = layer.renderer()
+        if not isinstance(renderer, QgsCategorizedSymbolRenderer):
+            return "Style loaded, but it is not a Categorized Renderer."
+
+        values = [cat.value() for cat in renderer.categories()]
+        values = list(filter(None, values))
+        return values
+
+
+    def get_qml_layer(self, path):
+        """ get renderer from given QML file """
+
+        if not os.path.exists(path):
+            return "File path does not exist."
+
+        layer = QgsVectorLayer("Point?field=nom_nivel:string", "temp_layer", "memory")
+        message, success = layer.loadNamedStyle(path)
+        
+        if not success:
+            return f"Actual Load Error: {res[1]}"
+
+        return layer
+
+
     def add_styles(self):
-        """ Create new styles in selected file """
+        """ Create new styles """
 
         section = self.parent.dlg.utils_sections_list.currentText()
         if section == COMBO_SELECT:
             self.parent.dlg.messageBar.pushMessage(f"You have to select an existing section where to add new styles to.", level=Qgis.Warning, duration=3)
             return
 
-        print(f"Add style for section {section}")
+        new_level = self.parent.dlg.utils_sections_name.text()
+        new_color = self.parent.dlg.utils_sections_color.color()
+        if not new_level or not new_color:
+            self.parent.dlg.messageBar.pushMessage(f"You have to write a name and choose a color for the new level.", level=Qgis.Warning, duration=3)
+            return
 
-        # edit files levels_[section].qml and overlay_levels_[section].qml
-        # TODO
+        print(f"Add style for section {section, new_level, new_color}")
+
+        existing_levels, qml_path = self.load_existing_levels(True)
+        existing_levels_overlay, qml_path_overlay = self.load_existing_levels(False)
+        if new_level in existing_levels or new_level in existing_levels_overlay:
+            self.parent.dlg.messageBar.pushMessage(f"Given level {new_level} already does exist in {qml_path} or {qml_path_overlay}.", level=Qgis.Warning, duration=3)
+            return
+
+        self.save_styles(qml_path, new_level, new_color)
+        self.save_styles(qml_path_overlay, new_level, new_color)
+
+
+    def save_styles(self, path, new_level, new_color):
+        """ Save new styles in selected file """
+
+        layer = self.get_qml_layer(path)
+        renderer = layer.renderer()
+        if not isinstance(renderer, QgsCategorizedSymbolRenderer):
+            return "Style loaded, but it is not a Categorized Renderer."
+
+        # Create the new symbol (Colored Circle)
+        new_symbol = QgsMarkerSymbol.createSimple({
+            'name': 'circle',
+            'color': new_color,
+            'outline_style': 'no',
+            'size': '3'
+        })
+
+        # reate new category and append
+        new_cat = QgsRendererCategory(new_level, new_symbol, new_level, True)
+        renderer.addCategory(new_cat)
+
+        # save back to files levels_[section].qml and overlay_levels_[section].qml  
+        msg_save, success_save = layer.saveNamedStyle(path)
+
+        if success_save:
+            print(f"Successfully updated and saved: {path}")
+        else:
+            print(f"Failed to save QML: {msg_save}")
 
 
     def create_styles(self):
