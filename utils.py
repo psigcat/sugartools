@@ -1,8 +1,9 @@
-from qgis.PyQt.QtCore import Qt, QFile, QMetaType
+from qgis.PyQt.QtCore import Qt, QFile, QMetaType, QPointF
+from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue, QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue, QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory, QgsFontMarkerSymbolLayer, QgsUnitTypes
 
 import os
 import configparser
@@ -704,7 +705,6 @@ class utils:
     def load_existing_levels(self, level=True):
         """ load all nom_nivel from selected section """
 
-        print("level", level)
         section = self.parent.dlg.utils_sections_list.currentText()
         if section == COMBO_SELECT:
             self.parent.dlg.utils_sections_existing.setText("")
@@ -716,12 +716,9 @@ class utils:
 
         qml_path = os.path.join(self.parent.plugin_dir, "qml", file_name)
         existing_levels = self.get_categories(qml_path)
-        print(existing_levels)
 
-        print("level", not level, level == False)
         if level:
             existing_levels_str = ', '.join(existing_levels)
-            print(existing_levels_str)
             self.parent.dlg.utils_sections_existing.setText(existing_levels_str)
 
         return existing_levels, qml_path
@@ -730,11 +727,11 @@ class utils:
     def get_categories(self, path):
         """ get list of categories from given QML file """
 
-        print(path)
         layer = self.get_qml_layer(path)
         renderer = layer.renderer()
         if not isinstance(renderer, QgsCategorizedSymbolRenderer):
-            return "Style loaded, but it is not a Categorized Renderer."
+            self.parent.dlg.messageBar.pushMessage(f"Style loaded, but it is not a Categorized Renderer, check file {path}", level=Qgis.Warning, duration=3)
+            return
 
         values = [cat.value() for cat in renderer.categories()]
         values = list(filter(None, values))
@@ -745,13 +742,14 @@ class utils:
         """ get renderer from given QML file """
 
         if not os.path.exists(path):
-            return "File path does not exist."
+            self.parent.dlg.messageBar.pushMessage(f"File {path} does not exist", level=Qgis.Warning, duration=3)
+            return
 
         layer = QgsVectorLayer("Point?field=nom_nivel:string", "temp_layer", "memory")
         message, success = layer.loadNamedStyle(path)
         
-        if not success:
-            return f"Actual Load Error: {res[1]}"
+        # if not success:
+        #     return f"Actual Load Error: {res[1]}"
 
         return layer
 
@@ -774,31 +772,65 @@ class utils:
 
         existing_levels, qml_path = self.load_existing_levels(True)
         existing_levels_overlay, qml_path_overlay = self.load_existing_levels(False)
-        if new_level in existing_levels or new_level in existing_levels_overlay:
-            self.parent.dlg.messageBar.pushMessage(f"Given level {new_level} already does exist in {qml_path} or {qml_path_overlay}.", level=Qgis.Warning, duration=3)
-            return
+        if new_level in existing_levels:
+            self.parent.dlg.messageBar.pushMessage(f"Given level {new_level} already does exist in {qml_path}.", level=Qgis.Warning, duration=3)
+        else:
+            self.save_styles(qml_path, new_level, self.create_symbol_circle(new_color))
 
-        self.save_styles(qml_path, new_level, new_color)
-        self.save_styles(qml_path_overlay, new_level, new_color)
+        if new_level in existing_levels_overlay:
+            self.parent.dlg.messageBar.pushMessage(f"Given level {new_level} already does exist in {qml_path_overlay}.", level=Qgis.Warning, duration=3)
+        else:
+            self.save_styles(qml_path_overlay, new_level, self.create_symbol_fontmarker(new_color))
 
 
-    def save_styles(self, path, new_level, new_color):
-        """ Save new styles in selected file """
+    def create_symbol_circle(self, new_color):
+        """ Create a circle marker symbol """
 
-        layer = self.get_qml_layer(path)
-        renderer = layer.renderer()
-        if not isinstance(renderer, QgsCategorizedSymbolRenderer):
-            return "Style loaded, but it is not a Categorized Renderer."
-
-        # Create the new symbol (Colored Circle)
-        new_symbol = QgsMarkerSymbol.createSimple({
+        # create the Colored Circle symbol
+        return QgsMarkerSymbol.createSimple({
             'name': 'circle',
             'color': new_color,
             'outline_style': 'no',
             'size': '3'
         })
 
-        # reate new category and append
+
+    def create_symbol_fontmarker(self, new_color):
+        """ Create a font marker symbol """
+
+        # create the multi-layer FontMarker Symbol
+        # layer 1: The Red Cross ('G')
+        font_layer_main = QgsFontMarkerSymbolLayer("ESRI Default Marker", "G", 7.0)
+        font_layer_main.setColor(QColor(new_color))
+        font_layer_main.setOffset(QPointF(0, -0.5))
+        font_layer_main.setSizeUnit(QgsUnitTypes.RenderPoints)
+        font_layer_main.setOffsetUnit(QgsUnitTypes.RenderPoints)
+
+        # layer 2: The Black Shadow ('F')
+        font_layer_shadow = QgsFontMarkerSymbolLayer("ESRI Default Marker", "F", 7.0)
+        font_layer_shadow.setColor(QColor(0, 0, 0))
+        font_layer_shadow.setOffset(QPointF(0.5, -0.5))
+        font_layer_shadow.setSizeUnit(QgsUnitTypes.RenderPoints)
+        font_layer_shadow.setOffsetUnit(QgsUnitTypes.RenderPoints)
+
+        # combine layers into a single symbol
+        symbol = QgsMarkerSymbol()
+        symbol.changeSymbolLayer(0, font_layer_main)
+        symbol.appendSymbolLayer(font_layer_shadow)
+
+        return symbol
+
+
+    def save_styles(self, path, new_level, new_symbol):
+        """ Save new styles in selected file """
+
+        layer = self.get_qml_layer(path)
+        renderer = layer.renderer()
+        if not isinstance(renderer, QgsCategorizedSymbolRenderer):
+            self.parent.dlg.messageBar.pushMessage(f"Style loaded, but it is not a Categorized Renderer, check file {path}", level=Qgis.Warning, duration=3)
+            return
+
+        # create new category and append
         new_cat = QgsRendererCategory(new_level, new_symbol, new_level, True)
         renderer.addCategory(new_cat)
 
@@ -806,9 +838,9 @@ class utils:
         msg_save, success_save = layer.saveNamedStyle(path)
 
         if success_save:
-            print(f"Successfully updated and saved: {path}")
+            self.parent.dlg.messageBar.pushMessage(f"Successfully updated and saved: {path}", level=Qgis.Success, duration=3)
         else:
-            print(f"Failed to save QML: {msg_save}")
+            self.parent.dlg.messageBar.pushMessage(f"Failed to save QML: {msg_save}", level=Qgis.Warning, duration=3)
 
 
     def create_styles(self):
