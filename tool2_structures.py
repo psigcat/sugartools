@@ -31,6 +31,14 @@ class StructuresTool():
 
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.structures_db, self.databases)
+        #self.parent.dlg.sections_3d.setVisible(False)
+
+
+    def show_2d_or_3d(self):
+        """ select type of process """
+
+        self.parent.dlg.sections_2d.setVisible(self.parent.dlg.structures_check_2d.isChecked())
+        self.parent.dlg.sections_3d.setVisible(self.parent.dlg.structures_check_3d.isChecked())
 
 
     def process_structures(self):

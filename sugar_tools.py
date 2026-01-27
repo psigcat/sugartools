@@ -207,6 +207,8 @@ class SugarTools:
         self.dlg.utils_add_styles_btn.clicked.connect(self.utils.add_styles)
         self.dlg.utils_new_styles_btn.clicked.connect(self.utils.create_styles)
         self.dlg.utils_sections_list.currentIndexChanged.connect(self.utils.load_existing_levels)
+        self.dlg.structures_check_2d.toggled.connect(self.structures_tool.show_2d_or_3d)
+        self.dlg.structures_check_3d.toggled.connect(self.structures_tool.show_2d_or_3d)
 
         iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
