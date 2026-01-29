@@ -8,6 +8,8 @@ from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFi
 import os
 import configparser
 import processing
+import random
+import shutil
 
 
 COMBO_SELECT = "(Select)"
@@ -706,7 +708,7 @@ class utils:
         """ load all nom_nivel from selected section """
 
         section = self.parent.dlg.utils_sections_list.currentText()
-        if section == COMBO_SELECT:
+        if not section or section == COMBO_SELECT:
             self.parent.dlg.utils_sections_existing.setText("")
             return
 
@@ -747,7 +749,7 @@ class utils:
 
         layer = QgsVectorLayer("Point?field=nom_nivel:string", "temp_layer", "memory")
         message, success = layer.loadNamedStyle(path)
-        
+
         # if not success:
         #     return f"Actual Load Error: {res[1]}"
 
@@ -775,12 +777,14 @@ class utils:
         if new_level in existing_levels:
             self.parent.dlg.messageBar.pushMessage(f"Given level {new_level} already does exist in {qml_path}.", level=Qgis.Warning, duration=3)
         else:
-            self.save_styles(qml_path, new_level, self.create_symbol_circle(new_color))
+            circle_symbol = self.create_symbol_circle(new_color)
+            self.save_style(qml_path, new_level, circle_symbol)
 
         if new_level in existing_levels_overlay:
             self.parent.dlg.messageBar.pushMessage(f"Given level {new_level} already does exist in {qml_path_overlay}.", level=Qgis.Warning, duration=3)
         else:
-            self.save_styles(qml_path_overlay, new_level, self.create_symbol_fontmarker(new_color))
+            fontmarker_symbol = self.create_symbol_fontmarker(new_color)
+            self.save_style(qml_path_overlay, new_level, fontmarker_symbol)
 
 
     def create_symbol_circle(self, new_color):
@@ -821,8 +825,24 @@ class utils:
         return symbol
 
 
-    def save_styles(self, path, new_level, new_symbol):
-        """ Save new styles in selected file """
+    def create_qml_file(self, path):
+        """ Create QML file from template """
+
+        file_name = "levels_template.qml"
+        if "overlay_levels" in path:
+            file_name = "overlay_levels_template.qml"   
+
+        template_path = os.path.join(self.parent.plugin_dir, "qml", file_name)
+
+        shutil.copyfile(template_path, path)
+
+
+    def save_style(self, path, new_level, new_symbol):
+        """ Save new style in selected file """
+
+        if not os.path.exists(path):
+            self.parent.dlg.messageBar.pushMessage(f"Creating new QML file from template.", level=Qgis.Success, duration=3)
+            self.create_qml_file(path)
 
         layer = self.get_qml_layer(path)
         renderer = layer.renderer()
@@ -843,15 +863,65 @@ class utils:
             self.parent.dlg.messageBar.pushMessage(f"Failed to save QML: {msg_save}", level=Qgis.Warning, duration=3)
 
 
+    def qml_exists(self, section):
+        """ Check if file exists """
+
+        file_level = f"levels_{section}.qml"
+        file_overlay = "overlay_" + file_level
+
+        path_level = os.path.join(self.parent.plugin_dir, "qml", file_level)
+        path_overlay = os.path.join(self.parent.plugin_dir, "qml", file_overlay)
+
+        return os.path.exists(path_level) or os.path.exists(path_overlay)
+
+
     def create_styles(self):
         """ Create new styles in new file """
 
-        section = self.parent.dlg.utils_sections_new.text()
-        if section == "":
-            self.parent.dlg.messageBar.pushMessage(f"You have to write a new section name where to save the new styles to.", level=Qgis.Warning, duration=3)
+        section = self.parent.dlg.utils_sections_new_section.text()
+        level_str = self.parent.dlg.utils_sections_new_levels.text()
+        if section == "" or level_str == "":
+            self.parent.dlg.messageBar.pushMessage(f"You have to write a new section and at least one level.", level=Qgis.Warning, duration=3)
             return
 
-        print(f"Create style for section {section}")
+        if self.qml_exists(section):
+            self.parent.dlg.messageBar.pushMessage(f"QML file already does exist, change section name.", level=Qgis.Warning, duration=3)
+            return
 
-        # create files levels_[section].qml and overlay_levels_[section].qml
-        # TODO
+        print(f"Create style for section {section} and {level_str}")
+
+        levels = level_str.split(",")
+        for level in levels:
+            level = level.strip()
+            color = self.get_random_color()
+            self.create_style(section, level, color)
+            self.create_style(section, level, color, False)
+
+        self.fill_symbology_list()
+
+
+    def get_random_color(self):
+        """ Generate random integers for R, G, and B """
+
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+
+        return QColor(r, g, b)
+
+
+    def create_style(self, section, level, color, islevel=True):
+        """ create style for one  """
+
+        file_name = f"levels_{section}.qml"
+        if not islevel:
+            file_name = "overlay_" + file_name
+
+        path = os.path.join(self.parent.plugin_dir, "qml", file_name)
+
+        if islevel:
+            symbol = self.create_symbol_circle(color)
+        else:
+            symbol = self.create_symbol_fontmarker(color)
+
+        self.save_style(path, level, symbol)
