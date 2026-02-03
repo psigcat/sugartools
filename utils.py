@@ -709,7 +709,7 @@ class utils:
 
         section = self.parent.dlg.utils_sections_list.currentText()
         if not section or section == COMBO_SELECT:
-            self.parent.dlg.utils_sections_existing.setText("")
+            self.parent.dlg.utils_sections_existing.setPlainText("")
             return
 
         file_name = f"levels_{section}.qml"
@@ -721,7 +721,7 @@ class utils:
 
         if level:
             existing_levels_str = ', '.join(existing_levels)
-            self.parent.dlg.utils_sections_existing.setText(existing_levels_str)
+            self.parent.dlg.utils_sections_existing.setPlainText(existing_levels_str)
 
         return existing_levels, qml_path
 
@@ -859,6 +859,7 @@ class utils:
 
         if success_save:
             self.parent.dlg.messageBar.pushMessage(f"Successfully updated and saved: {path}", level=Qgis.Success, duration=3)
+            self.load_existing_levels()
         else:
             self.parent.dlg.messageBar.pushMessage(f"Failed to save QML: {msg_save}", level=Qgis.Warning, duration=3)
 

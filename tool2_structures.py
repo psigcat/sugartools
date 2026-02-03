@@ -31,7 +31,7 @@ class StructuresTool():
 
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.structures_db, self.databases)
-        #self.parent.dlg.sections_3d.setVisible(False)
+        self.show_2d_or_3d()
 
 
     def show_2d_or_3d(self):
