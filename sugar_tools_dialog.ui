@@ -1027,7 +1027,7 @@
                  <item row="2" column="0">
                   <widget class="QLabel" name="label_9">
                    <property name="text">
-                    <string>New level names (nom_nivel):</string>
+                    <string>New level names (nom_nivel) separed by comas:</string>
                    </property>
                   </widget>
                  </item>
