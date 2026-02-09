@@ -422,15 +422,17 @@ class utils:
 
                 # remove layer part from file name
                 source = layer.source().split('|layername=')
-                if len(source) < 2:
-                    self.parent.dlg.messageBar.pushMessage(f"No layername defined in layer {layer.name()}", level=Qgis.Warning, duration=3)
-                    return
 
                 # get source file name, file extension and table name
                 source_file = source[0]
                 source_file_extension = source_file.split('.')
                 source_file_extension = source_file_extension[len(source_file_extension)-1]
-                source_table = source[1].split('|')[0]
+
+                if len(source) < 2:
+                    source_table = layer.name()
+                else:
+                    source_table = source[1].split('|')[0]
+                
                 if source_file_extension != 'gpkg':
                     self.parent.dlg.messageBar.pushMessage(f"Does only work for Geopackage (*.gpkg) layers", level=Qgis.Warning, duration=3)
                     return
