@@ -1,14 +1,18 @@
-from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle
+from qgis.core import Qgis, QgsProject, QgsExpressionContextUtils, QgsLayerTreeLayer, QgsMapThemeCollection, QgsBookmark, QgsReferencedRectangle, QgsLayoutItemMap, QgsPointXY, QgsGeometry, QgsPolygon, QgsVectorLayer, QgsFeature, QgsRectangle, QgsPoint, QgsField, QgsFields, QgsWkbTypes
+from qgis.PyQt.QtCore import QMetaType
 
 import os
 import json
+import numpy as np
+from scipy.spatial import ConvexHull
 
 from .utils_database import utils_database
 from .utils import utils
 
 
 SYMBOLOGY_DIR = "qml"
-FIELDS_MANDATORY_STRUCTURES = ["structures_db", "structures_workspace", "structures_name"]
+FIELDS_MANDATORY_STRUCTURES_2d = ["structures_db", "structures_workspace", "structures_name"]
+FIELDS_MANDATORY_STRUCTURES_3d = ["structures_db", "structures_gpkg_3d"]
 
 FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:real&field=coord_y:real&field=coord_z:real"
 FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)"
@@ -44,7 +48,13 @@ class StructuresTool():
     def process_structures(self):
         """ get structures from database """
 
-        if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_STRUCTURES):
+        is_2d = self.parent.dlg.structures_check_2d.isChecked()
+
+        fields_mandatory = FIELDS_MANDATORY_STRUCTURES_2d
+        if not is_2d:
+            fields_mandatory = FIELDS_MANDATORY_STRUCTURES_3d
+
+        if not self.utils.check_mandatory_fields(fields_mandatory):
             return False
 
         if not self.parent.dlg.structures_db.currentData()["value"]:
@@ -56,17 +66,20 @@ class StructuresTool():
         self.structures_db_obj = utils_database(self.parent.plugin_dir, db)
         self.structures_db = self.structures_db_obj.open_database()
 
-        # save layout vars
-        name = self.parent.dlg.structures_name.text()
-        layout_manager = QgsProject.instance().layoutManager()
-        layout = layout_manager.layoutByName("structures")
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_db", db["name"])
-        QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
+        if is_2d:
+            # save layout vars
+            name = self.parent.dlg.structures_name.text()
+            layout_manager = QgsProject.instance().layoutManager()
+            layout = layout_manager.layoutByName("structures")
+            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_db", db["name"])
+            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
 
-        self.create_structures(name)
+            self.create_structures_2d(name)
+        else:
+            self.create_structures_3d()
 
 
-    def create_structures(self, name):
+    def create_structures_2d(self, name):
         """ create structures and visualize """
 
         # create group
@@ -374,3 +387,194 @@ class StructuresTool():
                 name = self.parent.iface.activeLayer().name()
                 name = name.split("_")[0]
                 QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
+
+
+    def create_structures_3d(self):
+        """ create structures 3d and visualize """
+
+        # get nom_est from gpkg
+        gpkg_path = self.parent.dlg.structures_gpkg_3d.filePath()
+        unique_nom_est = self.get_unique_nom_est(gpkg_path)
+
+        if not unique_nom_est:
+            self.parent.dlg.messageBar.pushMessage(f"Layer not valid for creating 3 structures!", level=Qgis.Warning, duration=3)
+            return
+
+        # create 3d layer 
+        polygon_layer_uri = "MultiPolygonZ?crs=epsg:25831&field=nom_est:string(10)"
+        polygon_layer = QgsVectorLayer(polygon_layer_uri, "blocks", "memory")
+        #QgsProject.instance().addMapLayer(polygon_layer)
+
+        # get all points from database
+        for nom_est in unique_nom_est:
+            rows = self.load_points_from_db(nom_est)
+            points_layer = self.draw_points(rows, nom_est)
+
+            # create 3d from points
+            points = self.get_points_3d(points_layer)
+            polygon_geom = self.create_3d_from_points(points)
+            self.append_polygons_to_layer(polygon_layer, polygon_geom, nom_est)
+
+        # save to new layer in selected geopackage and show in QGIS
+        self.utils.add_layer_to_gpkg(polygon_layer, gpkg_path)
+
+
+    def get_unique_nom_est(self, gpkg_path):
+        """ read every feature and create list of unique field values for nom_est """
+
+        # load the layer from the GeoPackage
+        layer = QgsVectorLayer(gpkg_path, "2d_layer", "ogr")
+
+        if not layer.isValid():
+            self.parent.dlg.messageBar.pushMessage(f"Layer failed to load!", level=Qgis.Warning, duration=3)
+            return False
+
+        # find index of 'nom_est' field
+        idx = layer.fields().lookupField('nom_est')
+
+        if idx == -1:
+            self.parent.dlg.messageBar.pushMessage(f"Field 'nom_est' not found!", level=Qgis.Warning, duration=3)
+            return False
+
+        unique_list = layer.dataProvider().uniqueValues(idx)
+        final_list = list(unique_list)
+
+        return final_list
+
+
+    def load_points_from_db(self, name):
+        """ connect to database and load all points with level name = nom_est, "ns", "ew" """
+
+        sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}'"
+        rows = self.structures_db_obj.get_rows(sql)
+        if not rows or rows == None or len(rows) == 0:
+            return False
+
+        return rows
+
+
+    def draw_points(self, rows, nom_est):
+        """ draw blocks from given database rows """
+
+        # temporary points layer
+        points_layer_uri = "PointZ?crs=epsg:25831&field=nom_est:string(10)"
+        points_layer = QgsVectorLayer(points_layer_uri, nom_est, "memory")
+        #QgsProject.instance().addMapLayer(points_layer)
+
+        points_layer.startEditing()
+
+        for row in rows:
+            fields = QgsFields()
+            fields.append(QgsField("nom_est", QMetaType.QString))
+            feature = QgsFeature(fields)
+
+            point = QgsPoint(row[3], row[4], row[5]) #xy
+            geometry = QgsGeometry.fromPoint(point)
+            feature.setGeometry(geometry)
+            feature.setAttributes([row[0]]) # nom_est
+            points_layer.addFeature(feature)
+
+        points_layer.commitChanges()
+        #self.parent.iface.setActiveLayer(points_layer)
+        #self.parent.iface.zoomToActiveLayer()
+
+        return points_layer
+
+
+    def get_points_3d(self, points_layer):
+        """ get all points from PointZ vector layer """
+
+        points = []
+        # Define the acceptable WKB types for points
+        point_types = [QgsWkbTypes.Type.Point, QgsWkbTypes.Type.PointZ, QgsWkbTypes.Type.MultiPoint, QgsWkbTypes.Type.MultiPointZ]
+
+        for feature in points_layer.getFeatures():
+            geom = feature.geometry()
+            wkb_type = geom.wkbType()
+            
+            # 1. Skip the feature if it's not a point or multipoint type
+            if wkb_type not in point_types:
+                # print(f"Skipping non-point geometry type: {QgsWkbTypes.displayString(wkb_type)}")
+                continue
+
+            # 2. Handle MultiPoint/MultiPointZ features
+            if geom.isMultipart():
+                # Safe call to asMultiPoint() because we checked the type above
+                for pt in geom.asMultiPoint():
+                    # Check for 3D capability using pt.is3D()
+                    if pt.is3D():
+                        points.append((pt.x(), pt.y(), pt.z()))
+            # 3. Handle single Point/PointZ features
+            else:
+                pt = geom.constGet()
+                # Ensure the point is 3D before extracting coordinates
+                if pt.is3D():
+                    points.append((pt.x(), pt.y(), pt.z()))
+
+        return points
+
+
+    def create_3d_from_points(self, points):
+        """ create 3d polygon from points """
+
+        for point in points:
+            if not points or len(points) < 4:
+                self.parent.dlg.messageBar.pushMessage(f"A 3D convex hull requires at least 4 unique points.", level=Qgis.Critical, duration=3)
+                return False
+
+            points_array = np.array(points)
+            hull = ConvexHull(points_array)
+
+            # GeometryCollection Z WKT construction
+            polygon_components = [] # List to hold the WKT for each component: '((ring))'
+
+            # Iterate through hull simplices (triangular faces)
+            for simplex in hull.simplices:
+                ring_points_wkt = []
+                for i in simplex:
+                    x, y, z = points_array[i]
+                    ring_points_wkt.append(f"{x} {y} {z}") 
+
+                # Close the ring
+                ring_points_wkt.append(ring_points_wkt[0])
+
+                # Component format for MultiPolygon Z is ((ring))
+                component_wkt = f"(({', '.join(ring_points_wkt)}))"
+                polygon_components.append(component_wkt)
+
+            # 3. Combine components into the final WKT
+            # WKT format: MULTIPOLYGON Z (((r1)), ((r2)), ...)
+            merged_wkt = f"MULTIPOLYGON Z ({', '.join(polygon_components)})"
+
+            # Parse the final WKT string
+            merged_geom = QgsGeometry.fromWkt(merged_wkt)
+
+            if not merged_geom or merged_geom.isEmpty():
+                self.parent.dlg.messageBar.pushMessage(f"CRITICAL ERROR: Failed to parse GEOMETRYCOLLECTION Z WKT.", level=Qgis.Critical, duration=3)
+                return False
+
+            return merged_geom
+
+
+    def append_polygons_to_layer(self, threed_layer, polygons_geom, nom_est):
+        """ append polygon geometries to target polygon 3d layer """
+
+        # Append to Target Layer Provider
+        provider = threed_layer.dataProvider()
+        feature = QgsFeature(threed_layer.fields())
+        feature.setGeometry(polygons_geom) 
+        feature.setAttributes([nom_est])
+        threed_layer.addFeature(feature)
+
+        threed_layer.startEditing()
+        success = provider.addFeatures([feature])
+
+        if success:
+            threed_layer.commitChanges()
+            self.parent.dlg.messageBar.pushMessage(f"SUCCESS: Feature successfully appended to GeoPackage layer '{threed_layer.name()}' via data provider.", level=Qgis.Success, duration=3)
+            threed_layer.triggerRepaint()
+            return True
+        else:
+            threed_layer.rollBack()
+            self.parent.dlg.messageBar.pushMessage(f"FAILURE: Provider failed to add feature. The GeoPackage rejected the geometry during the edit commit.", level=Qgis.Critical, duration=3)
+            return False

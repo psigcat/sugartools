@@ -3,7 +3,7 @@ from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
 from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
-from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue, QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory, QgsFontMarkerSymbolLayer, QgsUnitTypes
+from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue, QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory, QgsFontMarkerSymbolLayer, QgsUnitTypes, QgsProviderRegistry
 
 import os
 import configparser
@@ -227,7 +227,12 @@ class utils:
         if only_selected:
             options.onlySelectedFeatures = True
 
-        QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
+        QgsVectorFileWriter.writeAsVectorFormatV3(
+            layer,
+            path,
+            QgsProject.instance().transformContext(),
+            options
+        )
 
         #block_layer = QgsVectorLayer(path, layer.name())
         #QgsProject.instance().addMapLayer(block_layer, False)
@@ -237,6 +242,47 @@ class utils:
         #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
         #print("created file", path, os.path.exists(path))
+
+
+    def add_layer_to_gpkg(self, layer, path):
+        """ save layer to an existing gpkg """
+
+        sublayers = QgsProviderRegistry.instance().decodeUri("ogr", path)
+        layer_metadata = QgsProviderRegistry.instance().providerMetadata("ogr")
+        sublayer_list = layer_metadata.querySublayers(path)
+
+        source_layer_name = None
+
+        for sub in sublayer_list:
+            # Check if the geometry type is MultiPolygon (including 3D/Z)
+            if QgsWkbTypes.geometryType(sub.wkbType()) == QgsWkbTypes.PolygonGeometry:
+                # Check if it is Multi (to be precise as per your requirement)
+                #if QgsWkbTypes.isMultiType(sub.wkbType()):
+                source_layer_name = sub.name()
+                break
+
+        if not source_layer_name:
+            print("No MultiPolygon layer found in the selected GeoPackage, use default name.")
+            source_layer_name = "polyon_layer"
+
+        # create gpkg
+        options = QgsVectorFileWriter.SaveVectorOptions()
+        options.driverName = "GPKG"
+        options.layerName = f"{source_layer_name}_3d"
+        options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer
+
+        error, msg, new_path, layer_name = QgsVectorFileWriter.writeAsVectorFormatV3(
+            layer,
+            path,
+            QgsProject.instance().transformContext(),
+            options
+        )
+
+        if error == QgsVectorFileWriter.NoError:
+            uri = f"{new_path}|layername={layer_name}"
+            final_layer = QgsVectorLayer(uri, layer_name, "ogr")
+            if final_layer.isValid():
+                QgsProject.instance().addMapLayer(final_layer)
 
 
     def create_vector_layer(self, name, geom_type, group=False, fields=""):
@@ -436,8 +482,6 @@ class utils:
     def apply_dictionaries(self):
         """ apply dictionaries to existing structures layers """
 
-        FIELDS_MAP_OPTIONS = self.read_config_dict()
-
         # TODO! duplicate of refactor_attributes
         for group in self.parent.iface.layerTreeView().selectedNodes():
 
@@ -450,11 +494,13 @@ class utils:
                     self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
                     return
 
-                self.apply_dictionaries_to_layer(layer, FIELDS_MAP_OPTIONS)
+                self.apply_dictionaries_to_layer(layer)
 
 
-    def apply_dictionaries_to_layer(self, layer, FIELDS_MAP_OPTIONS):
+    def apply_dictionaries_to_layer(self, layer):
         """ apply dictionary to layer fields """
+
+        FIELDS_MAP_OPTIONS = self.read_config_dict()
 
         for field_name, options in FIELDS_MAP_OPTIONS.items():
             field_index = layer.fields().indexOf(field_name)
