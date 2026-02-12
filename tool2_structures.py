@@ -408,12 +408,15 @@ class StructuresTool():
         # get all points from database
         for nom_est in unique_nom_est:
             rows = self.load_points_from_db(nom_est)
-            points_layer = self.draw_points(rows, nom_est)
+            if rows:
+                points_layer = self.draw_points(rows, nom_est)
 
-            # create 3d from points
-            points = self.get_points_3d(points_layer)
-            polygon_geom = self.create_3d_from_points(points)
-            self.append_polygons_to_layer(polygon_layer, polygon_geom, nom_est)
+                # create 3d from points
+                points = self.get_points_3d(points_layer)
+                polygon_geom = self.create_3d_from_points(points)
+                self.append_polygons_to_layer(polygon_layer, polygon_geom, nom_est)
+            else:
+                print("no rows for nom_est:", nom_est)
 
         # save to new layer in selected geopackage and show in QGIS
         self.utils.add_layer_to_gpkg(polygon_layer, gpkg_path)
