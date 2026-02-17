@@ -34,7 +34,7 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "nom_nivel",
+        "expression": 'left(coalesce("nom_nivel", ""), 8)',
         "length": 8,
         "name": "nom_nivel",
         "precision": 0,
@@ -45,7 +45,7 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "nom_est",
+        "expression": 'left(coalesce("nom_est", ""), 10)',
         "length": 10,
         "name": "nom_est",
         "precision": 0,
@@ -56,7 +56,7 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "label",
+        "expression": 'left(coalesce("label", ""), 20)',
         "length": 20,
         "name": "label",
         "precision": 0,
@@ -67,7 +67,7 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "t_est1",
+        "expression": 'left(coalesce("t_est1", ""), 10)',
         "length": 10,
         "name": "t_est1",
         "precision": 0,
@@ -78,7 +78,7 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "t_forma",
+        "expression": 'left(coalesce("t_forma", ""), 10)',
         "length": 10,
         "name": "planta",
         "precision": 0,
@@ -89,7 +89,7 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
-        "expression": "t_est2",
+        "expression": 'left(coalesce("t_est2", ""), 10)',
         "length": 10,
         "name": "morfologia_3d",
         "precision": 0,
