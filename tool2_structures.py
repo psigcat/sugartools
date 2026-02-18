@@ -409,7 +409,7 @@ class StructuresTool():
             return
 
         # create 3d layer 
-        polygon_layer_uri = "MultiPolygonZ?crs=epsg:25831&field=nom_est:string(10)"
+        polygon_layer_uri = "MultiPolygonZ?crs=epsg:25831&field=nom_nivel:string(10)&field=nom_est:string(10)&field=label:string(10)"
         polygon_layer = QgsVectorLayer(polygon_layer_uri, f"{polygon_layer_2d.name()}_3d", "memory")
         #QgsProject.instance().addMapLayer(polygon_layer)
 
@@ -422,7 +422,9 @@ class StructuresTool():
                 # create 3d from points
                 points = self.get_points_3d(points_layer)
                 polygon_geom = self.create_3d_from_points(points)
-                self.append_polygons_to_layer(polygon_layer, polygon_geom, nom_est)
+                nom_nivel = self.get_field_value(polygon_layer_2d, "nom_nivel", "nom_est", nom_est)
+                label = self.get_field_value(polygon_layer_2d, "label", "nom_est", nom_est)
+                self.append_polygons_to_layer(polygon_layer, polygon_geom, nom_est, nom_nivel, label)
             else:
                 print("no rows for nom_est:", nom_est)
 
@@ -449,6 +451,22 @@ class StructuresTool():
         final_list = list(unique_list)
 
         return final_list
+
+
+    def get_field_value(self, layer, field_name, field_name_2, value_2):
+        """ get feature value from given field """
+
+        idx = layer.fields().lookupField(field_name)
+        idx2 = layer.fields().lookupField(field_name_2)
+
+        if idx == -1 or idx2 == -1:
+            return ""
+
+        for feat in layer.getFeatures():
+            if feat[field_name_2] == value_2:
+                return feat[field_name]
+
+        return ""
 
 
     def load_points_from_db(self, name):
@@ -565,18 +583,18 @@ class StructuresTool():
             return merged_geom
 
 
-    def append_polygons_to_layer(self, threed_layer, polygons_geom, nom_est):
+    def append_polygons_to_layer(self, threed_layer, polygons_geom, nom_est, nom_nivel, label):
         """ append polygon geometries to target polygon 3d layer """
 
         # Append to Target Layer Provider
         provider = threed_layer.dataProvider()
-        provider.addAttributes([QgsField("SHAPE_volume", QVariant.Double, "", 10, 9)])
+        provider.addAttributes([QgsField("SHAPE_volume", QVariant.Double, "", 10, 3)])
         threed_layer.updateFields()
 
         feature = QgsFeature(threed_layer.fields())
         feature.setGeometry(polygons_geom) 
         calculated_volume = self.utils.calculate_multipolygon_z_volume(polygons_geom)
-        feature.setAttributes([nom_est, calculated_volume])
+        feature.setAttributes([nom_nivel, nom_est, label, calculated_volume])
         threed_layer.addFeature(feature)
 
         threed_layer.startEditing()
