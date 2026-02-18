@@ -316,7 +316,7 @@ class BlocksTool():
             return
 
         # create line layer
-        line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:string(10)"
+        line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:string(10)&field=SHAPE_Length:real"
         line_layer = QgsVectorLayer(line_layer_uri, "linestring", "memory")
 
         line_layer.startEditing()
@@ -325,12 +325,8 @@ class BlocksTool():
         feature = QgsFeature()
         geom = QgsGeometry.fromPolyline([top_points[1], top_points[0], top_points[2]])
         feature.setGeometry(geom)
-        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
-
-        field_index_permiter = line_layer.fields().indexFromName("perimeter")
-        if field_index_permiter != -1:
-            line_layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
-        
+        shape_length = round(geom.length()/1000, 2)
+        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text(), shape_length])
         line_layer.addFeature(feature)
 
         # Add lines from each of this points to closest points on convex hull
