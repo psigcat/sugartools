@@ -901,7 +901,14 @@
               <item>
                <widget class="QPushButton" name="recalculate_shape_btn">
                 <property name="text">
-                 <string>Recalculate SHAPE_Length and SHAPE_Area</string>
+                 <string>Recalculate SHAPE_length and SHAPE_area</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="recalculate_shape_volume_btn">
+                <property name="text">
+                 <string>Recalculate SHAPE_volume</string>
                 </property>
                </widget>
               </item>
