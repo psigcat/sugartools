@@ -690,7 +690,7 @@ class utils:
 
 
     def recalculate_shape(self):
-        """ recalculate SHAPE_Length and SHAPE_Area of selected layers """
+        """ recalculate SHAPE_length and SHAPE_area of selected layers """
 
         for group in self.parent.iface.layerTreeView().selectedNodes():
 
@@ -707,7 +707,7 @@ class utils:
                 fields = layer.fields().names()
                 fields = [item.lower() for item in fields]
                 if not "shape_length" in fields or not "shape_area" in fields:
-                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have fields SHAPE_Length or SHAPE_Area", level=Qgis.Warning, duration=3)
+                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have fields SHAPE_length or SHAPE_area", level=Qgis.Warning, duration=3)
                     return
 
                 # get index of shape_length and shape_area
@@ -731,7 +731,59 @@ class utils:
                         layer.updateFeature(feature)
 
                     layer.commitChanges()
-                    self.parent.dlg.messageBar.pushMessage(f"Recalculation of SHAPE_Length and SHAPE_Area for layer {layer.name()} done", level=Qgis.Success, duration=3)
+                    self.parent.dlg.messageBar.pushMessage(f"Recalculation of SHAPE_length and SHAPE_area for layer {layer.name()} done", level=Qgis.Success, duration=3)
+
+                else:
+                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)
+                    return
+
+
+    def recalculate_shape_volume(self):
+        """ recalculate SHAPE_volume of selected layers """
+
+        for group in self.parent.iface.layerTreeView().selectedNodes():
+
+            if isinstance(group, QgsLayerTreeLayer):
+
+                layer = QgsProject.instance().mapLayersByName(group.name())[0]
+                #print("selected layer", layer.name(), layer.source(), layer.providerType())
+
+                if not layer.providerType() == 'ogr':
+                    self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
+                    return
+
+                # check if layer has fields shape_volume
+                fields = layer.fields().names()
+                fields = [item.lower() for item in fields]
+                if not "shape_volume" in fields:
+                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have field SHAPE_volume", level=Qgis.Warning, duration=3)
+                    return
+
+                # get index of shape_volume
+                shape_volume_index = fields.index("shape_volume")
+
+                # check if layer is editable
+                caps = layer.dataProvider().capabilities()
+                if caps & QgsVectorDataProvider.Capability.ChangeAttributeValues:
+
+                    layer.startEditing()
+                    for feature in layer.getFeatures():
+                        geom = feature.geometry()
+                        if not geom.type() == Qgis.GeometryType.Polygon:
+                            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a Polygon geometry", level=Qgis.Warning, duration=3)
+                            return
+
+                        if not QgsWkbTypes.hasZ(geom.wkbType()):
+                            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have Z-values", level=Qgis.Warning, duration=3)
+                            return
+
+                        # overwrite with recalculated values
+                        calculated_volume = self.calculate_multipolygon_z_volume(geom)
+                        feature.setAttribute(shape_volume_index, calculated_volume)
+                        layer.updateFeature(feature)
+
+                    layer.commitChanges()
+                    self.parent.dlg.messageBar.pushMessage(f"Recalculation of SHAPE_volume for layer {layer.name()} done", level=Qgis.Success, duration=3)
 
                 else:
                     self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)

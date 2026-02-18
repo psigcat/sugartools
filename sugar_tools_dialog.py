@@ -23,6 +23,7 @@
 """
 
 from qgis.core import Qgis
+from qgis.gui import QgsFileWidget
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 
@@ -53,3 +54,5 @@ class SugarToolsDialog(QtWidgets.QDialog, FORM_CLASS):
         self.extract_polygon_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
         self.extract_lines_layer.setFilters(Qgis.LayerFilter.LineLayer)
         self.extract_3d_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
+
+        self.structures_gpkg_3d.setFilter("GeoPackage files (*.gpkg)")
