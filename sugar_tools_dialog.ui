@@ -27,7 +27,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidgetMain">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabSections">
       <attribute name="title">
@@ -407,12 +407,12 @@
           <item>
            <widget class="QLabel" name="label_38">
             <property name="text">
-             <string>Geopackage file containing 2d structures</string>
+             <string>Select polygon 2d layer</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QgsFileWidget" name="structures_gpkg_3d"/>
+           <widget class="QgsMapLayerComboBox" name="structures_layer_3d"/>
           </item>
          </layout>
         </widget>

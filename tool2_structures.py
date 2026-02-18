@@ -12,7 +12,7 @@ from .utils import utils
 
 SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES_2d = ["structures_db", "structures_workspace", "structures_name"]
-FIELDS_MANDATORY_STRUCTURES_3d = ["structures_db", "structures_gpkg_3d"]
+FIELDS_MANDATORY_STRUCTURES_3d = ["structures_db", "structures_layer_3d"]
 
 FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:real&field=coord_y:real&field=coord_z:real"
 FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)"
@@ -36,6 +36,10 @@ class StructuresTool():
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.structures_db, self.databases)
         self.show_2d_or_3d()
+
+        self.parent.dlg.structures_layer_3d.setAllowEmptyLayer(True, "None")
+        if self.parent.iface.activeLayer():
+            self.parent.dlg.structures_layer_3d.setLayer(self.parent.iface.activeLayer())
 
 
     def show_2d_or_3d(self):
@@ -392,12 +396,16 @@ class StructuresTool():
     def create_structures_3d(self):
         """ create structures 3d and visualize """
 
+        polygon_layer_2d = self.parent.dlg.structures_layer_3d.currentLayer()
+        if polygon_layer_2d is None:
+            self.parent.dlg.messageBar.pushMessage(f"No polygon layer selected!", level=Qgis.Warning, duration=3)
+            return
+
         # get nom_est from gpkg
-        gpkg_path = self.parent.dlg.structures_gpkg_3d.filePath()
-        unique_nom_est = self.get_unique_nom_est(gpkg_path)
+        unique_nom_est = self.get_unique_nom_est(polygon_layer_2d)
 
         if not unique_nom_est:
-            self.parent.dlg.messageBar.pushMessage(f"Layer not valid for creating 3 structures!", level=Qgis.Warning, duration=3)
+            self.parent.dlg.messageBar.pushMessage(f"Layer not valid for creating 3d structures!", level=Qgis.Warning, duration=3)
             return
 
         # create 3d layer 
@@ -419,14 +427,12 @@ class StructuresTool():
                 print("no rows for nom_est:", nom_est)
 
         # save to new layer in selected geopackage and show in QGIS
-        self.utils.add_layer_to_gpkg(polygon_layer, gpkg_path)
+        gpkg_path = polygon_layer_2d.source().split("|")[0]
+        self.utils.add_layer_to_gpkg(polygon_layer, gpkg_path, polygon_layer_2d.name())
 
 
-    def get_unique_nom_est(self, gpkg_path):
+    def get_unique_nom_est(self, layer):
         """ read every feature and create list of unique field values for nom_est """
-
-        # load the layer from the GeoPackage
-        layer = QgsVectorLayer(gpkg_path, "2d_layer", "ogr")
 
         if not layer.isValid():
             self.parent.dlg.messageBar.pushMessage(f"Layer failed to load!", level=Qgis.Warning, duration=3)

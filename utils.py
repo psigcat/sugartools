@@ -244,26 +244,29 @@ class utils:
         #print("created file", path, os.path.exists(path))
 
 
-    def add_layer_to_gpkg(self, layer, path):
+    def add_layer_to_gpkg(self, layer, path, source_layer_name):
         """ save layer to an existing gpkg """
 
         sublayers = QgsProviderRegistry.instance().decodeUri("ogr", path)
         layer_metadata = QgsProviderRegistry.instance().providerMetadata("ogr")
         sublayer_list = layer_metadata.querySublayers(path)
 
-        source_layer_name = None
+        # source_layer_name = None
 
-        for sub in sublayer_list:
-            # Check if the geometry type is MultiPolygon (including 3D/Z)
-            if QgsWkbTypes.geometryType(sub.wkbType()) == QgsWkbTypes.PolygonGeometry:
-                # Check if it is Multi (to be precise as per your requirement)
-                #if QgsWkbTypes.isMultiType(sub.wkbType()):
-                source_layer_name = sub.name()
-                break
+        # for sub in sublayer_list:
 
-        if not source_layer_name:
-            print("No MultiPolygon layer found in the selected GeoPackage, use default name.")
-            source_layer_name = "polyon_layer"
+        #     print(sub)
+
+        #     # Check if the geometry type is MultiPolygon (including 3D/Z)
+        #     if QgsWkbTypes.geometryType(sub.wkbType()) == QgsWkbTypes.PolygonGeometry:
+        #         # Check if it is Multi (to be precise as per your requirement)
+        #         #if QgsWkbTypes.isMultiType(sub.wkbType()):
+        #         source_layer_name = sub.name()
+        #         break
+
+        # if not source_layer_name:
+        #     print("No MultiPolygon layer found in the selected GeoPackage, use default name.")
+        #     source_layer_name = "polyon_layer"
 
         # create gpkg
         options = QgsVectorFileWriter.SaveVectorOptions()

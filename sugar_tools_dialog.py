@@ -55,4 +55,4 @@ class SugarToolsDialog(QtWidgets.QDialog, FORM_CLASS):
         self.extract_lines_layer.setFilters(Qgis.LayerFilter.LineLayer)
         self.extract_3d_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
 
-        self.structures_gpkg_3d.setFilter("GeoPackage files (*.gpkg)")
+        self.structures_layer_3d.setFilters(Qgis.LayerFilter.PolygonLayer)
