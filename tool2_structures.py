@@ -569,7 +569,7 @@ class StructuresTool():
 
         feature = QgsFeature(threed_layer.fields())
         feature.setGeometry(polygons_geom) 
-        calculated_volume = self.calculate_multipolygon_z_volume(polygons_geom)
+        calculated_volume = self.utils.calculate_multipolygon_z_volume(polygons_geom)
         feature.setAttributes([nom_est, calculated_volume])
         threed_layer.addFeature(feature)
 
@@ -585,42 +585,3 @@ class StructuresTool():
             threed_layer.rollBack()
             self.parent.dlg.messageBar.pushMessage(f"FAILURE: Provider failed to add feature. The GeoPackage rejected the geometry during the edit commit.", level=Qgis.Critical, duration=3)
             return False
-
-
-    def calculate_multipolygon_z_volume(self, geometry):
-        """Calculates volume of a closed MultiPolygonZ by summing signed volumes."""
-
-        total_volume = 0.0
-        
-        # 1. Get the abstract geometry
-        abstract_geom = geometry.constGet() # This is the QgsMultiPolygon
-        
-        # 2. Iterate through each Polygon in the MultiPolygon
-        for i in range(abstract_geom.numGeometries()):
-            polygon = abstract_geom.geometryN(i)
-            
-            # 3. Iterate through rings (Exterior = 0, Interiors > 0)
-            for r in range(polygon.numInteriorRings() + 1):
-                ring = polygon.exteriorRing() if r == 0 else polygon.getInteriorRing(r-1)
-                
-                # 4. Use the Divergence Theorem (Signed volume of tetrahedra)
-                # We anchor to (0,0,0) and sum signed volumes of triangles in the fan
-                nodes = [ring.pointN(p) for p in range(ring.numPoints())]
-                
-                # Simple fan triangulation for the ring
-                for j in range(1, len(nodes) - 2):
-                    p1 = nodes[0]
-                    p2 = nodes[j]
-                    p3 = nodes[j+1]
-                    
-                    # Math: Signed Volume = (1/6) * |P1 · (P2 × P3)|
-                    v321 = p3.x() * p2.y() * p1.z()
-                    v231 = p2.x() * p3.y() * p1.z()
-                    v312 = p3.x() * p1.y() * p2.z()
-                    v132 = p1.x() * p3.y() * p2.z()
-                    v213 = p2.x() * p1.y() * p3.z()
-                    v123 = p1.x() * p2.y() * p3.z()
-                    
-                    total_volume += (1.0/6.0) * (-v321 + v231 + v312 - v132 - v213 + v123)
-                    
-        return abs(total_volume)/1000000000
