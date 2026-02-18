@@ -410,7 +410,7 @@ class StructuresTool():
 
         # create 3d layer 
         polygon_layer_uri = "MultiPolygonZ?crs=epsg:25831&field=nom_est:string(10)"
-        polygon_layer = QgsVectorLayer(polygon_layer_uri, "blocks", "memory")
+        polygon_layer = QgsVectorLayer(polygon_layer_uri, f"{polygon_layer_2d.name()}_3d", "memory")
         #QgsProject.instance().addMapLayer(polygon_layer)
 
         # get all points from database
