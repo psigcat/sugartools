@@ -327,9 +327,9 @@ class BlocksTool():
         feature.setGeometry(geom)
         feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
 
-        # field_index_permiter = line_layer.fields().indexFromName("perimeter")
-        # if field_index_permiter != -1:
-        #     line_layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
+        field_index_permiter = line_layer.fields().indexFromName("perimeter")
+        if field_index_permiter != -1:
+            line_layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
         
         line_layer.addFeature(feature)
 
@@ -493,20 +493,23 @@ class BlocksTool():
         # Append to Target Layer Provider
         provider = threed_layer.dataProvider()
         new_feature = QgsFeature(threed_layer.fields())
-        new_feature.setGeometry(merged_geom) 
+        new_feature.setGeometry(merged_geom)
         dib_pieza = self.parent.dlg.blocks_dib_pieza.text()
 
         # Find the field indices based on the target layer's field names
         fid_field_idx = threed_layer.fields().indexFromName('fid')
         id_bloque_field_idx = threed_layer.fields().indexFromName('id_bloque')
+        id_volume_field_idx = threed_layer.fields().indexFromName('SHAPE_volume')
 
         # Ensure attributes are set correctly for the target layer's schema
         if fid_field_idx != -1:
-             all_fids = list(provider.allFeatureIds())
-             max_fid = max(all_fids) if all_fids else 0
-             new_feature[fid_field_idx] = max_fid + 1
+            all_fids = list(provider.allFeatureIds())
+            max_fid = max(all_fids) if all_fids else 0
+            new_feature[fid_field_idx] = max_fid + 1
         if id_bloque_field_idx != -1:
-             new_feature[id_bloque_field_idx] = dib_pieza
+            new_feature[id_bloque_field_idx] = dib_pieza
+        if id_volume_field_idx != -1:
+            new_feature[id_volume_field_idx] = self.utils.calculate_multipolygon_z_volume(merged_geom)
 
         threed_layer.startEditing()
         success = provider.addFeatures([new_feature])
