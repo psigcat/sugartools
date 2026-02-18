@@ -428,9 +428,10 @@ class StructuresTool():
             else:
                 print("no rows for nom_est:", nom_est)
 
-        # save to new layer in selected geopackage and show in QGIS
-        gpkg_path = polygon_layer_2d.source().split("|")[0]
-        self.utils.add_layer_to_gpkg(polygon_layer, gpkg_path, polygon_layer_2d.name())
+        if polygon_layer.featureCount() > 0:
+            # save to new layer in selected geopackage and show in QGIS
+            gpkg_path = polygon_layer_2d.source().split("|")[0]
+            self.utils.add_layer_to_gpkg(polygon_layer, gpkg_path, polygon_layer_2d.name())
 
 
     def get_unique_nom_est(self, layer):
