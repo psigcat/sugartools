@@ -564,7 +564,7 @@ class StructuresTool():
 
         # Append to Target Layer Provider
         provider = threed_layer.dataProvider()
-        provider.addAttributes([QgsField("SHAPE_volume", QVariant.Double, "", 10, 4)])
+        provider.addAttributes([QgsField("SHAPE_volume", QVariant.Double, "", 10, 9)])
         threed_layer.updateFields()
 
         feature = QgsFeature(threed_layer.fields())
@@ -623,4 +623,4 @@ class StructuresTool():
                     
                     total_volume += (1.0/6.0) * (-v321 + v231 + v312 - v132 - v213 + v123)
                     
-        return abs(total_volume)/1000000
+        return abs(total_volume)/1000000000
