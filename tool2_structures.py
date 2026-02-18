@@ -448,7 +448,7 @@ class StructuresTool():
     def load_points_from_db(self, name):
         """ connect to database and load all points with level name = nom_est, "ns", "ew" """
 
-        sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}'"
+        sql = f"SELECT * FROM view_formas WHERE nom_nivel='{name}' OR  nom_nivel='{name}ns' OR nom_nivel='{name}ew'"
         rows = self.structures_db_obj.get_rows(sql)
         if not rows or rows == None or len(rows) == 0:
             return False
