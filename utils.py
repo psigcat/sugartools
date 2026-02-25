@@ -391,6 +391,10 @@ class utils:
     def refactor_attributes(self):
         """ refactor attribute tables of selected layers """
 
+        if len(self.parent.iface.layerTreeView().selectedNodes()) < 1:
+            self.parent.dlg.messageBar.pushMessage(f"You have to select at least one layer.", level=Qgis.Warning, duration=3)
+            return
+
         for group in self.parent.iface.layerTreeView().selectedNodes():
 
             if isinstance(group, QgsLayerTreeLayer):
@@ -466,6 +470,10 @@ class utils:
     def apply_dictionaries(self):
         """ apply dictionaries to existing structures layers """
 
+        if len(self.parent.iface.layerTreeView().selectedNodes()) < 1:
+            self.parent.dlg.messageBar.pushMessage(f"You have to select at least one layer.", level=Qgis.Warning, duration=3)
+            return
+
         # TODO! duplicate of refactor_attributes
         for group in self.parent.iface.layerTreeView().selectedNodes():
 
@@ -493,6 +501,7 @@ class utils:
                 config_map = {opt: opt for opt in options}
                 widget_setup = QgsEditorWidgetSetup('ValueMap', {'map': config_map})
                 layer.setEditorWidgetSetup(field_index, widget_setup)
+                self.parent.dlg.messageBar.pushMessage(f"Dictionaries applied to layer {layer.name()}.", level=Qgis.Success)
             else:
                 print(f"Warning: Field '{field_name}' not found in layer.")
 
