@@ -1,4 +1,4 @@
-from qgis.PyQt.QtCore import Qt, QFile, QMetaType, QPointF
+from qgis.PyQt.QtCore import Qt, QFile, QMetaType, QPointF, QIODevice
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
@@ -369,7 +369,7 @@ class utils:
         #layout.setName("Sections")
         qpt_file = QFile(qpt_file_path)
 
-        if qpt_file.open(QFile.ReadOnly | QFile.Text):
+        if qpt_file.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Tex):
             document = QDomDocument()
             if document.setContent(qpt_file):
                 context = QgsReadWriteContext()
