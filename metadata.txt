@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.21
+version=0.2.22
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.22 - fix styles for structures (#23), fix Qt6 errors (#38, #28)
 	0.2.21 - add fields label and nom_nivel to 3d structures (#51)
 	0.2.20 - fix name new structure 3d layer (#51)
 	0.2.19 - change geopackage to layer selection (#51)
