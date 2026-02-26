@@ -8,7 +8,13 @@ import numpy as np
 from scipy.spatial import ConvexHull
 import sqlite3
 import math
-import sip
+
+try:
+    # Qt6
+    from PyQt6 import sip
+except ImportError:
+    # Qt5
+    import sip
 
 
 from .utils_database import utils_database
