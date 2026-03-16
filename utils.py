@@ -10,6 +10,8 @@ import configparser
 import processing
 import random
 import shutil
+import numpy as np
+import trimesh
 
 
 COMBO_SELECT = "(Select)"
@@ -369,7 +371,7 @@ class utils:
         #layout.setName("Sections")
         qpt_file = QFile(qpt_file_path)
 
-        if qpt_file.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Tex):
+        if qpt_file.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text):
             document = QDomDocument()
             if document.setContent(qpt_file):
                 context = QgsReadWriteContext()
@@ -768,8 +770,13 @@ class utils:
                             self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have Z-values", level=Qgis.Warning, duration=3)
                             return
 
+                        if not geom.isClosed():
+                            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a closed Multipolygon geometry", level=Qgis.Warning, duration=3)
+                            return
+
                         # overwrite with recalculated values
-                        calculated_volume = self.calculate_multipolygon_z_volume(geom)
+                        #calculated_volume = self.calculate_multipolygon_z_volume(geom)
+                        calculated_volume = self.calculate_volume_with_trimesh(geom)
                         feature.setAttribute(shape_volume_index, calculated_volume)
                         layer.updateFeature(feature)
 
@@ -1019,7 +1026,7 @@ class utils:
         self.save_style(path, level, symbol)
 
 
-    def calculate_multipolygon_z_volume(self, geometry):
+    def calculate_multipolygon_z_volume_bck(self, geometry):
         """Calculates volume of a closed MultiPolygonZ by summing signed volumes."""
 
         total_volume = 0.0
@@ -1056,3 +1063,86 @@ class utils:
                     total_volume += (1.0/6.0) * (-v321 + v231 + v312 - v132 - v213 + v123)
                     
         return abs(total_volume)/1000000000
+
+
+    def calculate_multipolygon_z_volume(self, geometry):
+        """
+        Calculates volume for a MultiPolygonZ with massive coordinates.
+        Optimized for triangulated surfaces (3 points per ring).
+        """
+        abstract_geom = geometry.constGet()
+        if abstract_geom.numGeometries() == 0:
+            return 0.0
+
+        total_volume = 0.0
+        
+        # We need a GLOBAL Anchor for the WHOLE MultiPolygon 
+        # to ensure top and bottom faces relate to each other.
+        # We'll use the first point of the first triangle.
+        first_ring = abstract_geom.geometryN(0).exteriorRing()
+        ox, oy, oz = first_ring.pointN(0).x(), first_ring.pointN(0).y(), first_ring.pointN(0).z()
+
+        for i in range(abstract_geom.numGeometries()):
+            part = abstract_geom.geometryN(i)
+            ring = part.exteriorRing()
+            if ring.numPoints() < 4: continue
+                
+            p1, p2, p3 = ring.pointN(0), ring.pointN(1), ring.pointN(2)
+            
+            # 1. SHIFT TO LOCAL (This kills the 'Millions' error)
+            x1, y1, z1 = p1.x() - ox, p1.y() - oy, p1.z() - oz
+            x2, y2, z2 = p2.x() - ox, p2.y() - oy, p2.z() - oz
+            x3, y3, z3 = p3.x() - ox, p3.y() - oy, p3.z() - oz
+
+            # 2. SIGNED VOLUME OF THE TETRAHEDRON
+            # We use the determinant formula. It is the only way to 
+            # get the 7.29 result by letting faces subtract correctly.
+            v_signed = (x1 * (y2 * z3 - y3 * z2) - 
+                        y1 * (x2 * z3 - x3 * z2) + 
+                        z1 * (x2 * y3 - x3 * y2)) / 6.0
+            
+            total_volume += v_signed
+
+        # If your winding is 'backwards', the sum will be negative. 
+        # abs() gives the final correct volume.
+        return abs(total_volume)
+
+
+    def calculate_volume_with_trimesh(self, geometry):
+        """ Calculates volume for a MultiPolygonZ using trimesh library """
+
+        # 1. Extract all vertices and faces from the QgsGeometry
+        # We must normalize to a local origin to prevent the 1,387,339 error
+        abstract_geom = geometry.constGet()
+        vertices = []
+        faces = []
+        
+        # Anchor point for precision
+        p_ref = abstract_geom.geometryN(0).exteriorRing().pointN(0)
+        origin = np.array([p_ref.x(), p_ref.y(), p_ref.z()])
+
+        v_count = 0
+        for i in range(abstract_geom.numGeometries()):
+            ring = abstract_geom.geometryN(i).exteriorRing()
+            # Convert QgsPoint to numpy array relative to origin
+            nodes = []
+            for j in range(ring.numPoints() - 1): # Skip the closing duplicate point
+                p = ring.pointN(j)
+                nodes.append([p.x(), p.y(), p.z()] - origin)
+            
+            # Triangulate the face (handles your cube and 3D polygons)
+            if len(nodes) == 3:
+                vertices.extend(nodes)
+                faces.append([v_count, v_count+1, v_count+2])
+                v_count += 3
+            elif len(nodes) == 4: # Like your cube faces
+                vertices.extend(nodes)
+                faces.append([v_count, v_count+1, v_count+2])
+                faces.append([v_count, v_count+2, v_count+3])
+                v_count += 4
+
+        # 2. Create Mesh
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        
+        # 3. Trimesh handles the math safely
+        return abs(mesh.volume) / 1e9

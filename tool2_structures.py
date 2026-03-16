@@ -594,7 +594,8 @@ class StructuresTool():
 
         feature = QgsFeature(threed_layer.fields())
         feature.setGeometry(polygons_geom) 
-        calculated_volume = self.utils.calculate_multipolygon_z_volume(polygons_geom)
+        #calculated_volume = self.utils.calculate_multipolygon_z_volume(polygons_geom)
+        calculated_volume = self.utils.calculate_volume_with_trimesh(polygons_geom)
         feature.setAttributes([nom_nivel, nom_est, label, calculated_volume])
         threed_layer.addFeature(feature)
 
