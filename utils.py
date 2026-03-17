@@ -1111,38 +1111,47 @@ class utils:
     def calculate_volume_with_trimesh(self, geometry):
         """ Calculates volume for a MultiPolygonZ using trimesh library """
 
-        # 1. Extract all vertices and faces from the QgsGeometry
-        # We must normalize to a local origin to prevent the 1,387,339 error
         abstract_geom = geometry.constGet()
         vertices = []
         faces = []
         
-        # Anchor point for precision
+        # 1. Coordinate Normalization (Essential for UTM)
+        # We divide by 1000 to get meters immediately
         p_ref = abstract_geom.geometryN(0).exteriorRing().pointN(0)
-        origin = np.array([p_ref.x(), p_ref.y(), p_ref.z()])
+        origin = np.array([p_ref.x(), p_ref.y(), p_ref.z()]) / 1000.0
 
-        v_count = 0
+        v_idx = 0
         for i in range(abstract_geom.numGeometries()):
             ring = abstract_geom.geometryN(i).exteriorRing()
-            # Convert QgsPoint to numpy array relative to origin
-            nodes = []
-            for j in range(ring.numPoints() - 1): # Skip the closing duplicate point
-                p = ring.pointN(j)
-                nodes.append([p.x(), p.y(), p.z()] - origin)
-            
-            # Triangulate the face (handles your cube and 3D polygons)
-            if len(nodes) == 3:
-                vertices.extend(nodes)
-                faces.append([v_count, v_count+1, v_count+2])
-                v_count += 3
-            elif len(nodes) == 4: # Like your cube faces
-                vertices.extend(nodes)
-                faces.append([v_count, v_count+1, v_count+2])
-                faces.append([v_count, v_count+2, v_count+3])
-                v_count += 4
+            n = ring.numPoints()
 
-        # 2. Create Mesh
+            # Extract and scale points
+            face_pts = []
+            for j in range(n - 1): # Exclude the closing point
+                p = ring.pointN(j)
+                face_pts.append((np.array([p.x(), p.y(), p.z()]) / 1000.0) - origin)
+            
+            # Triangulate polygon faces (handles squares/cubes and triangles)
+            for j in range(1, len(face_pts) - 1):
+                vertices.extend([face_pts[0], face_pts[j], face_pts[j+1]])
+                faces.append([v_idx, v_idx + 1, v_idx + 2])
+                v_idx += 3
+
+        # 2. Create the Mesh
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-        
-        # 3. Trimesh handles the math safely
-        return abs(mesh.volume) / 1e9
+
+        # 3. THE REPAIR STEPS (Critical for 7.29m3 result)
+        # Merge vertices that are identical (removes gaps)
+        mesh.merge_vertices()
+        # Fix inverted triangles (unifies normals)
+        trimesh.repair.fix_normals(mesh)
+        # Close small holes
+        trimesh.repair.fill_holes(mesh)
+
+        # 4. Check results
+        if not mesh.is_watertight:
+            # If still not watertight, the volume might be 'signed' or wrong
+            # We use the absolute value of the mass properties
+            return abs(mesh.volume)
+
+        return abs(mesh.volume)

@@ -2,3 +2,4 @@ xlrd
 openpyxl
 scipy
 trimesh
+networkx
