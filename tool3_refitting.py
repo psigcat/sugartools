@@ -446,19 +446,21 @@ class RefittingTool():
         """ calculate azimut """
 
         vatan = 0
-        if incx != 0 and incx != 0:
+        if incx != 0 and incy != 0:
             vatan = math.atan(incx / incy) * (180 / math.pi)
 
         vazimut = vatan
 
-        if incx >= 0 and incy >= 0:
-            vazimut = math.atan(incxmo / incymo) * (180 / math.pi)
-        elif incx >= 0 and incy < 0:
-            vazimut = 90 + (math.atan(incymo / incxmo) * (180 / math.pi))
-        elif incx < 0 and incy < 0:
-            vazimut = 180 + (math.atan(incxmo / incymo) * (180 / math.pi))
-        elif incx < 0 and incy >= 0:
-            vazimut = 270 + (math.atan(incymo / incxmo) * (180 / math.pi))
+        if incxmo > 0 and incymo > 0:
+            print(incxmo, incymo, math.pi)
+            if incx >= 0 and incy >= 0:
+                vazimut = math.atan(incxmo / incymo) * (180 / math.pi)
+            elif incx >= 0 and incy < 0:
+                vazimut = 90 + (math.atan(incymo / incxmo) * (180 / math.pi))
+            elif incx < 0 and incy < 0:
+                vazimut = 180 + (math.atan(incxmo / incymo) * (180 / math.pi))
+            elif incx < 0 and incy >= 0:
+                vazimut = 270 + (math.atan(incymo / incxmo) * (180 / math.pi))
 
         return vazimut
 
