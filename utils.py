@@ -146,6 +146,28 @@ STRUCTURES_FIELD_MAPPINGS = [
     {
         "alias": "",
         "comment": "",
+        "expression": "",
+        "length": 15,
+        "name": "relleno",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
+        "expression": "",
+        "length": 15,
+        "name": "seccion",
+        "precision": 0,
+        "sub_type": 0,
+        "type": 10,
+        "type_name": "text"
+    },
+    {
+        "alias": "",
+        "comment": "",
         "expression": "SHAPE_Length",
         "length": 0,
         "name": "SHAPE_Length",
@@ -518,7 +540,9 @@ class utils:
             'forma_2d': [],
             'white_layer': [],
             'black_layer': [],
-            'rubefaccion': []
+            'rubefaccion': [],
+            'relleno': [],
+            'seccion': []
         }
 
         for key in dictionary:

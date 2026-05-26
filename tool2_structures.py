@@ -15,7 +15,7 @@ FIELDS_MANDATORY_STRUCTURES_2d = ["structures_db", "structures_workspace", "stru
 FIELDS_MANDATORY_STRUCTURES_3d = ["structures_db", "structures_layer_3d"]
 
 FIELDS = "&field=nom_nivel:string(8)&field=num_pieza:integer&field=coord_x:real&field=coord_y:real&field=coord_z:real"
-FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)"
+FIELDS_MAP_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=label:string(20)&field=t_est1:string(10)&field=planta:string(10)&field=morfologia_3d:string(10)&field=forma_2d:string(10)&field=white_layer:string(2)&field=black_layer:string(2)&field=rubefaccion:string(2)&field=relleno:string(15)&field=seccion:string(15)"
 FIELDS_NS_EW_EMPTY = "&field=nom_nivel:string(8)&field=nom_est:string(10)&field=cod_sec:integer&field=nom_sec:string(10)&field=nom_estrat:string(10)&field=t_estrat"
 
 
@@ -164,7 +164,6 @@ class StructuresTool():
         self.create_structures_empty(name, type, "linestring", group)
         self.create_structures_empty(name, type, "multilinestring", group)
         self.create_map_theme(name, type)
-        self.create_map_theme(name, type, True)
 
 
     def create_structures_empty(self, name, type, geom_type, group):
@@ -260,7 +259,7 @@ class StructuresTool():
         return point_layer
 
 
-    def create_map_theme(self, name, type, print=False):
+    def create_map_theme(self, name, type):
         """ create map theme from given layers """
 
         mapThemesCollection = QgsProject.instance().mapThemeCollection()
@@ -374,6 +373,7 @@ class StructuresTool():
         layout = layout_manager.layoutByName("structures")
 
         # set active structure to layout variable
+        print("0:", self.active_structure)
         QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", self.active_structure)
 
         if self.active_structure:
@@ -382,15 +382,17 @@ class StructuresTool():
             bookmark_ns = bookmark_manager.bookmarkById(f"{self.active_structure}_ns")
             bookmark_ew = bookmark_manager.bookmarkById(f"{self.active_structure}_ew")
 
+            print("1:", bookmark_map, bookmark_ns, bookmark_ew)
+
             if bookmark_map and bookmark_ns and bookmark_ew:
                 self.apply_spatial_bookmarks(layout, [bookmark_map, bookmark_ns, bookmark_ew])
 
-        else:
+        elif self.parent.iface.activeLayer():
             # set active structure to name extracted from first selected layer
-            if self.parent.iface.activeLayer():
-                name = self.parent.iface.activeLayer().name()
-                name = name.split("_")[0]
-                QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
+            name = self.parent.iface.activeLayer().name()
+            name = name.split("_")[0]
+            print("2:", name)
+            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_structures_name", name)
 
 
     def create_structures_3d(self):
