@@ -390,7 +390,6 @@ class utils:
         # Create a new layout
         layout = QgsPrintLayout(project)
         layout.initializeDefaults()
-        #layout.setName("Sections")
         qpt_file = QFile(qpt_file_path)
 
         if qpt_file.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text):
@@ -402,14 +401,8 @@ class utils:
                 else:
                     self.parent.dlg.messageBar.pushMessage(f"QPT template {layout.name()} loaded successfully.", level=Qgis.Success)
             qpt_file.close()
-        # else:
-        #     print("Failed to open QPT file.")
 
         layout_added = project.layoutManager().addLayout(layout)
-
-        # add to combo box
-        # if layout_added:
-        #     self.parent.dlg.layout.addItem(layout.name())
 
 
     def refactor_attributes(self):
