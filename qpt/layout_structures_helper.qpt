@@ -1,4 +1,4 @@
-<Layout units="mm" worldFileMap="{4b5f0556-a504-4ab7-821c-ec288ff8bf84}" name="structures" printResolution="300">
+<Layout units="mm" worldFileMap="{4b5f0556-a504-4ab7-821c-ec288ff8bf84}" name="structures helper" printResolution="300">
  <Snapper snapToGuides="1" tolerance="5" snapToItems="1" snapToGrid="0"/>
  <Grid offsetX="0" offsetUnits="mm" offsetY="0" resUnits="mm" resolution="10"/>
  <PageCollection>
