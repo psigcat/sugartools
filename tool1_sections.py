@@ -248,7 +248,7 @@ class SectionsTool():
                     files = self.return_file_list(folder, pattern)
                     if files:
                         file_list += files
-        return file_list
+        return sorted(file_list)
 
 
     def return_file_list(self, folder, pattern):
@@ -291,6 +291,7 @@ class SectionsTool():
         
         if self.parent.dlg.section_ew.isChecked():
             file_list = self.get_file_list(SECTION_EW_PATTERN)
+            print(file_list)
             if file_list:
                 success = True
                 group = self.utils.create_group(label + SECTION_EW_PATTERN[1:] + " cross-sections")
