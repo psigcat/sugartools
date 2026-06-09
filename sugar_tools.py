@@ -201,6 +201,7 @@ class SugarTools:
         self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.utils.import_layout("layout_sections.qpt"))
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.utils.import_layout("layout_map.qpt"))
         self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures.qpt"))
+        self.dlg.import_layout_structures_helper_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures_helper.qpt"))
         self.dlg.refactor_structures_attr_btn.clicked.connect(self.utils.refactor_attributes)
         self.dlg.refactor_structures_dict_btn.clicked.connect(self.utils.apply_dictionaries)
         self.dlg.recalculate_shape_btn.clicked.connect(self.utils.recalculate_shape)
@@ -242,6 +243,7 @@ class SugarTools:
             self.utils.import_layout("layout_sections.qpt")
             self.utils.import_layout("layout_map.qpt")
             self.utils.import_layout("layout_structures.qpt")
+            self.utils.import_layout("layout_structures_helper.qpt")
 
         # create custom crs, doesnt work for now
         # self.utils.create_custom_crs()
