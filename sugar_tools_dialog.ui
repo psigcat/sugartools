@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>683</width>
-    <height>792</height>
+    <width>835</width>
+    <height>1004</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -886,6 +886,13 @@
                <widget class="QPushButton" name="import_layout_structures_btn">
                 <property name="text">
                  <string>Import Structures layout</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="import_layout_structures_helper_btn">
+                <property name="text">
+                 <string>Import Structures Helper layout</string>
                 </property>
                </widget>
               </item>
