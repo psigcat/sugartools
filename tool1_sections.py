@@ -119,40 +119,6 @@ class SectionsTool():
             widget.addItem(file)
 
 
-    # def fill_layer(self):
-    #     """ show all layers in combobox """
-
-    #     self.parent.dlg.layer.clear()
-    #     self.parent.dlg.layer.addItem(COMBO_SELECT)
-    #     for group in QgsProject.instance().layerTreeRoot().children():
-    #         #self.add_layer_tree_item(self.getLayerTree(group))
-    #         self.getLayerTree(group)
-
-    #     # select active layer
-    #     if self.parent.iface.activeLayer():
-    #         self.parent.dlg.layer.setCurrentText(self.parent.iface.activeLayer().name())
-    #     else:
-    #         self.parent.dlg.layer.setCurrentIndex(1)
-
-
-    # def getLayerTree(self, node):
-    #     if isinstance(node, QgsLayerTreeGroup):
-    #         for child in node.children():
-    #             self.getLayerTree(child)
-    #     elif isinstance(node, QgsLayerTreeNode):
-    #         self.parent.dlg.layer.addItem(node.name())
-
-
-    # def fill_layout(self):
-    #     """ show all layouts in combobox """
-
-    #     self.parent.dlg.layout.clear()
-    #     #self.parent.dlg.layout.addItem(COMBO_SELECT)
-    #     layout_manager = QgsProject.instance().layoutManager()
-    #     for layout in layout_manager.printLayouts():
-    #         self.parent.dlg.layout.addItem(layout.name())
-
-
     def load_file(self, file, group, csv_params_coords, prefix, inverted=False):
         """ load csv file as vector layer """
 
@@ -396,7 +362,7 @@ class SectionsTool():
     def write_layout_vars(self, layout):
         """ write variables to composition """
 
-        checked_layers = self.parent.iface.mapCanvas().layers()
+        checked_layers = QgsProject.instance().layerTreeRoot().checkedLayers()
         var_names = ["layer", "section", "red_points", "duplicated_points", "no_coord", "thickness", "blocks"]
 
         for var_name in var_names:
