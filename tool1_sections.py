@@ -360,24 +360,27 @@ class SectionsTool():
 
 
     def write_layout_vars(self, layout):
-        """ write variables to composition """
+        """ Write variables to composition """
 
         checked_layers = QgsProject.instance().layerTreeRoot().checkedLayers()
         var_names = ["layer", "section", "red_points", "duplicated_points", "no_coord", "thickness", "blocks"]
 
         for var_name in var_names:
+            vars_list = []
 
-            vars = []
             for layer in checked_layers:
-                var = QgsExpressionContextUtils.layerScope(layer).variable("layer_" + var_name)
-                if var is not None:
-                    vars.append(var)
+                custom_var_key = f"layer_{var_name}"
+                var = QgsExpressionContextUtils.layerScope(layer).variable(custom_var_key)
 
-            vars = list(set(vars))
-            vars_str = ""
-            if len(vars) > 0:
-                vars_str = ', '.join(vars)
-            QgsExpressionContextUtils.setLayoutVariable(layout, "layout_" + var_name, vars_str)
+                if var is None and var_name == "layer":
+                    var = layer.name()
+
+                if var is not None and str(var).strip():
+                    vars_list.append(str(var))
+
+            unique_vars = list(dict.fromkeys(vars_list))
+            vars_str = ', '.join(unique_vars) if unique_vars else ""
+            QgsExpressionContextUtils.setLayoutVariable(layout, f"layout_{var_name}", vars_str)
 
 
     def write_layout_yacimiento(self, layout):
