@@ -278,7 +278,7 @@ class BlocksTool():
         # smooth polygon
         if self.parent.dlg.blocks_smooth_polygons.isChecked():
             params = {
-                'INPUT': layer,
+                'INPUT': polygon_layer,
                 'ITERATIONS': 1,
                 'OFFSET': 0.25,
                 'MAX_ANGLE': 180,
