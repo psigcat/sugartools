@@ -1,4 +1,4 @@
-from qgis.PyQt.QtCore import Qt, QFile, QMetaType, QPointF, QIODevice
+from qgis.PyQt.QtCore import Qt, QFile, QMetaType, QPointF, QIODevice, QSettings
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
@@ -818,18 +818,6 @@ class utils:
             self.parent.dlg.utils_sections_list.addItem(file[len(filter_str):-4])
 
 
-    def get_path_qml(self):
-        """ return QML folder """
-
-        return self.parent.dlg.folder_qml.filePath()
-
-
-    def get_path_qpt(self):
-        """ return QPT folder """
-
-        return self.parent.dlg.folder_qpt.filePath()
-
-
     def load_existing_levels(self, level=True):
         """ load all nom_nivel from selected section """
 
@@ -1183,3 +1171,55 @@ class utils:
             return abs(mesh.volume)
 
         return abs(mesh.volume)
+
+
+    def read_settings(self):
+        """ Load the user selected settings """
+
+        qset = QSettings()
+
+        path_qml_default = os.path.join(self.parent.plugin_dir, "qml")
+        path_qml = qset.value('/SugarTools/path_qml', path_qml_default)
+        self.parent.dlg.folder_qml.setFilePath(path_qml)
+
+        path_qpt_default = os.path.join(self.parent.plugin_dir, "qpt")
+        path_qpt = qset.value('/SugarTools/path_qpt', path_qpt_default)
+        self.parent.dlg.folder_qpt.setFilePath(path_qpt)
+
+
+    def save_settings_qml(self):
+        """ Save the user selected settings """
+
+        file_path = self.parent.dlg.folder_qml.filePath()
+        if os.path.isdir(file_path):
+            QSettings().setValue('/SugarTools/path_qml', file_path)
+
+
+    def save_settings_qpt(self):
+        """ Save the user selected settings """
+
+        file_path = self.parent.dlg.folder_qpt.filePath()
+        if os.path.isdir(file_path):
+            QSettings().setValue('/SugarTools/path_qpt', file_path)
+
+
+    def get_path_qml(self):
+        """ return QML folder """
+
+        path_qml = self.parent.dlg.folder_qml.filePath()
+        if not os.path.isdir(path_qml):
+            path_qml = os.path.join(self.parent.plugin_dir, "qml")
+            self.parent.dlg.messageBar.pushMessage(f"Layer Stylings folder {path_qml} does not exist, using plugin default.", level=Qgis.Warning)
+            
+        return path_qml
+
+
+    def get_path_qpt(self):
+        """ return QPT folder """
+
+        path_qpt = self.parent.dlg.folder_qpt.filePath()
+        if not os.path.isdir(path_qpt):
+            path_qpt = os.path.join(self.plugin_dir, "qpt")
+            self.parent.dlg.messageBar.pushMessage(f"Layouts folder {path_qpt} does not exist, using plugin default.", level=Qgis.Warning)
+            
+        return path_qpt

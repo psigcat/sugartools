@@ -54,6 +54,9 @@ class BlocksTool():
         self.parent.dlg.blocks_filter_expr_btn.clicked.connect(self.open_expr_builder)
         self.parent.dlg.blocks_filter_expr_select_btn.clicked.connect(self.load_blocks)
 
+        self.parent.dlg.folder_qml.fileChanged.connect(self.utils.save_settings_qml)
+        self.parent.dlg.folder_qpt.fileChanged.connect(self.utils.save_settings_qpt)
+
 
     def reset_ui(self):
         """ reset UI """
