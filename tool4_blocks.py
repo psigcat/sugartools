@@ -278,7 +278,7 @@ class BlocksTool():
         # smooth polygon
         if self.parent.dlg.blocks_smooth_polygons.isChecked():
             params = {
-                'INPUT': polygon_layer,
+                'INPUT': write_layer,
                 'ITERATIONS': 1,
                 'OFFSET': 0.25,
                 'MAX_ANGLE': 180,
@@ -337,6 +337,7 @@ class BlocksTool():
 
         # Add lines from each of this points to closest points on convex hull
         for line_feature in line_features:
+            #print(line_feature.geometry().asWkt(2))
             line_layer.addFeature(line_feature)
 
         line_layer.commitChanges()
