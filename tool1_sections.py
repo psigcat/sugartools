@@ -10,7 +10,6 @@ from .utils import utils
 
 
 COMBO_SELECT = "(Select)"
-SYMBOLOGY_DIR = "qml"
 SECTION_EW_PATTERN = "_EW"
 SECTION_NS_PATTERN = "_NS"
 INVERTED_STR = " inverted"
@@ -95,14 +94,14 @@ class SectionsTool():
     def fill_symbology(self):
         """ show all symbologies (but starting with levels) in combobox """
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
+        symbology_path = self.parent.utils.get_path_qml()
         self.fill_symbology_files(self.parent.dlg.symbology, "levels", symbology_path)
 
 
     def fill_symbology_overlay(self):
         """ show all symbologies (but starting with overlay) in combobox """
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
+        symbology_path = self.parent.utils.get_path_qml()
         self.fill_symbology_files(self.parent.dlg.symbology_overlay, "overlay", symbology_path)
 
 
@@ -198,7 +197,7 @@ class SectionsTool():
         if overlay:
             symbology = self.parent.dlg.symbology_overlay.currentText()
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, symbology)
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), symbology)
         layer.loadNamedStyle(symbology_path)
         layer.triggerRepaint()
 
@@ -381,6 +380,7 @@ class SectionsTool():
             unique_vars = list(dict.fromkeys(vars_list))
             vars_str = ', '.join(unique_vars) if unique_vars else ""
             QgsExpressionContextUtils.setLayoutVariable(layout, f"layout_{var_name}", vars_str)
+            print("set", vars_str)
 
 
     def write_layout_yacimiento(self, layout):
@@ -493,7 +493,7 @@ class SectionsTool():
         result['OUTPUT'].setName(layer_name)
 
         # apply style
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks.qml")
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
         result['OUTPUT'].loadNamedStyle(symbology_path)
         result['OUTPUT'].triggerRepaint()
 

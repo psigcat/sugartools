@@ -21,7 +21,6 @@ from .utils_database import utils_database
 from .utils import utils
 
 
-SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_BLOCKS = ["blocks_db", "blocks_workspace"]
 FIELDS_MANDATORY_PROCESS = ["blocks_workspace", "blocks_dib_pieza", "blocks_polygon_layer", "blocks_lines_layer", "blocks_3d_layer"]
 POLYGON_LAYER_ID = "_2d"
@@ -173,7 +172,7 @@ class BlocksTool():
         self.parent.iface.setActiveLayer(blocks_layer)
         self.parent.iface.zoomToActiveLayer()
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "blocks_points.qml")
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks_points.qml")
         blocks_layer.loadNamedStyle(symbology_path)
 
         self.utils.save_layer_gpkg(blocks_layer, os.path.join(self.parent.dlg.blocks_workspace.filePath(), "helper"))

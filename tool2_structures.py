@@ -10,7 +10,6 @@ from .utils_database import utils_database
 from .utils import utils
 
 
-SYMBOLOGY_DIR = "qml"
 FIELDS_MANDATORY_STRUCTURES_2d = ["structures_db", "structures_workspace", "structures_name"]
 FIELDS_MANDATORY_STRUCTURES_3d = ["structures_db", "structures_layer_3d"]
 
@@ -178,7 +177,7 @@ class StructuresTool():
         layer_path = os.path.join(self.parent.dlg.structures_workspace.filePath(), "structures", name, "layers_" + name)
         self.utils.save_layer_gpkg(layer, layer_path)
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_{geom_type}.qml")
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), f"structures_{geom_type}.qml")
         layer.loadNamedStyle(symbology_path)
 
         if type == "map":
@@ -249,7 +248,7 @@ class StructuresTool():
             type = "ew"
         elif type == "map_ns":
             type = "ns"
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, f"structures_points_{type}.qml")
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), f"structures_points_{type}.qml")
         point_layer.loadNamedStyle(symbology_path)
         point_layer.triggerRepaint()
 

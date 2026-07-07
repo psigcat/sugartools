@@ -232,6 +232,10 @@ class SugarTools:
         self.blocks_tool.setup()
 
         # utils
+        path_qml = os.path.join(self.plugin_dir, "qml")
+        self.dlg.folder_qml.setFilePath(path_qml)
+        path_qpt = os.path.join(self.plugin_dir, "qpt")
+        self.dlg.folder_qpt.setFilePath(path_qpt)
         self.utils.fill_symbology_list()
 
 

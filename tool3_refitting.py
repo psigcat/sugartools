@@ -13,7 +13,6 @@ import openpyxl
 from .utils import utils
 
 
-SYMBOLOGY_DIR = "qml"
 COMBO_SELECT = "(Select)"
 FIELDS_DEFAULT = {
     "refitting_part": "num_pieza",
@@ -607,7 +606,7 @@ class RefittingTool():
             i+=1
         layer.commitChanges()
 
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "refitting_points.qml")
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "refitting_points.qml")
         layer.loadNamedStyle(symbology_path)
         #layer.triggerRepaint()
 
@@ -639,7 +638,7 @@ class RefittingTool():
             i+=1
         layer.commitChanges()
 
-        #symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "refitting_lines.qml")
+        #symbology_path = os.path.join(self.parent.utils.get_path_qml(), "refitting_lines.qml")
         #layer.loadNamedStyle(symbology_path)
         #layer.triggerRepaint()
 

@@ -15,7 +15,6 @@ import trimesh
 
 
 COMBO_SELECT = "(Select)"
-SYMBOLOGY_DIR = "qml"
 FIELDS_SECTIONS = ["section_ew", "section_ns", "section_ew_inverted", "section_ns_inverted"]
 FIELDS_MANDATORY_IMPORT = ["workspace", "delimiter"]
 FIELDS_MANDATORY_IMPORT_POINTS = ["symbology"]
@@ -385,7 +384,7 @@ class utils:
         """ create layout from template shipped with plugin """
 
         project = QgsProject.instance()
-        qpt_file_path = os.path.join(self.parent.plugin_dir, "qpt", template)
+        qpt_file_path = os.path.join(self.get_path_qpt(), template)
 
         # Create a new layout
         layout = QgsPrintLayout(project)
@@ -477,7 +476,7 @@ class utils:
                 QgsProject.instance().removeMapLayer(layer)
 
                 # copy style from original to refactored layer
-                symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR, "structures_map.qml")
+                symbology_path = os.path.join(self.get_path_qml(), "structures_map.qml")
                 final_layer.loadNamedStyle(symbology_path)
                 final_layer.triggerRepaint()
 
@@ -810,13 +809,25 @@ class utils:
 
         self.parent.dlg.utils_sections_list.clear()
         self.parent.dlg.utils_sections_list.addItem(COMBO_SELECT)
-        symbology_path = os.path.join(self.parent.plugin_dir, SYMBOLOGY_DIR)
+        symbology_path = self.get_path_qml()
         filter_str = "levels_"
 
         symbology_files = [f for f in os.listdir(symbology_path) if os.path.isfile(os.path.join(symbology_path, f)) and f.startswith(filter_str)]
         symbology_files.sort()
         for file in symbology_files:
             self.parent.dlg.utils_sections_list.addItem(file[len(filter_str):-4])
+
+
+    def get_path_qml(self):
+        """ return QML folder """
+
+        return self.parent.dlg.folder_qml.filePath()
+
+
+    def get_path_qpt(self):
+        """ return QPT folder """
+
+        return self.parent.dlg.folder_qpt.filePath()
 
 
     def load_existing_levels(self, level=True):
@@ -831,7 +842,7 @@ class utils:
         if not level:
             file_name = "overlay_" + file_name
 
-        qml_path = os.path.join(self.parent.plugin_dir, "qml", file_name)
+        qml_path = os.path.join(self.get_path_qml(), file_name)
         existing_levels = self.get_categories(qml_path)
 
         if level:
@@ -947,7 +958,7 @@ class utils:
         if "overlay_levels" in path:
             file_name = "overlay_levels_template.qml"   
 
-        template_path = os.path.join(self.parent.plugin_dir, "qml", file_name)
+        template_path = os.path.join(self.get_path_qml, file_name)
 
         shutil.copyfile(template_path, path)
 
@@ -985,8 +996,8 @@ class utils:
         file_level = f"levels_{section}.qml"
         file_overlay = "overlay_" + file_level
 
-        path_level = os.path.join(self.parent.plugin_dir, "qml", file_level)
-        path_overlay = os.path.join(self.parent.plugin_dir, "qml", file_overlay)
+        path_level = os.path.join(self.get_path_qml(), file_level)
+        path_overlay = os.path.join(self.get_path_qml(), file_overlay)
 
         return os.path.exists(path_level) or os.path.exists(path_overlay)
 
@@ -1033,7 +1044,7 @@ class utils:
         if not islevel:
             file_name = "overlay_" + file_name
 
-        path = os.path.join(self.parent.plugin_dir, "qml", file_name)
+        path = os.path.join(self.get_path_qml(), file_name)
 
         if islevel:
             symbol = self.create_symbol_circle(color)
