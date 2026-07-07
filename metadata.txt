@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.26
+version=0.2.27
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.27 - custom folder for QPT and QML (#62), fix layer for smooth polygons (#32)
 	0.2.26 - show all layouts in structures print layout (#61)
 	0.2.25 - add structures helper layout, order sections alphabetical (#59, #57)
 	0.2.24 - fix polygons using networkx before calculateing SHAPE_volume (#55)
