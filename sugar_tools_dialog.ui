@@ -923,6 +923,42 @@
             </widget>
            </item>
            <item>
+            <widget class="QGroupBox" name="groupBox_15">
+             <property name="title">
+              <string>Default Folders</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_18">
+              <item>
+               <widget class="QLabel" name="label_39">
+                <property name="text">
+                 <string>Layer Stylings (QML)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QgsFileWidget" name="folder_qml">
+                <property name="storageMode">
+                 <enum>QgsFileWidget::GetDirectory</enum>
+                </property>
+                <property name="options">
+                 <set>QFileDialog::ShowDirsOnly</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_40">
+                <property name="text">
+                 <string>Layouts (QPT)</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QgsFileWidget" name="folder_qpt"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <spacer name="verticalSpacer_2">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
