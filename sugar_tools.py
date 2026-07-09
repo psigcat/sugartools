@@ -214,6 +214,8 @@ class SugarTools:
         self.dlg.utils_add_styles_btn.clicked.connect(self.utils.add_styles)
         self.dlg.utils_new_styles_btn.clicked.connect(self.utils.create_styles)
         self.dlg.utils_sections_list.currentIndexChanged.connect(self.utils.load_existing_levels)
+        self.dlg.folder_qml.fileChanged.connect(self.utils.save_settings_qml)
+        self.dlg.folder_qpt.fileChanged.connect(self.utils.save_settings_qpt)
         self.dlg.btn_folder_qml_default.clicked.connect(self.utils.set_folder_qml_default)
         self.dlg.btn_folder_qpt_default.clicked.connect(self.utils.set_folder_qpt_default)
 
