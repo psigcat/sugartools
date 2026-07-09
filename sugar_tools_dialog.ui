@@ -927,15 +927,29 @@
              <property name="title">
               <string>Default Folders</string>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_18">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_8">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_40">
+                <property name="text">
+                 <string>Layouts (QPT)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
                <widget class="QLabel" name="label_39">
                 <property name="text">
                  <string>Layer Stylings (QML)</string>
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="btn_folder_qml_default">
+                <property name="text">
+                 <string>Reset to default</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="2">
                <widget class="QgsFileWidget" name="folder_qml">
                 <property name="storageMode">
                  <enum>QgsFileWidget::GetDirectory</enum>
@@ -945,14 +959,14 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QLabel" name="label_40">
+              <item row="3" column="1">
+               <widget class="QPushButton" name="btn_folder_qpt_default">
                 <property name="text">
-                 <string>Layouts (QPT)</string>
+                 <string>Reset to default</string>
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="4" column="0" colspan="2">
                <widget class="QgsFileWidget" name="folder_qpt"/>
               </item>
              </layout>

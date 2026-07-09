@@ -1223,3 +1223,17 @@ class utils:
             self.parent.dlg.messageBar.pushMessage(f"Layouts folder {path_qpt} does not exist, using plugin default.", level=Qgis.Warning)
             
         return path_qpt
+
+
+    def set_folder_qml_default(self):
+        """ reset to default QML folder """
+
+        default_folder = os.path.join(self.parent.plugin_dir, "qml")
+        self.parent.dlg.folder_qml.setFilePath(default_folder)
+
+
+    def set_folder_qpt_default(self):
+        """ reset to default QPT folder """
+
+        default_folder = os.path.join(self.parent.plugin_dir, "qpt")
+        self.parent.dlg.folder_qpt.setFilePath(default_folder)

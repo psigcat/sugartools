@@ -191,6 +191,7 @@ class SugarTools:
         self.dlg.buttonBox.accepted.disconnect()
         self.dlg.buttonBox.accepted.connect(self.process)
         self.dlg.tabWidgetMain.currentChanged.connect(self.tab_changed)
+
         # self.dlg.section_ew.stateChanged.connect(self.sections_tool.fill_layer)
         # self.dlg.section_ns.stateChanged.connect(self.sections_tool.fill_layer)
         #self.dlg.layer.currentTextChanged.connect(self.sections_tool.set_and_zoom_active_layer)
@@ -198,6 +199,10 @@ class SugarTools:
         self.dlg.radioPoints.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioBlocks.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioPointsBlocks.toggled.connect(self.sections_tool.point_or_block)
+
+        self.dlg.structures_check_2d.toggled.connect(self.structures_tool.show_2d_or_3d)
+        self.dlg.structures_check_3d.toggled.connect(self.structures_tool.show_2d_or_3d)
+
         self.dlg.import_layout_sections_btn.clicked.connect(lambda:self.utils.import_layout("layout_sections.qpt"))
         self.dlg.import_layout_map_btn.clicked.connect(lambda:self.utils.import_layout("layout_map.qpt"))
         self.dlg.import_layout_structures_btn.clicked.connect(lambda:self.utils.import_layout("layout_structures.qpt"))
@@ -209,8 +214,8 @@ class SugarTools:
         self.dlg.utils_add_styles_btn.clicked.connect(self.utils.add_styles)
         self.dlg.utils_new_styles_btn.clicked.connect(self.utils.create_styles)
         self.dlg.utils_sections_list.currentIndexChanged.connect(self.utils.load_existing_levels)
-        self.dlg.structures_check_2d.toggled.connect(self.structures_tool.show_2d_or_3d)
-        self.dlg.structures_check_3d.toggled.connect(self.structures_tool.show_2d_or_3d)
+        self.dlg.btn_folder_qml_default.clicked.connect(self.utils.set_folder_qml_default)
+        self.dlg.btn_folder_qpt_default.clicked.connect(self.utils.set_folder_qpt_default)
 
         iface.layerTreeView().currentLayerChanged.connect(self.utils.select_layer)
         iface.layoutDesignerOpened.connect(self.structures_tool.onLayoutLoaded)
