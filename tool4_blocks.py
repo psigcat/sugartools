@@ -60,6 +60,13 @@ class BlocksTool():
 
         self.parent.dlg.blocks_filter_expr.setText(r""""dib_pieza" = '102'""")
         self.parent.dlg.blocks_dib_pieza.setText("")
+        self.parent.dlg.blocks_draw_box.setEnabled(False)
+
+        active_layer = self.parent.iface.activeLayer()
+
+        if active_layer and active_layer.wkbType() in [QgsWkbTypes.Type.PointZ, QgsWkbTypes.Type.MultiPointZ]:
+            self.parent.dlg.blocks_draw_box.setEnabled(True)
+            self.parent.dlg.blocks_dib_pieza.setText(active_layer.name())
 
 
     def connect_db(self):
@@ -104,6 +111,10 @@ class BlocksTool():
 
         if not os.path.exists(self.parent.dlg.blocks_workspace.filePath()):
             self.parent.dlg.messageBar.pushMessage(f"No valid workspace path '{self.parent.dlg.blocks_workspace.filePath()}'", level=Qgis.Warning, duration=3)
+            return
+
+        if self.parent.dlg.blocks_filter_expr.text() == "":
+            self.parent.dlg.messageBar.pushMessage(f"Expression empty, it's mandatory to use an expression like \"dib_pieza\" = '102'", level=Qgis.Warning, duration=3)
             return
 
         exp = QgsExpression(self.parent.dlg.blocks_filter_expr.text())
@@ -186,7 +197,7 @@ class BlocksTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_PROCESS):
             return False
 
-        if sip.isdeleted(self.points_layer):
+        if self.points_layer and sip.isdeleted(self.points_layer):
             self.parent.dlg.messageBar.pushMessage(f"No block points available, load blocks first (or select points layer with name <dib_pieza> if available) in order to draw a polygon.", level=Qgis.Critical, duration=10)
             return
 
@@ -250,7 +261,11 @@ class BlocksTool():
         field_index_permiter = layer.fields().indexFromName("perimeter")
         if field_index_permiter != -1:
             layer.renameAttribute(field_index_permiter, 'SHAPE_Length')
-        
+
+        # recalculate SHAPE_Length and SHAPE_Area
+        feature = list(layer.getFeatures())[0]
+        self.utils.recalculate_shape_feature(layer, feature, field_index_permiter, field_index_area)
+
         layer.commitChanges()
 
         return layer

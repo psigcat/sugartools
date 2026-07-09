@@ -698,7 +698,7 @@ class utils:
         return crs
 
 
-    def recalculate_shape(self):
+    def recalculate_shape(self, feature=None):
         """ recalculate SHAPE_length and SHAPE_area of selected layers """
 
         for group in self.parent.iface.layerTreeView().selectedNodes():
@@ -708,43 +708,60 @@ class utils:
                 layer = QgsProject.instance().mapLayersByName(group.name())[0]
                 #print("selected layer", layer.name(), layer.source(), layer.providerType())
 
-                if not layer.providerType() == 'ogr':
-                    self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
-                    return
+                self.recalculate_shape_features(layer, feature)
 
-                # check if layer has fields shape_length and shape_area
-                fields = layer.fields().names()
-                fields = [item.lower() for item in fields]
-                if not "shape_length" in fields or not "shape_area" in fields:
-                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have fields SHAPE_length or SHAPE_area", level=Qgis.Warning, duration=3)
-                    return
 
-                # get index of shape_length and shape_area
-                shape_length_index = fields.index("shape_length")
-                shape_area_index = fields.index("shape_area")
+    def recalculate_shape_features(self, layer, feature):
+        """ recalculate SHAPE_length and SHAPE_area of given layer and feature """
 
-                # check if layer is editable
-                caps = layer.dataProvider().capabilities()
-                if caps & QgsVectorDataProvider.Capability.ChangeAttributeValues:
+        if not layer.providerType() == 'ogr':
+            self.parent.dlg.messageBar.pushMessage(f"Does only work with layers of type 'ogr'", level=Qgis.Warning, duration=3)
+            return
 
-                    layer.startEditing()
-                    for feature in layer.getFeatures():
-                        geom = feature.geometry()
-                        if not geom.type() == Qgis.GeometryType.Polygon:
-                            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a Polygon geometry", level=Qgis.Warning, duration=3)
-                            return
+        # check if layer has fields shape_length and shape_area
+        fields = layer.fields().names()
+        fields = [item.lower() for item in fields]
+        if not "shape_length" in fields or not "shape_area" in fields:
+            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have fields SHAPE_length or SHAPE_area", level=Qgis.Warning, duration=3)
+            return
 
-                        # overwrite with recalculated values
-                        feature.setAttribute(shape_length_index, round(geom.length()/1000, 2))
-                        feature.setAttribute(shape_area_index, round(geom.area()/1000000, 2))
-                        layer.updateFeature(feature)
+        # get index of shape_length and shape_area
+        shape_length_index = fields.index("shape_length")
+        shape_area_index = fields.index("shape_area")
 
-                    layer.commitChanges()
-                    self.parent.dlg.messageBar.pushMessage(f"Recalculation of SHAPE_length and SHAPE_area for layer {layer.name()} done", level=Qgis.Success, duration=3)
+        # check if layer is editable
+        caps = layer.dataProvider().capabilities()
+        if caps & QgsVectorDataProvider.Capability.ChangeAttributeValues:
 
-                else:
-                    self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)
-                    return
+            layer.startEditing()
+            if feature:
+                self.recalculate_shape_feature(layer, feature, shape_length_index, shape_area_index)
+            else:
+                for feature in layer.getFeatures():
+                    self.recalculate_shape_feature(layer, feature, shape_length_index, shape_area_index)
+
+            layer.commitChanges()
+
+            if not feature:
+                self.parent.dlg.messageBar.pushMessage(f"Recalculation of SHAPE_length and SHAPE_area for layer {layer.name()} done", level=Qgis.Success, duration=3)
+
+        else:
+            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} not editable", level=Qgis.Warning, duration=3)
+            return
+
+
+    def recalculate_shape_feature(self, layer, feature, shape_length_index, shape_area_index):
+        """ recalculate SHAPE_length and SHAPE_area of given feature """
+
+        geom = feature.geometry()
+        if not geom.type() == Qgis.GeometryType.Polygon:
+            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a Polygon geometry", level=Qgis.Warning, duration=3)
+            return
+
+        # overwrite with recalculated values
+        feature.setAttribute(shape_length_index, round(geom.length()/1000, 2))
+        feature.setAttribute(shape_area_index, round(geom.area()/1000000, 2))
+        layer.updateFeature(feature)
 
 
     def recalculate_shape_volume(self):
