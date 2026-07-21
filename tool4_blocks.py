@@ -314,6 +314,134 @@ class BlocksTool():
 
 
     def draw_line(self, convex_hull):
+        """ draw line strictly in 2D (MultiLineString) """
+
+        line_layer = self.parent.dlg.blocks_lines_layer.currentLayer()
+        if line_layer is None:
+            return
+
+        # save layer before processing
+        if line_layer.isEditable():
+            line_layer.commitChanges()
+
+        if not line_layer or line_layer.wkbType() != QgsWkbTypes.Type.MultiLineString:
+            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiLineString layer.", level=Qgis.Critical, duration=3)
+            return
+
+        top_points = self.get_points_top_3d()
+        if not top_points:
+            return
+
+        # Pass to the updated purely 2D function
+        line_features = self.get_points_random_2d(convex_hull, top_points)
+
+        # create strictly 2D line layer
+        line_layer_uri = "MultiLineString?crs=epsg:25831&field=id_bloque:string(10)&field=SHAPE_Length:real"
+        line_layer = QgsVectorLayer(line_layer_uri, "linestring", "memory")
+
+        line_layer.startEditing()
+
+        # 1. Create a 2D line connecting the 3 highest Z points
+        feature = QgsFeature()
+        
+        # Strip Z values using QgsPointXY
+        p1 = QgsPointXY(top_points[1].x(), top_points[1].y())
+        p0 = QgsPointXY(top_points[0].x(), top_points[0].y())
+        p2 = QgsPointXY(top_points[2].x(), top_points[2].y())
+        
+        # Use fromMultiPolylineXY to guarantee a MultiLineString without Z
+        geom = QgsGeometry.fromMultiPolylineXY([[p1, p0, p2]])
+        feature.setGeometry(geom)
+        
+        shape_length = round(geom.length() / 1000, 2)
+        feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text(), shape_length])
+        line_layer.addFeature(feature)
+
+        # 2. Add purely 2D lines from each of these points to closest points on the convex hull
+        for line_feature in line_features:
+            line_layer.addFeature(line_feature)
+
+        line_layer.commitChanges()
+
+        # write output to selected layer
+        params = {
+            'SOURCE_LAYER': line_layer,
+            'SOURCE_FIELD': '',
+            'TARGET_LAYER': self.parent.dlg.blocks_lines_layer.currentText(),
+            'TARGET_FIELD': '',
+            'ACTION_ON_DUPLICATE': 0
+        }
+        processing.run("etl_load:appendfeaturestolayer", params)
+
+
+    def get_points_random_2d(self, convex_hull, top_points):
+        """ get 3 points from convex hull closest to top_points and make purely 2D lines """
+
+        hull_features = [f.geometry() for f in convex_hull.getFeatures()]
+
+        # Extract convex hull points
+        convex_hull_points = []
+        for geom in hull_features:
+            if geom.isMultipart():
+                convex_hull_points.extend(geom.asMultiPolygon()[0][0])
+            else:
+                convex_hull_points.extend(geom.asPolygon()[0])
+
+        # Convert convex hull points strictly to QgsPointXY (No Z dimension)
+        convex_hull_points_xy = [QgsPointXY(hp.x(), hp.y()) for hp in convex_hull_points]
+
+        # Compute convex hull centroid
+        sum_x = sum(p.x() for p in convex_hull_points_xy)
+        sum_y = sum(p.y() for p in convex_hull_points_xy)
+        centroid = QgsPointXY(sum_x / len(convex_hull_points_xy), sum_y / len(convex_hull_points_xy))
+
+        # Function to compute angle from centroid
+        def compute_angle(p):
+            return math.degrees(math.atan2(p.y() - centroid.y(), p.x() - centroid.x())) % 360
+        
+        # Assign hull points to 3 angle groups (0-120, 120-240, 240-360)
+        hull_sections = {0: [], 1: [], 2: []}
+        for p in convex_hull_points_xy:
+            angle = compute_angle(p)
+            section = int(angle // 120)
+            hull_sections[section].append(p)
+
+        if not all(hull_sections.values()):
+            print("Not enough convex hull points in each section!")
+            return []
+
+        used_sections = set()
+        line_features = []
+        for idx, pt_3d in enumerate(top_points):
+            # Extract planar 2D coordinate from the 3D top point
+            p_xy = QgsPointXY(pt_3d.x(), pt_3d.y())
+
+            available_sections = [s for s in [0, 1, 2] if s not in used_sections]
+            if not available_sections:
+                self.parent.dlg.messageBar.pushMessage(f"Not enough distinct hull sections!", level=Qgis.Critical, duration=3)
+                break
+
+            best_section = min(available_sections, key=lambda s: min(p_xy.distance(hp) for hp in hull_sections[s]))
+            closest_hull_point = min(hull_sections[best_section], key=lambda hp: p_xy.distance(hp))
+            used_sections.add(best_section)
+
+            # avoid making line between two identical points
+            if p_xy.x() != closest_hull_point.x() and p_xy.y() != closest_hull_point.y():
+                line_feature = QgsFeature()
+                
+                # Create MultiLineString geometry strictly in 2D
+                geom = QgsGeometry.fromMultiPolylineXY([[p_xy, closest_hull_point]])
+                line_feature.setGeometry(geom)
+                
+                # Assign both mandatory attributes matching your MultiLineString layer schema
+                shape_length = round(geom.length() / 1000, 2)
+                line_feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text(), shape_length])
+                line_features.append(line_feature)
+
+        return line_features
+
+
+    def draw_line_old(self, convex_hull):
         """ draw line """
 
         line_layer = self.parent.dlg.blocks_lines_layer.currentLayer()
@@ -446,6 +574,7 @@ class BlocksTool():
             if p.x() != closest_hull_point.x() and p.y() != closest_hull_point.y():
 
                 # Create a line feature
+                #p = QgsPoint(p.x(), p.y(), 0)
                 line_feature = QgsFeature()
                 line_feature.setGeometry(QgsGeometry.fromPolyline([p, closest_hull_point]))
                 line_feature.setAttributes([self.parent.dlg.blocks_dib_pieza.text()])
