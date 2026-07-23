@@ -795,17 +795,30 @@ class utils:
                     layer.startEditing()
                     for feature in layer.getFeatures():
                         geom = feature.geometry()
+                        
+                        # 1. Check if it's a Polygon/Multipolygon
                         if not geom.type() == Qgis.GeometryType.Polygon:
                             self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a Polygon geometry", level=Qgis.Warning, duration=3)
                             return
 
+                        # 2. Check for Z-values
                         if not QgsWkbTypes.hasZ(geom.wkbType()):
                             self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have Z-values", level=Qgis.Warning, duration=3)
                             return
 
-                        if not geom.isClosed():
-                            self.parent.dlg.messageBar.pushMessage(f"Layer {layer.name()} doesn't have a closed Multipolygon geometry", level=Qgis.Warning, duration=3)
-                            return
+                        # 3. Validity Check & Fix
+                        if not geom.isGeosValid():
+                            # Attempt to repair the geometry
+                            fixed_geom = geom.makeValid()
+                            
+                            # Verify the repair was successful and didn't result in an empty geometry
+                            if fixed_geom and fixed_geom.isGeosValid() and not fixed_geom.isEmpty():
+                                # Apply the fixed geometry to the feature in the active edit session
+                                layer.changeGeometry(feature.id(), fixed_geom)
+                            else:
+                                # If makeValid() fails, you must decide whether to skip, delete, or flag the feature
+                                self.parent.dlg.messageBar.pushMessage(f"Feature ID {feature.id()} could not be automatically fixed.", level=Qgis.Warning, duration=3)
+                                return
 
                         # overwrite with recalculated values
                         #calculated_volume = self.calculate_multipolygon_z_volume(geom)
