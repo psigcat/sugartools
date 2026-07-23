@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.29
+version=0.2.30
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.30 - change isClosed to isGeosValid and fix in case it is not (#64)
 	0.2.29 - refactor draw_line avoiding Z (#63)
 	0.2.28 - recalculate SHAPE_Length and SHAPE_Area (#3), reset buttons for custom QPT and QML folder (#62)
 	0.2.27 - custom folder for QPT and QML (#62), fix layer for smooth polygons (#32)
