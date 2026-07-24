@@ -134,8 +134,9 @@ class BlocksTool():
             return
 
         dib_pieza = self.parent.dlg.blocks_filter_expr.text()
-        dib_pieza = dib_pieza.replace(r""""dib_pieza" = """, "")
-        dib_pieza = dib_pieza.replace("'", "").replace('"', "").strip()
+        # dib_pieza = dib_pieza.replace(r""""dib_pieza" = """, "")
+        # dib_pieza = dib_pieza.replace("'", "").replace('"', "").strip()
+        dib_pieza = utils.get_first_number(dib_pieza)
         self.parent.dlg.blocks_dib_pieza.setText(dib_pieza)
 
         self.draw_blocks(dib_pieza, rows)
@@ -197,6 +198,12 @@ class BlocksTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY_PROCESS):
             return False
 
+        try:
+            dib_pieza = int(self.parent.dlg.blocks_dib_pieza.text())
+        except ValueError:
+            self.parent.dlg.messageBar.pushMessage(f"dib_pieza has to be of type int", level=Qgis.Critical, duration=10)
+            return
+
         if self.points_layer and sip.isdeleted(self.points_layer):
             self.parent.dlg.messageBar.pushMessage(f"No block points available, load blocks first (or select points layer with name <dib_pieza> if available) in order to draw a polygon.", level=Qgis.Critical, duration=10)
             return
@@ -204,7 +211,7 @@ class BlocksTool():
         if self.points_layer is None:
             active_layer = self.parent.iface.activeLayer()
 
-            if not active_layer or active_layer.name() != self.parent.dlg.blocks_dib_pieza.text():
+            if not active_layer or active_layer.name() != dib_pieza:
                 self.parent.dlg.messageBar.pushMessage(f"No block points available, select blocks first in order to draw a polygon.", level=Qgis.Critical, duration=3)
                 return
 

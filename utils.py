@@ -12,6 +12,7 @@ import random
 import shutil
 import numpy as np
 import trimesh
+import re
 
 
 COMBO_SELECT = "(Select)"
@@ -1267,3 +1268,14 @@ class utils:
 
         default_folder = os.path.join(self.parent.plugin_dir, "qpt")
         self.parent.dlg.folder_qpt.setFilePath(default_folder)
+
+
+    def get_first_number(sql_query):
+        # Looks for single quotes containing only digits, and captures just the digits
+        match = re.search(r"'(\d+)'", sql_query)
+
+        if match:
+            first_number = match.group(1)
+            return first_number
+
+        return 0
