@@ -331,7 +331,7 @@
        <item>
         <widget class="QLabel" name="label_11">
          <property name="text">
-          <string>Database</string>
+          <string>Database (MySQL)</string>
          </property>
         </widget>
        </item>
@@ -566,7 +566,7 @@
        <item>
         <widget class="QLabel" name="label_24">
          <property name="text">
-          <string>Database</string>
+          <string>Database (MySQL)</string>
          </property>
         </widget>
        </item>
@@ -824,6 +824,91 @@
        </item>
        <item>
         <spacer name="verticalSpacer_10">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabDbLayer">
+      <attribute name="title">
+       <string>DB Layer</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_18">
+       <item>
+        <widget class="QLabel" name="label_41">
+         <property name="text">
+          <string>Database (MySQL)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="db_layer_db"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_42">
+         <property name="text">
+          <string>Table or View</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="db_layer_table"/>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_16">
+         <property name="title">
+          <string>Geometry Definition</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <layout class="QFormLayout" name="formLayout_3">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_46">
+            <property name="text">
+             <string>X field</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="db_layer_x"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_44">
+            <property name="text">
+             <string>Y field</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="db_layer_y"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_45">
+            <property name="text">
+             <string>Z field</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="db_layer_z"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>

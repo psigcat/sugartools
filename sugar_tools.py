@@ -37,6 +37,7 @@ from .tool3_refitting import RefittingTool
 from .tool4_blocks import BlocksTool
 from .tool5_relblocks import RelblocksTool
 from .tool6_extractblocks import ExtractblocksTool
+from .tool7_dblayer import DbLayerTool
 
 
 class SugarTools:
@@ -238,6 +239,10 @@ class SugarTools:
         self.blocks_tool = BlocksTool(self)
         self.blocks_tool.setup()
 
+        # dblayer
+        self.dblayer_tool = DbLayerTool(self)
+        self.dblayer_tool.setup()
+
         # utils
         self.utils.read_settings()
         self.utils.fill_symbology_list()
@@ -303,6 +308,9 @@ class SugarTools:
 
         elif main_tab == "tabExtractForms":
             self.extractblocks_tool.process_extractforms()
+
+        elif main_tab == "tabDbLayer":
+            self.dblayer_tool.process_dblayer()
 
 
     def run(self):
