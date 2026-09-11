@@ -128,7 +128,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="3" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="MM" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -181,7 +181,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="3.6818" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -220,7 +220,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -259,7 +259,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -298,7 +298,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -337,7 +337,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -376,7 +376,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -415,7 +415,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
@@ -454,7 +454,7 @@
             <Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="outline_width_unit" value="MM" type="QString"/>
             <Option name="scale_method" value="diameter" type="QString"/>
-            <Option name="size" value="2.20908" type="QString"/>
+            <Option name="size" type="QString" value="2"/>
             <Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/>
             <Option name="size_unit" value="Point" type="QString"/>
             <Option name="vertical_anchor_point" value="1" type="QString"/>
