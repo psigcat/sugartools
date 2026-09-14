@@ -3,11 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-<<<<<<< HEAD
-version=0.2.32
-=======
 version=0.2.33
->>>>>>> a262234 (new version 0.2.33)
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -30,10 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
-<<<<<<< HEAD
-=======
 	0.2.33 - change size strucure level points
->>>>>>> a262234 (new version 0.2.33)
 	0.2.32 - add MySQL DB layer (#67)
 	0.2.31 - savely use dib_pieza as int (#65)
 	0.2.30 - change isClosed to isGeosValid and fix in case it is not (#64)
