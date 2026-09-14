@@ -30,6 +30,7 @@ from qgis.core import QgsProject
 import os
 
 from .utils import utils
+from .utils_dblayer import DbLayerTool
 from .sugar_tools_dialog import SugarToolsDialog
 from .tool1_sections import SectionsTool
 from .tool2_structures import StructuresTool
@@ -37,7 +38,6 @@ from .tool3_refitting import RefittingTool
 from .tool4_blocks import BlocksTool
 from .tool5_relblocks import RelblocksTool
 from .tool6_extractblocks import ExtractblocksTool
-from .tool7_dblayer import DbLayerTool
 
 
 class SugarTools:
@@ -239,13 +239,11 @@ class SugarTools:
         self.blocks_tool = BlocksTool(self)
         self.blocks_tool.setup()
 
-        # dblayer
-        self.dblayer_tool = DbLayerTool(self)
-        self.dblayer_tool.setup()
-
         # utils
         self.utils.read_settings()
         self.utils.fill_symbology_list()
+        self.utils_dblayer_tool = DbLayerTool(self)
+        self.utils_dblayer_tool.setup()
 
 
     def initialLoad(self):
@@ -308,9 +306,6 @@ class SugarTools:
 
         elif main_tab == "tabExtractForms":
             self.extractblocks_tool.process_extractforms()
-
-        elif main_tab == "tabDbLayer":
-            self.dblayer_tool.process_dblayer()
 
 
     def run(self):

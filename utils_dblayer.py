@@ -31,6 +31,7 @@ class DbLayerTool():
 
         self.parent.dlg.db_layer_db.currentIndexChanged.connect(self.load_tables)
         self.parent.dlg.db_layer_table.currentIndexChanged.connect(self.load_columns)
+        self.parent.dlg.db_layer_btn.clicked.connect(self.process_dblayer)
 
 
     def connect_db(self):

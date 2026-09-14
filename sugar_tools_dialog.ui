@@ -837,91 +837,6 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabDbLayer">
-      <attribute name="title">
-       <string>DB Layer</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_18">
-       <item>
-        <widget class="QLabel" name="label_41">
-         <property name="text">
-          <string>Database (MySQL)</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="db_layer_db"/>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_42">
-         <property name="text">
-          <string>Table or View</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="db_layer_table"/>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_16">
-         <property name="title">
-          <string>Geometry Definition</string>
-         </property>
-         <property name="flat">
-          <bool>false</bool>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <layout class="QFormLayout" name="formLayout_3">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_46">
-            <property name="text">
-             <string>X field</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="db_layer_x"/>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_44">
-            <property name="text">
-             <string>Y field</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="db_layer_y"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_45">
-            <property name="text">
-             <string>Z field</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="db_layer_z"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="tabUtils">
       <attribute name="title">
        <string>Utils</string>
@@ -1078,109 +993,100 @@
           </attribute>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QGroupBox" name="groupBox_6">
+            <widget class="QGroupBox" name="groupBox_13">
              <property name="title">
-              <string>Sections</string>
+              <string>Edit existing file (level and overlay)</string>
              </property>
-             <layout class="QGridLayout" name="gridLayout">
-              <item row="0" column="0">
-               <widget class="QGroupBox" name="groupBox_13">
-                <property name="title">
-                 <string>Edit existing file (level and overlay)</string>
+             <layout class="QGridLayout" name="gridLayout_10">
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>Choose color:</string>
                 </property>
-                <layout class="QGridLayout" name="gridLayout_10">
-                 <item row="4" column="0">
-                  <widget class="QLabel" name="label_8">
-                   <property name="text">
-                    <string>Choose color:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_2">
-                   <property name="text">
-                    <string>New level name (nom_nivel):</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_28">
-                   <property name="text">
-                    <string>Existing levels:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="0" colspan="2">
-                  <widget class="QPushButton" name="utils_add_styles_btn">
-                   <property name="text">
-                    <string>Create new styles in selected section</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QComboBox" name="utils_sections_list"/>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="utils_sections_name"/>
-                 </item>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_5">
-                   <property name="text">
-                    <string>Select section:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="1">
-                  <widget class="QgsColorButton" name="utils_sections_color">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QPlainTextEdit" name="utils_sections_existing"/>
-                 </item>
-                </layout>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>New level name (nom_nivel):</string>
+                </property>
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QGroupBox" name="groupBox_14">
-                <property name="title">
-                 <string>Create new files (level and overlay) from given section name</string>
+               <widget class="QLabel" name="label_28">
+                <property name="text">
+                 <string>Existing levels:</string>
                 </property>
-                <layout class="QGridLayout" name="gridLayout_11">
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="utils_sections_new_section"/>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_3">
-                   <property name="text">
-                    <string>Section name:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0" colspan="2">
-                  <widget class="QPushButton" name="utils_new_styles_btn">
-                   <property name="text">
-                    <string>Create new styles in new section</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_9">
-                   <property name="text">
-                    <string>New level names (nom_nivel) separed by comas:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="utils_sections_new_levels"/>
-                 </item>
-                </layout>
                </widget>
+              </item>
+              <item row="6" column="0" colspan="2">
+               <widget class="QPushButton" name="utils_add_styles_btn">
+                <property name="text">
+                 <string>Create new styles in selected section</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="utils_sections_list"/>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="utils_sections_name"/>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>Select section:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QgsColorButton" name="utils_sections_color">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QPlainTextEdit" name="utils_sections_existing"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_14">
+             <property name="title">
+              <string>Create new files (level and overlay) from given section name</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_11">
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="utils_sections_new_section"/>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>Section name:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QPushButton" name="utils_new_styles_btn">
+                <property name="text">
+                 <string>Create new styles in new section</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>New level names (nom_nivel) separed by comas:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="utils_sections_new_levels"/>
               </item>
              </layout>
             </widget>
@@ -1206,32 +1112,23 @@
           </attribute>
           <layout class="QVBoxLayout" name="verticalLayout_9">
            <item>
-            <widget class="QGroupBox" name="groupBox_10">
+            <widget class="QGroupBox" name="groupBox_12">
              <property name="title">
-              <string>Structures</string>
+              <string>Apply to selected layers</string>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_10">
+             <layout class="QVBoxLayout" name="verticalLayout_13">
               <item>
-               <widget class="QGroupBox" name="groupBox_12">
-                <property name="title">
-                 <string>Apply to selected layers</string>
+               <widget class="QPushButton" name="refactor_structures_attr_btn">
+                <property name="text">
+                 <string>Refactor attribute table</string>
                 </property>
-                <layout class="QVBoxLayout" name="verticalLayout_13">
-                 <item>
-                  <widget class="QPushButton" name="refactor_structures_attr_btn">
-                   <property name="text">
-                    <string>Refactor attribute table</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="refactor_structures_dict_btn">
-                   <property name="text">
-                    <string>Apply dictionaries</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="refactor_structures_dict_btn">
+                <property name="text">
+                 <string>Apply dictionaries</string>
+                </property>
                </widget>
               </item>
              </layout>
@@ -1239,6 +1136,98 @@
            </item>
            <item>
             <spacer name="verticalSpacer_11">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tabDbLayer">
+          <attribute name="title">
+           <string>DB Layer</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_18">
+           <item>
+            <widget class="QLabel" name="label_41">
+             <property name="text">
+              <string>Database (MySQL)</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="db_layer_db"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_42">
+             <property name="text">
+              <string>Table or View</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="db_layer_table"/>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_16">
+             <property name="title">
+              <string>Geometry Definition</string>
+             </property>
+             <property name="flat">
+              <bool>false</bool>
+             </property>
+             <property name="checkable">
+              <bool>false</bool>
+             </property>
+             <layout class="QFormLayout" name="formLayout_3">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_46">
+                <property name="text">
+                 <string>X field</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QComboBox" name="db_layer_x"/>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_44">
+                <property name="text">
+                 <string>Y field</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="db_layer_y"/>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_45">
+                <property name="text">
+                 <string>Z field</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QComboBox" name="db_layer_z"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="db_layer_btn">
+             <property name="text">
+              <string>Add DB Layer</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
