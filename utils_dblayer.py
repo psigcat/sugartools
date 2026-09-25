@@ -153,8 +153,6 @@ class DbLayerTool():
     def process_dblayer(self):
         """ add layer from database """
 
-        print("ok")
-
         # 1. Check mandatory fields
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY):
             return False

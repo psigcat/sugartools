@@ -33,6 +33,7 @@ from .utils import utils
 from .utils_dblayer import DbLayerTool
 from .sugar_tools_dialog import SugarToolsDialog
 from .tool1_sections import SectionsTool
+from .tool1_sections_db import SectionsDbTool
 from .tool2_structures import StructuresTool
 from .tool3_refitting import RefittingTool
 from .tool4_blocks import BlocksTool
@@ -186,6 +187,7 @@ class SugarTools:
         self.utils = utils(self)
 
         self.sections_tool = SectionsTool(self)
+        self.sectionsdb_tool = SectionsDbTool(self)
         self.structures_tool = StructuresTool(self)
 
         self.dlg = SugarToolsDialog()
@@ -200,6 +202,12 @@ class SugarTools:
         self.dlg.radioPoints.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioBlocks.toggled.connect(self.sections_tool.point_or_block)
         self.dlg.radioPointsBlocks.toggled.connect(self.sections_tool.point_or_block)
+
+        self.dlg.radioDistOrthogonal_db.toggled.connect(self.sectionsdb_tool.ortho_or_oblique)
+        self.dlg.radioDistOblique_db.toggled.connect(self.sectionsdb_tool.ortho_or_oblique)
+        self.dlg.radioPoints_db.toggled.connect(self.sectionsdb_tool.point_or_block)
+        self.dlg.radioBlocks_db.toggled.connect(self.sectionsdb_tool.point_or_block)
+        self.dlg.radioPointsBlocks_db.toggled.connect(self.sectionsdb_tool.point_or_block)
 
         self.dlg.structures_check_2d.toggled.connect(self.structures_tool.show_2d_or_3d)
         self.dlg.structures_check_3d.toggled.connect(self.structures_tool.show_2d_or_3d)
@@ -292,6 +300,9 @@ class SugarTools:
             # elif active_tab == "tabLayout":
             #     self.sections_tool.load_layout(active_tab)
 
+        elif main_tab == "tabSections_db":
+            self.sectionsdb_tool.create_dblayer()
+
         elif main_tab == "tabStructures":
             self.structures_tool.process_structures()
 
@@ -316,6 +327,9 @@ class SugarTools:
         self.sections_tool.fill_symbology()
         self.sections_tool.fill_symbology_overlay()
         self.dlg.show()
+
+        # sectionsdb
+        self.sectionsdb_tool.setup()
 
         # refitting
         self.refitting_tool = RefittingTool(self)
