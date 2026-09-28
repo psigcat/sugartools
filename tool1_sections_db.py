@@ -236,8 +236,9 @@ class SectionsDbTool():
         sql_query = f"""
             SELECT distinct(nom_cmateria) 
             FROM {table_name}
-            WHERE cod_tnivel = 'UA' AND coord_y < 78200
+            WHERE cod_tnivel = 'UA'
         """
+        # AND coord_y < 78200
         
         # Execute query using get_rows from utils_database.py
         records = self.dblayer_db_obj.get_rows(sql_query)
@@ -449,8 +450,9 @@ class SectionsDbTool():
             SELECT d.{x_col}, d.{y_col}, d.{z_col}{other_cols_str}, 
                    make_point(d.{x_col}, d.{y_col}, d.{z_col}) AS geometry 
             FROM "{base_layer_name}" AS d
-            WHERE d.cod_tnivel = 'UA' AND d.coord_y < 78200
+            WHERE d.cod_tnivel = 'UA'
         """
+        # AND d.coord_y < 78200
 
         return vlayer_query
 
