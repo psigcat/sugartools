@@ -138,7 +138,7 @@ class SectionsTool():
         #QgsProject.instance().addMapLayer(gpkg_layer, False)
 
         # check if group already does exist
-        layer_group = self.get_layer_group("Sec" + layer_name, group)
+        layer_group = self.utils.get_layer_group("Sec" + layer_name, group)
         if not layer_group:
             layer_group = self.utils.create_group("Sec" + layer_name, group)
         # insert as first element in group to assure that it does appear before blocks
@@ -162,15 +162,6 @@ class SectionsTool():
             # self.write_layout_yacimiento(gpkg_layer)
 
         self.progress.setValue(self.progress.value() + 1)
-
-
-    def get_layer_group(self, layer_group_name, section_group):
-        """ get layer group inside another group, false if it doesn't exist """
-
-        for group in section_group.findGroups():
-            if group.name() == layer_group_name:
-                return group
-        return False
 
 
     def set_symbology(self, layer, overlay=False):

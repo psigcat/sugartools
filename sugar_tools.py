@@ -236,6 +236,12 @@ class SugarTools:
         version = self.utils.get_metadata_parameter(self.plugin_dir)
         self.dlg.setWindowTitle(f"SugarTools {version}")
 
+        # utils
+        self.utils.read_settings()
+        self.utils.fill_symbology_list()
+        self.utils_dblayer_tool = DbLayerTool(self)
+        self.utils_dblayer_tool.setup()
+
         # sections
         # self.sections_tool.fill_layer()
         # self.sections_tool.fill_layout()
@@ -243,15 +249,12 @@ class SugarTools:
         # structures
         self.structures_tool.setup()
 
+        # sectionsdb
+        self.sectionsdb_tool.setup()
+
         # blocks
         self.blocks_tool = BlocksTool(self)
         self.blocks_tool.setup()
-
-        # utils
-        self.utils.read_settings()
-        self.utils.fill_symbology_list()
-        self.utils_dblayer_tool = DbLayerTool(self)
-        self.utils_dblayer_tool.setup()
 
 
     def initialLoad(self):
@@ -327,9 +330,6 @@ class SugarTools:
         self.sections_tool.fill_symbology()
         self.sections_tool.fill_symbology_overlay()
         self.dlg.show()
-
-        # sectionsdb
-        self.sectionsdb_tool.setup()
 
         # refitting
         self.refitting_tool = RefittingTool(self)

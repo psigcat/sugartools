@@ -338,8 +338,60 @@ class SectionsDbTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY):
             return False
 
-        # 2. Get values from UI
+        # 2. Make base layer
         table_name = self.parent.dlg.sections_table_db.currentData()["value"]
+        vlayer_query = self.create_baselayer(table_name)
+
+        # 3. Points or blocks?
+        # if (self.parent.dlg.radioBlocks_db.isChecked() or (self.parent.dlg.radioPointsBlocks_db.isChecked() and file.find(BLOCK_PATTERN) > -1)) and self.parent.dlg.option_polygons_db.isChecked():
+        #     new_layer = self.create_blocks(gpkg_layer, prefix, layer_group, file)
+
+        selected_mats = self.get_selected_materials()
+        if selected_mats:
+            formatted_mats = ", ".join([f"'{m}'" for m in selected_mats])
+            vlayer_query += f" AND nom_cmateria NOT IN ({formatted_mats})"
+
+        # 6. Add selected options to query
+        if self.parent.dlg.exclude_red_points_db.isChecked():
+            vlayer_query += " AND bol_nivelok = true"
+
+        if self.parent.dlg.exclude_duplicated_points_db.isChecked():
+            vlayer_query += " AND bol_duplicado = false"
+
+        if self.parent.dlg.exclude_no_coords_db.isChecked():
+            vlayer_query += " AND nom_cmateria != 'no coordenad'"
+
+        vlayer_query += ";"
+
+        print(vlayer_query)
+
+        # 7. Create Virtual Layer (URL Encode the query to prevent URI parsing errors)
+        query_encoded = urllib.parse.quote(vlayer_query)
+        vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
+        
+        vlayer = QgsVectorLayer(vlayer_uri, f"{table_name}", "virtual")
+        vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+
+        # 8. Validate and Add to Project
+        if not vlayer.isValid():
+            self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {table_name}.", level=Qgis.Critical, duration=5)
+            return False
+
+        folder_name = self.get_folder_name(vlayer)
+        path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
+        self.utils.save_layer_gpkg(vlayer, path)
+        QgsProject.instance().addMapLayer(vlayer, True)
+        self.parent.dlg.messageBar.pushMessage(f"Layer {table_name} created successfully.", level=Qgis.Success, duration=5)
+
+        self.slice_layer_by_y(vlayer, folder_name)
+
+        return vlayer
+
+
+    def create_baselayer(self, table_name):
+        """ """
+
+        # 1. Get values from UI
         x_col = self.parent.dlg.sections_x_db.currentData()["value"]
         y_col = self.parent.dlg.sections_y_db.currentData()["value"]
         z_col = self.parent.dlg.sections_z_db.currentData()["value"]
@@ -348,7 +400,7 @@ class SectionsDbTool():
         db_config = self.databases[db_key]
         db_name = db_config["db"]
 
-        # 3. Fetch all columns to build the [all other columns] list
+        # 2. Fetch all columns to build the [all other columns] list
         sql_cols = f"""
             SELECT COLUMN_NAME 
             FROM information_schema.columns 
@@ -371,7 +423,7 @@ class SectionsDbTool():
         if other_cols_str:
             other_cols_str = ", " + other_cols_str # Add leading comma for the SQL syntax
 
-        # 4. Create Base Layer and add it to the project silently
+        # 3. Create Base Layer and add it to the project silently
         uri = QgsDataSourceUri()
         uri.setConnection(db_config['host'], str(db_config['port']), db_config['db'], db_config['user'], db_config['passwd'])
         uri.setDataSource("", table_name, None) 
@@ -390,7 +442,6 @@ class SectionsDbTool():
                 self.parent.dlg.messageBar.pushMessage(f"Failed to connect to base table or view {table_name}.", level=Qgis.Critical, duration=5)
                 return False
 
-        # Add to project but keep it hidden from the TOC/Layers Panel (False argument)
         QgsProject.instance().addMapLayer(base_layer, False)
 
         # 5. Construct the Virtual Layer query using the hidden base layer
@@ -401,40 +452,14 @@ class SectionsDbTool():
             WHERE d.cod_tnivel = 'UA' AND d.coord_y < 78200
         """
 
-        selected_mats = self.get_selected_materials()
-        if selected_mats:
-            formatted_mats = ", ".join([f"'{m}'" for m in selected_mats])
-            vlayer_query += f" AND nom_cmateria NOT IN ({formatted_mats})"
-        vlayer_query += ";"
-
-        # 6. Create Virtual Layer (URL Encode the query to prevent URI parsing errors)
-        query_encoded = urllib.parse.quote(vlayer_query)
-        vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
-        
-        vlayer = QgsVectorLayer(vlayer_uri, f"{table_name}", "virtual")
-        vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
-
-        # 7. Validate and Add to Project
-        if not vlayer.isValid():
-            self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {table_name}.", level=Qgis.Critical, duration=5)
-            return False
-
-        folder_name = self.get_folder_name(vlayer)
-        path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
-        self.utils.save_layer_gpkg(vlayer, path)
-        QgsProject.instance().addMapLayer(vlayer, True)
-        self.parent.dlg.messageBar.pushMessage(f"Layer {table_name} created successfully.", level=Qgis.Success, duration=5)
-
-        self.slice_layer_by_y(vlayer, folder_name)
-
-        return vlayer
+        return vlayer_query
 
 
     def get_folder_name(self, layer):
         """ build folder name """
 
-        yacimento = "RB" # TODO
-        thickness = self.parent.dlg.sections_thickness_db.text()
+        yacimento = "Ortho_RB" # TODO
+        thickness = int(self.parent.dlg.sections_thickness_db.value())
 
         folder_name = f"{yacimento}_{thickness}"
 
@@ -458,7 +483,7 @@ class SectionsDbTool():
         """
 
         field_name = self.parent.dlg.sections_y_db.currentText()
-        step = float(self.parent.dlg.sections_thickness_db.text())
+        step = self.parent.dlg.sections_thickness_db.value()
         
         # 1. Get field index and min/max values
         idx = layer.fields().indexOf(field_name)
@@ -473,11 +498,10 @@ class SectionsDbTool():
             print(f"Error: No valid values found in the '{field_name}' field.")
             return
 
-        # Create or find the 'sections' group in the layer tree
+        # Create or find the group in the layer tree
         root = QgsProject.instance().layerTreeRoot()
         group = root.findGroup(folder_name)
         if not group:
-            # Insert at the top of the layer tree
             group = root.insertGroup(0, folder_name)
 
         # Get the geometry type and CRS for the memory layer creation
@@ -520,6 +544,100 @@ class SectionsDbTool():
                 QgsProject.instance().addMapLayer(mem_layer, False)
                 group.addLayer(mem_layer)
 
+                self.apply_symbology(mem_layer, slice_save_path, group)
+
             current_y = next_y
             
         print(f"Successfully sliced layer into slots of {step}.")
+
+
+    def apply_symbology(self, layer, path, group):
+        """ filter active layer by query """
+
+        self.set_symbology(layer)
+
+        # save style to gpkg
+        symbology = self.parent.dlg.symbology_db.currentText()
+        symbology_name = symbology.split(".qml")[0]
+        layer.saveStyleToDatabase(symbology_name, "", True, "")
+
+        if self.parent.dlg.filter_expr_db.text() != "" and self.parent.dlg.symbology_overlay_db.currentText() != COMBO_SELECT:
+            self.make_overlay(layer, path, group)
+
+
+    def make_overlay(self, layer, path, group):
+        """ duplicate existing layer in layer group """
+
+        print("make overlay for layer", layer.name())
+
+        layer_clone = QgsVectorLayer(layer.source(), layer.name() + "_overlay")
+        layer_clone.setName(layer.name() + "_overlay")
+        self.utils.save_layer_gpkg(layer_clone, path, False)
+
+        layer_final = self.remove_filtered_features(layer_clone.name(), True, self.parent.dlg.filter_expr_db.text(), path)
+        QgsProject.instance().addMapLayer(layer_final, False)
+
+        overlays_group_name = "overlays"
+        overlays_group = self.utils.get_layer_group(overlays_group_name, group)
+        if not overlays_group:
+            overlays_group = self.utils.create_group(overlays_group_name, group)
+        overlays_group.insertChildNode(1, QgsLayerTreeLayer(layer_final))
+
+        # save style to gpkg
+        self.set_symbology(layer_final, True)
+        symbology = self.parent.dlg.symbology_overlay_db.currentText()
+        symbology_name = symbology.split(".qml")[0]
+        layer_final.saveStyleToDatabase(symbology_name, "", True, "")
+
+
+    def remove_filtered_features(self, layer_name, overlay, filter_text, path):
+        """ remove all features from vector layer which are filtered out """
+
+        layer = QgsVectorLayer(path + f"/{layer_name}.gpkg|layername={layer_name}", layer_name)
+
+        print("remove filtered features for layer", layer.name(), len(list(layer.getFeatures())))
+
+        # get expression
+        symbology = self.parent.dlg.symbology_db.currentText()
+        if overlay:
+            filter_text = self.parent.dlg.filter_expr_db.text()
+            symbology = self.parent.dlg.symbology_overlay_db.currentText()
+
+        print("active filter", filter_text)
+
+        # check for expression to delete filtered out features
+        if filter_text == "" or symbology == COMBO_SELECT:
+            print("no filter to apply, so nothing to delete")
+            return layer
+
+        # Use the inverse expression to get filtered-out features
+        inverse_expression = f'NOT ({filter_text})'
+        print("inverse filter", inverse_expression)
+        request = QgsFeatureRequest(QgsExpression(inverse_expression))
+        ids_to_delete = [f.id() for f in layer.getFeatures(request)]
+
+        # Delete the features
+        if ids_to_delete:
+            layer.startEditing()
+            layer.deleteFeatures(ids_to_delete)
+            print(f"Deleted {len(ids_to_delete)} features.")
+
+        # Commit the changes
+        if not layer.commitChanges():
+            print("Failed to commit changes:", layer.name(), layer.commitErrors())
+
+        layer.setSubsetString("")
+
+        return layer
+
+
+    def set_symbology(self, layer, overlay=False):
+        """ set symbology from selected qml file """
+
+        symbology = self.parent.dlg.symbology_db.currentText()
+        if overlay:
+            symbology = self.parent.dlg.symbology_overlay_db.currentText()
+
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), symbology)
+        layer.loadNamedStyle(symbology_path)
+        layer.triggerRepaint()

@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import Qt, QFile, QMetaType, QPointF, QIODevice, QSettings
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import QAction, QLineEdit, QPlainTextEdit, QComboBox, QCheckBox, QProgressBar
-from qgis.gui import QgsFileWidget, QgsMapLayerComboBox
+from qgis.gui import QgsFileWidget, QgsMapLayerComboBox, QgsDoubleSpinBox
 from qgis.core import Qgis, QgsProject, QgsSettings, QgsVectorLayer, QgsVectorFileWriter, QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsMapThemeCollection, QgsWkbTypes, QgsPrintLayout, QgsReadWriteContext, QgsCoordinateReferenceSystemRegistry, QgsApplication, QgsMapLayerStyle, QgsFeatureRequest, QgsVectorDataProvider, QgsEditorWidgetSetup, QgsField, QgsDefaultValue, QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory, QgsFontMarkerSymbolLayer, QgsUnitTypes, QgsProviderRegistry
 
 import os
@@ -216,6 +216,15 @@ class utils:
             return value
 
 
+    def get_layer_group(self, layer_group_name, section_group):
+        """ get layer group inside another group, false if it doesn't exist """
+
+        for group in section_group.findGroups():
+            if group.name() == layer_group_name:
+                return group
+        return False
+
+
     def create_group(self, group_name, parent=False):
         """ create layer group """
 
@@ -327,6 +336,8 @@ class utils:
             data = widget.isChecked()
         elif type(widget) == QgsMapLayerComboBox:
             data = widget.currentText()
+        elif type(widget) == QgsDoubleSpinBox:
+            data = widget.value()
         else:
             self.parent.dlg.messageBar.pushMessage(f"Type of component not supported for field '{fieldname}': {type(widget)}", level=Qgis.Warning)
         return widget, data
