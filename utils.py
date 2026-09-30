@@ -659,7 +659,7 @@ class utils:
         progressMessageBar.layout().addWidget(progress)
         messageBar.pushWidget(progressMessageBar, Qgis.Info)
 
-        return progress
+        return progress, progressMessageBar
 
 
     def select_layer(self):

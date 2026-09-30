@@ -150,7 +150,9 @@ class SectionsDbTool():
             SELECT distinct(nom_cmateria) 
             FROM {TABLE_NAME}
         """
+        #    WHERE coord_y < 78200
         
+        # Execute query using get_rows from utils_database.py
         records = self.dblayer_db_obj.get_rows(sql_query)
         
         unique_materials = []
@@ -230,8 +232,6 @@ class SectionsDbTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY):
             return False
 
-        self.progress = self.utils.initProgressBar("Import sections from database...", 100)
-
         if self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
             # points
@@ -240,6 +240,7 @@ class SectionsDbTool():
 
             layer_type = 'UA'
             where_query = f" cod_tnivel = '{layer_type}'"
+            #  AND coord_y < 78200
 
             selected_mats = self.get_selected_materials()
             if selected_mats:
@@ -255,7 +256,7 @@ class SectionsDbTool():
 
             self.import_dblayer(layer_type, where_query)
 
-        if self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
+        elif self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
             # blocks
             layer_type = 'FO'
@@ -264,6 +265,9 @@ class SectionsDbTool():
             #  AND coord_y < 78200
 
             self.import_dblayer(layer_type, where_query)
+
+        self.progress.setValue(100)
+        self.parent.dlg.messageBar.popWidget(self.progress_msg)
 
 
     def import_dblayer(self, layer_type, where_query):
@@ -299,9 +303,6 @@ class SectionsDbTool():
             if vlayer_ns_neg:
                 self.slice_layer("NS_NEG", vlayer_ns_neg, layer_type)
 
-        self.progress.setValue(100)
-        #self.parent.dlg.messageBar.clearWidgets()
-
 
     def limit_projection(self, where_query):
         """ add limits to where query """
@@ -312,7 +313,7 @@ class SectionsDbTool():
         ymax = self.parent.dlg.limit_ymax_db.value()
         
         if xmin != 0 and xmax != 0 and ymin != 0 and ymax != 0:
-            where_query += f"AND {COORDX} >= {xmin} AND {COORDX} <= {xmax} AND {COORDY} >= {ymin} AND {COORDY} <= {ymax}"
+            where_query += f" AND {COORDX} >= {xmin} AND {COORDX} <= {xmax} AND {COORDY} >= {ymin} AND {COORDY} <= {ymax}"
 
         return where_query
 
@@ -320,53 +321,47 @@ class SectionsDbTool():
     def create_baselayer(self, where_query):
         """ load database layer as memory layer and return whole query """
 
+        self.progress, self.progress_msg = self.utils.initProgressBar("Import sections from database...", 100)
+
         # 1. Get values from UI
         db_key = self.parent.dlg.sections_db.currentData()["value"]
         db_config = self.databases[db_key]
         db_name = db_config["db"]
-
-        # 2. Fetch all columns to build columns list
-        # sql_cols = f"""
-        #     SELECT COLUMN_NAME 
-        #     FROM information_schema.columns 
-        #     WHERE table_schema = '{db_name}' 
-        #       AND table_name = '{TABLE_NAME}';
-        # """
-        
-        # records = self.dblayer_db_obj.get_rows(sql_cols)
-        
-        # columns = []
-        # if records:
-        #     for row in records:
-        #         col = row[0].data().decode('utf-8') if hasattr(row[0], 'data') else str(row[0])
-        #         columns.append(f"d.{col}")
-        # columns_str = ", ".join(columns)
+        base_layer_name = f"{TABLE_NAME}_base"
 
         self.progress.setValue(self.progress.value() + 1)
-
-        # 3. Create Base Layer and add it to the project silently
-        uri = QgsDataSourceUri()
-        uri.setConnection(db_config['host'], str(db_config['port']), db_config['db'], db_config['user'], db_config['passwd'])
-        uri.setDataSource("", TABLE_NAME, "")
         
-        base_layer_name = f"{TABLE_NAME}_base"
+        # 2. Build a robust OGR connection string for MySQL
+        ogr_uri = (
+            f"MySQL:{db_name},host={db_config['host']},port={db_config['port']},"
+            f"user={db_config['user']},password={db_config['passwd']},tables={TABLE_NAME}"
+            f"|layername={TABLE_NAME}"
+        )
         
-        # Try the native QGIS MySQL provider first
-        base_layer = QgsVectorLayer(uri.uri(), base_layer_name, "mysql")
+        # 3. Use the OGR provider directly (highly stable on Windows)
+        base_layer = QgsVectorLayer(ogr_uri, base_layer_name, "ogr")
         
-        # Fallback to the standard OGR provider if native fails
+        # Fallback to native MySQL provider if OGR fails (rare)
         if not base_layer.isValid():
-            ogr_uri = f"MySQL:{db_name},host={db_config['host']},port={db_config['port']},user={db_config['user']},password={db_config['passwd']}|layername={TABLE_NAME}"
-            base_layer = QgsVectorLayer(ogr_uri, base_layer_name, "ogr")
+            uri = QgsDataSourceUri()
+            uri.setConnection(db_config['host'], str(db_config['port']), db_config['db'], db_config['user'], db_config['passwd'])
+            uri.setDataSource("", TABLE_NAME, "")
+            
+            base_layer = QgsVectorLayer(uri.uri(), base_layer_name, "mysql")
             
             if not base_layer.isValid():
-                self.parent.dlg.messageBar.pushMessage(f"Failed to connect to base table or view {TABLE_NAME}.", level=Qgis.Critical, duration=5)
+                self.parent.dlg.messageBar.pushMessage(f"Failed to connect to base table or view '{TABLE_NAME}' on {ogr_uri}.", level=Qgis.Critical, duration=5)
                 return False
 
+        # Apply the subset string
         success = base_layer.setSubsetString(where_query)
         
         if not success:
-            self.parent.dlg.messageBar.pushMessage(f"Warning: Could not apply provider filter to {table_name}.", level=Qgis.Warning, duration=5)
+            self.parent.dlg.messageBar.pushMessage(f"Could not apply provider filter to {TABLE_NAME}.", level=Qgis.Warning, duration=5)
+
+        if len(list(base_layer.getFeatures())) == 0:
+            self.parent.dlg.messageBar.pushMessage(f"No features in base layer loaded from {TABLE_NAME}. Maybe problems with your MySQL database?", level=Qgis.Warning, duration=5)
+            return False
 
         QgsProject.instance().addMapLayer(base_layer, False)
 
@@ -392,13 +387,13 @@ class SectionsDbTool():
         """ return field min and max values """
 
         if section_type == 'EW':
-            field_name = COORDX
-        elif section_type == 'NS':
             field_name = COORDY
+        elif section_type == 'NS':
+            field_name = COORDX
         elif section_type == 'EW_NEG':
-            field_name = COORDX_NEG
-        elif section_type == 'NS_NEG':
             field_name = COORDY_NEG
+        elif section_type == 'NS_NEG':
+            field_name = COORDX_NEG
 
         idx = layer.fields().indexOf(field_name)
         if idx == -1:
@@ -415,13 +410,13 @@ class SectionsDbTool():
         """ create virtual layer using the hidden base layer and add to project """
 
         if section_type == 'EW':
-            coord1 = COORDY
-        elif section_type == 'NS':
             coord1 = COORDX
+        elif section_type == 'NS':
+            coord1 = COORDY
         elif section_type == 'EW_NEG':
-            coord1 = COORDY_NEG
-        elif section_type == 'NS_NEG':
             coord1 = COORDX_NEG
+        elif section_type == 'NS_NEG':
+            coord1 = COORDY_NEG
 
         vlayer_query = f"""
             SELECT *, make_point({coord1}, {COORDZ}) AS geometry 
@@ -446,10 +441,10 @@ class SectionsDbTool():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {TABLE_NAME}.", level=Qgis.Critical, duration=5)
             return False
 
+        QgsProject.instance().addMapLayer(vlayer, True)
         folder_name = self.get_folder_name(vlayer, section_type)
         path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
         self.utils.save_layer_gpkg(vlayer, path)
-        QgsProject.instance().addMapLayer(vlayer, True)
         self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
 
         self.progress.setValue(self.progress.value() + 1)
@@ -629,7 +624,11 @@ class SectionsDbTool():
 
         #print("create block", layer.name())
 
-        uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
+        # paint polygons as points
+        if self.parent.dlg.option_points_db.isChecked():
+            QgsProject.instance().addMapLayer(layer, False)
+            group.addLayer(layer)
+            return
 
         field = 'dib_pieza'
         #if self.parent.dlg.radioPointsBlocks_db.isChecked():
@@ -648,38 +647,15 @@ class SectionsDbTool():
         if len(list(result['OUTPUT'].getFeatures())) == 0:
             return
 
-        if self.parent.dlg.option_polygons_db.isChecked():
-            QgsProject.instance().addMapLayer(result['OUTPUT'], False)
-            group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
-            result['OUTPUT'].setName(layer.name())
+        QgsProject.instance().addMapLayer(result['OUTPUT'], False)
+        group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
+        result['OUTPUT'].setName(layer.name())
 
-            # apply style
-            symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
-            result['OUTPUT'].loadNamedStyle(symbology_path)
-            result['OUTPUT'].triggerRepaint()
+        # apply style
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
+        result['OUTPUT'].loadNamedStyle(symbology_path)
+        result['OUTPUT'].triggerRepaint()
 
         self.utils.save_layer_gpkg(result['OUTPUT'], path)
 
         self.progress.setValue(self.progress.value() + 1)
-
-        # paint polygons as points
-        if self.parent.dlg.option_points_db.isChecked():
-            points = self.make_centroids(result['OUTPUT'], group, layer.name(), path)
-
-
-    def make_centroids(self, layer, group, layer_name, path):
-        """ make centroids from polygons """
-
-        params = {
-            'INPUT': layer.source(),
-            'ALL_PARTS': False,
-            'OUTPUT': 'TEMPORARY_OUTPUT'
-        }
-        points = processing.run("native:centroids", params)
-
-        QgsProject.instance().addMapLayer(points['OUTPUT'], False)
-        group.addChildNode(QgsLayerTreeLayer(points['OUTPUT']))
-        points['OUTPUT'].setName(layer_name)
-        self.utils.save_layer_gpkg(points['OUTPUT'], path)
-
-        return points

@@ -45,6 +45,10 @@ class SugarToolsDialog(QtWidgets.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
+        # Force the dialog to shrink to the minimum size required by its layout
+        self.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+        self.adjustSize()
+
         # Set QgsMapComboBox filters
         self.blocks_polygon_layer.setFilters(Qgis.LayerFilter.PolygonLayer)
         self.blocks_lines_layer.setFilters(Qgis.LayerFilter.LineLayer)
