@@ -64,7 +64,7 @@ class SectionsTool():
                 return node.name()
 
 
-    def point_or_block(self):
+    def points_or_blocks(self):
         """ select type of symbology """
 
         self.parent.dlg.groupBoxPoints.setVisible(self.parent.dlg.radioPoints.isChecked() or self.parent.dlg.radioPointsBlocks.isChecked())
@@ -452,10 +452,7 @@ class SectionsTool():
         result = processing.run("qgis:minimumboundinggeometry", params)
 
         QgsProject.instance().addMapLayer(result['OUTPUT'], False)
-        # insert as last element in group
         layer_group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
-
-        #processing.runAndLoadResults("native:buffer", params)
 
         # rename block
         layer_name_parts = layer.name().split(prefix)

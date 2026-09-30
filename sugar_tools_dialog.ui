@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1279</width>
-    <height>1047</height>
+    <width>1111</width>
+    <height>1034</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -388,6 +388,302 @@
          </layout>
         </widget>
        </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBoxPoints_db">
+         <property name="title">
+          <string>Options for Points import</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3_db">
+          <item row="1" column="0" colspan="2">
+           <widget class="QCheckBox" name="exclude_duplicated_points_db">
+            <property name="text">
+             <string>Exclude duplicated points</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="exclude_red_points_db">
+            <property name="text">
+             <string>Exclude points marked in red</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QGroupBox" name="groupBox_2_db">
+            <property name="title">
+             <string>Overlay symbology</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_7_db">
+             <item row="1" column="0">
+              <widget class="QLineEdit" name="filter_expr_db">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_7_db">
+               <property name="text">
+                <string>Symbology</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QPushButton" name="filter_expr_btn_db">
+               <property name="text">
+                <string>Expression</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0" colspan="2">
+              <widget class="QLabel" name="label_4_db">
+               <property name="text">
+                <string>Filter expression (e. g.: &quot;fec_archivo&quot; &gt; '2020-01-01')</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="symbology_overlay_db">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="2" colspan="2">
+        <widget class="QGroupBox" name="groupBox_10">
+         <property name="title">
+          <string>Options</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_19">
+          <item>
+           <widget class="QGroupBox" name="groupLimitProjection_db">
+            <property name="title">
+             <string>Limit projection area (optional)</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout">
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_43_db_3">
+               <property name="text">
+                <string>Ymin</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QgsDoubleSpinBox" name="limit_xmin_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="minimum">
+                <double>-100000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>100000.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>1000.000000000000000</double>
+               </property>
+               <property name="value">
+                <double>30000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QgsDoubleSpinBox" name="limit_ymin_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="minimum">
+                <double>-100000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>100000.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>1000.000000000000000</double>
+               </property>
+               <property name="value">
+                <double>70000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QgsDoubleSpinBox" name="limit_ymax_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="minimum">
+                <double>-100000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>100000.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>1000.000000000000000</double>
+               </property>
+               <property name="value">
+                <double>80000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QgsDoubleSpinBox" name="limit_xmax_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="minimum">
+                <double>-100000.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>100000.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>1000.000000000000000</double>
+               </property>
+               <property name="value">
+                <double>40000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_43_db_2">
+               <property name="text">
+                <string>Xmin</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_43_db_5">
+               <property name="text">
+                <string>Xmax</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="label_43_db_4">
+               <property name="text">
+                <string>Ymax</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupAnchorpoints_db">
+            <property name="title">
+             <string>Anchor points (optional)</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_19">
+             <item row="2" column="0">
+              <widget class="QLabel" name="anchorpoint_distance_db_label">
+               <property name="text">
+                <string>Distance</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="3">
+              <widget class="QLineEdit" name="anchorpoint_angle_db">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="anchorpoint_x1_db"/>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLabel" name="anchorpoint_angle_db_label">
+               <property name="text">
+                <string>Angle</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="anchorpoint_y1_db">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="label_43_db_10">
+               <property name="text">
+                <string>Y2</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_43_db_11">
+               <property name="text">
+                <string>X2</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_43_db_12">
+               <property name="text">
+                <string>Y1</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLineEdit" name="anchorpoint_x2_db"/>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_43_db_13">
+               <property name="text">
+                <string>X1</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_distance_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>10000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLineEdit" name="anchorpoint_y2_db">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_13">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QGroupBox" name="distribution_db">
          <property name="title">
@@ -433,25 +729,29 @@
           <string>Database (MySQL)</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_16">
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_50_db">
+          <item row="2" column="1">
+           <widget class="QgsFileWidget" name="workspace_db">
+            <property name="storageMode">
+             <enum>QgsFileWidget::GetDirectory</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="labelSymbology_db">
             <property name="text">
-             <string>Table</string>
+             <string>Symbology</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="sections_table_db">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+          <item row="3" column="1">
+           <widget class="QComboBox" name="symbology_db"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_db">
+            <property name="text">
+             <string>Workspace</string>
             </property>
            </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="sections_db"/>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_43_db">
@@ -460,52 +760,10 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QGroupBox" name="groupBox_17_db">
-            <property name="title">
-             <string>Geometry Definition</string>
-            </property>
-            <property name="flat">
-             <bool>false</bool>
-            </property>
-            <property name="checkable">
-             <bool>false</bool>
-            </property>
-            <layout class="QFormLayout" name="formLayout_4">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_47_db">
-               <property name="text">
-                <string>X field</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QComboBox" name="sections_x_db"/>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_48_db">
-               <property name="text">
-                <string>Y field</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QComboBox" name="sections_y_db"/>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_49_db">
-               <property name="text">
-                <string>Z field</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QComboBox" name="sections_z_db"/>
-             </item>
-            </layout>
-           </widget>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="sections_db"/>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="5" column="0" colspan="2">
            <spacer name="verticalSpacer_14">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -517,6 +775,26 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_43">
+            <property name="text">
+             <string>Thickness</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QgsDoubleSpinBox" name="sections_thickness_db">
+            <property name="decimals">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <double>10000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>1000.000000000000000</double>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -579,83 +857,6 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBoxPoints_db">
-         <property name="title">
-          <string>Options for Points import</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_3_db">
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="exclude_no_coords_db">
-            <property name="text">
-             <string>Exclude No_Coord and Samples</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QGroupBox" name="groupBox_2_db">
-            <property name="title">
-             <string>Overlay symbology</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_7_db">
-             <item row="1" column="0">
-              <widget class="QLineEdit" name="filter_expr_db">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_7_db">
-               <property name="text">
-                <string>Symbology</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QPushButton" name="filter_expr_btn_db">
-               <property name="text">
-                <string>Expression</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0" colspan="2">
-              <widget class="QLabel" name="label_4_db">
-               <property name="text">
-                <string>Filter expression (e. g.: &quot;fec_archivo&quot; &gt; '2020-01-01')</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QComboBox" name="symbology_overlay_db">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="exclude_red_points_db">
-            <property name="text">
-             <string>Exclude points marked in red</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QCheckBox" name="exclude_duplicated_points_db">
-            <property name="text">
-             <string>Exclude duplicated points</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="2" column="3">
         <widget class="QGroupBox" name="groupBox_17">
          <property name="title">
@@ -672,168 +873,11 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>370</width>
-               <height>282</height>
+               <width>202</width>
+               <height>243</height>
               </rect>
              </property>
             </widget>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="2" colspan="2">
-        <widget class="QGroupBox" name="groupBox_10">
-         <property name="title">
-          <string>Options</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_12">
-          <item row="1" column="1">
-           <widget class="QComboBox" name="symbology_db"/>
-          </item>
-          <item row="5" column="0" colspan="2">
-           <spacer name="verticalSpacer_13">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="0" column="1">
-           <widget class="QgsFileWidget" name="workspace_db">
-            <property name="storageMode">
-             <enum>QgsFileWidget::GetDirectory</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_43">
-            <property name="text">
-             <string>Thickness</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_db">
-            <property name="text">
-             <string>Workspace</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="labelSymbology_db">
-            <property name="text">
-             <string>Symbology</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="QGroupBox" name="groupAnchorpoints_db">
-            <property name="title">
-             <string>Anchor points (optional)</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout">
-             <item row="2" column="0">
-              <widget class="QLabel" name="anchorpoint_distance_db_label">
-               <property name="text">
-                <string>Distance</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="2">
-              <widget class="QLabel" name="anchorpoint_angle_db_label">
-               <property name="text">
-                <string>Angle</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_43_db_2">
-               <property name="text">
-                <string>X1</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_43_db_3">
-               <property name="text">
-                <string>Y1</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="3">
-              <widget class="QLineEdit" name="anchorpoint_angle_db">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="3">
-              <widget class="QLineEdit" name="anchorpoint_y2_db">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="anchorpoint_y1_db">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QLineEdit" name="anchorpoint_x1_db"/>
-             </item>
-             <item row="0" column="2">
-              <widget class="QLabel" name="label_43_db_5">
-               <property name="text">
-                <string>X2</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="2">
-              <widget class="QLabel" name="label_43_db_4">
-               <property name="text">
-                <string>Y2</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="3">
-              <widget class="QLineEdit" name="anchorpoint_x2_db"/>
-             </item>
-             <item row="2" column="1">
-              <widget class="QgsDoubleSpinBox" name="anchorpoint_distance_db">
-               <property name="decimals">
-                <number>0</number>
-               </property>
-               <property name="maximum">
-                <double>10000.000000000000000</double>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QgsDoubleSpinBox" name="sections_thickness_db">
-            <property name="decimals">
-             <number>0</number>
-            </property>
-            <property name="maximum">
-             <double>10000.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>1000.000000000000000</double>
-            </property>
            </widget>
           </item>
          </layout>
@@ -894,6 +938,19 @@
           </item>
          </layout>
         </widget>
+       </item>
+       <item row="3" column="2">
+        <spacer name="verticalSpacer_16">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>

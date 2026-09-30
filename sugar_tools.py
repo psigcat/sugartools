@@ -199,15 +199,15 @@ class SugarTools:
         # self.dlg.section_ns.stateChanged.connect(self.sections_tool.fill_layer)
         #self.dlg.layer.currentTextChanged.connect(self.sections_tool.set_and_zoom_active_layer)
         self.dlg.filter_expr_btn.clicked.connect(self.sections_tool.open_expr_builder)
-        self.dlg.radioPoints.toggled.connect(self.sections_tool.point_or_block)
-        self.dlg.radioBlocks.toggled.connect(self.sections_tool.point_or_block)
-        self.dlg.radioPointsBlocks.toggled.connect(self.sections_tool.point_or_block)
+        self.dlg.radioPoints.toggled.connect(self.sections_tool.points_or_blocks)
+        self.dlg.radioBlocks.toggled.connect(self.sections_tool.points_or_blocks)
+        self.dlg.radioPointsBlocks.toggled.connect(self.sections_tool.points_or_blocks)
 
         self.dlg.radioDistOrthogonal_db.toggled.connect(self.sectionsdb_tool.ortho_or_oblique)
         self.dlg.radioDistOblique_db.toggled.connect(self.sectionsdb_tool.ortho_or_oblique)
-        self.dlg.radioPoints_db.toggled.connect(self.sectionsdb_tool.point_or_block)
-        self.dlg.radioBlocks_db.toggled.connect(self.sectionsdb_tool.point_or_block)
-        self.dlg.radioPointsBlocks_db.toggled.connect(self.sectionsdb_tool.point_or_block)
+        self.dlg.radioPoints_db.toggled.connect(self.sectionsdb_tool.points_or_blocks)
+        self.dlg.radioBlocks_db.toggled.connect(self.sectionsdb_tool.points_or_blocks)
+        self.dlg.radioPointsBlocks_db.toggled.connect(self.sectionsdb_tool.points_or_blocks)
 
         self.dlg.structures_check_2d.toggled.connect(self.structures_tool.show_2d_or_3d)
         self.dlg.structures_check_3d.toggled.connect(self.structures_tool.show_2d_or_3d)
@@ -304,7 +304,7 @@ class SugarTools:
             #     self.sections_tool.load_layout(active_tab)
 
         elif main_tab == "tabSections_db":
-            self.sectionsdb_tool.create_dblayer()
+            self.sectionsdb_tool.process_dblayer()
 
         elif main_tab == "tabStructures":
             self.structures_tool.process_structures()
@@ -326,7 +326,7 @@ class SugarTools:
         """Run method that performs all the real work"""
 
         # show the dialog
-        self.sections_tool.point_or_block()
+        self.sections_tool.points_or_blocks()
         self.sections_tool.fill_symbology()
         self.sections_tool.fill_symbology_overlay()
         self.dlg.show()

@@ -12,12 +12,17 @@ from .utils import utils
 from .utils_database import utils_database
 
 
-FIELDS_MANDATORY = ["sections_db", "sections_table_db", "sections_x_db", "sections_y_db", "sections_z_db", "workspace_db", "symbology_db", "sections_thickness_db"]
+FIELDS_MANDATORY = ["sections_db", "workspace_db", "sections_thickness_db"]
 COMBO_SELECT = "(Select)"
-COORDX_IDS = ["coord_x"]
-COORDY_IDS = ["coord_y"]
-COORDZ_IDS = ["coord_z"]
+COORDX = "coord_x"
+COORDY = "coord_y"
+COORDZ = "coord_z"
+COORDX_NEG = "coord_x_neg"
+COORDY_NEG = "coord_y_neg"
 MATERIA_SELECTED = ['muestras', 'sedimento', 'no coordenad']
+TABLE_NAME = 'view_secciones'
+ORTO = "sec_orthogonal"
+OBLI = "sec_oblique"
 
 # copia de site_params.py
 SITES = {
@@ -51,15 +56,14 @@ class SectionsDbTool():
         """ load initial parameters """
 
         self.ortho_or_oblique()
-        self.point_or_block()
+        self.points_or_blocks()
         self.fill_symbology()
         self.fill_symbology_overlay()
 
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.sections_db, self.databases)
 
-        self.parent.dlg.sections_db.currentIndexChanged.connect(self.load_tables)
-        self.parent.dlg.sections_table_db.currentIndexChanged.connect(self.load_columns)
+        self.parent.dlg.sections_db.currentIndexChanged.connect(self.get_cmateria_values)
         self.parent.dlg.filter_expr_btn_db.clicked.connect(self.open_expr_builder)
 
 
@@ -70,20 +74,19 @@ class SectionsDbTool():
         self.parent.dlg.radioPoints_db.setChecked(True)
         self.parent.dlg.radioBlocks_db.setEnabled(isOrthogonal)
         self.parent.dlg.radioPointsBlocks_db.setEnabled(isOrthogonal)
-        self.parent.dlg.anchorpoint_distance_db.setVisible(not isOrthogonal)
-        self.parent.dlg.anchorpoint_distance_db_label.setVisible(not isOrthogonal)
-        self.parent.dlg.anchorpoint_angle_db.setVisible(not isOrthogonal)
-        self.parent.dlg.anchorpoint_angle_db_label.setVisible(not isOrthogonal)
+        self.parent.dlg.groupAnchorpoints_db.setVisible(not isOrthogonal)
 
 
-    def point_or_block(self):
+    def points_or_blocks(self):
         """ select type of symbology """
 
-        self.parent.dlg.groupBoxPoints_db.setVisible(self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked())
+        paint_points = self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked()
+
+        self.parent.dlg.groupBoxPoints_db.setVisible(paint_points)
         self.parent.dlg.groupBoxBlocks_db.setVisible(self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked())
 
-        self.parent.dlg.labelSymbology_db.setVisible(self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked())
-        self.parent.dlg.symbology_db.setVisible(self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked())
+        self.parent.dlg.labelSymbology_db.setVisible(paint_points)
+        self.parent.dlg.symbology_db.setVisible(paint_points)
 
 
     def fill_symbology(self):
@@ -136,111 +139,18 @@ class SectionsDbTool():
         return True
 
 
-    def load_tables(self):
-        """ Fetch tables for the selected database and populate combobox """
-        
-        # Block signals temporarily to prevent recursive loops when clearing
-        self.parent.dlg.sections_table_db.blockSignals(True)
-        self.parent.dlg.sections_table_db.clear()
-        
+    def get_cmateria_values(self):
+        """ get all unique values from column nom_cmateria """
+
         # Ensure a valid DB is selected
         if not self.connect_db():
-            self.parent.dlg.sections_table_db.blockSignals(False)
             return
-            
-        # Get the selected database name from the combobox data
-        db_key = self.parent.dlg.sections_db.currentData()["value"]
-        db_name = self.databases[db_key]["db"]
-
-        # MySQL query to get tables and views
-        sql_query = f"""
-            SELECT TABLE_NAME 
-            FROM information_schema.tables 
-            WHERE table_schema = '{db_name}';
-        """
-        
-        # Execute query using get_rows from utils_database.py
-        records = self.dblayer_db_obj.get_rows(sql_query)
-        
-        # Populate the table combobox
-        self.parent.dlg.sections_table_db.addItem("Please select a table or view", {"value": None})
-        if records:
-            for row in records:
-                # Safely convert QByteArray to a standard Python string
-                table_name = row[0].data().decode('utf-8') if hasattr(row[0], 'data') else str(row[0])
-                
-                self.parent.dlg.sections_table_db.addItem(table_name, {"value": table_name})
-                
-        self.parent.dlg.sections_table_db.blockSignals(False)
-
-
-    def load_columns(self):
-        """ Fetch numerical columns for the selected table and populate X, Y, Z combos """
-        
-        combos = [self.parent.dlg.sections_x_db, self.parent.dlg.sections_y_db, self.parent.dlg.sections_z_db]
-        
-        # Clear existing items
-        for combo in combos:
-            combo.blockSignals(True)
-            combo.clear()
-            combo.addItem("Please select a column", {"value": None})
-            
-        # Get selected table
-        table_data = self.parent.dlg.sections_table_db.currentData()
-        if not table_data or not table_data.get("value"):
-            for combo in combos:
-                combo.blockSignals(False)
-            return
-            
-        table_name = table_data["value"]
-        db_key = self.parent.dlg.sections_db.currentData()["value"]
-        db_name = self.databases[db_key]["db"]
-        
-        # MySQL query to get only numerical columns
-        sql_query = f"""
-            SELECT COLUMN_NAME 
-            FROM information_schema.columns 
-            WHERE table_schema = '{db_name}' 
-              AND table_name = '{table_name}'
-              AND data_type IN (
-                  'tinyint', 'smallint', 'mediumint', 'int', 'bigint', 
-                  'decimal', 'numeric', 'float', 'double'
-              );
-        """
-        
-        # Execute query using get_rows from utils_database.py
-        records = self.dblayer_db_obj.get_rows(sql_query)
-        
-        # Populate the X, Y, and Z comboboxes
-        if records:
-            for row in records:
-                # Safely convert QByteArray to a standard Python string
-                col_name = row[0].data().decode('utf-8') if hasattr(row[0], 'data') else str(row[0])
-                
-                for combo in combos:
-                    combo.addItem(col_name, {"value": col_name})
-                    
-        for combo in combos:
-            combo.blockSignals(False)
-
-        self.preselect_coords(self.parent.dlg.sections_x_db, COORDX_IDS)
-        self.preselect_coords(self.parent.dlg.sections_y_db, COORDY_IDS)
-        self.preselect_coords(self.parent.dlg.sections_z_db, COORDZ_IDS)
-
-        self.get_cmateria_values(table_name)
-
-
-    def get_cmateria_values(self, table_name):
-        """ get all unique values from column nom_cmateria """
 
         sql_query = f"""
             SELECT distinct(nom_cmateria) 
-            FROM {table_name}
-            WHERE cod_tnivel = 'UA'
+            FROM {TABLE_NAME}
         """
-        # AND coord_y < 78200
         
-        # Execute query using get_rows from utils_database.py
         records = self.dblayer_db_obj.get_rows(sql_query)
         
         unique_materials = []
@@ -314,197 +224,259 @@ class SectionsDbTool():
         return selected_materials
 
 
-    def preselect_coords(self, item, labels):
-        """ preselect coordinate dropdowns """
+    def process_dblayer(self):
+        """ process layer options """
 
-        for i in range(item.count()):
-            for label in labels:
-                if label == item.itemText(i):
-                    item.setCurrentIndex(i)
-
-
-    def process_sectionsdb(self):
-        """ create points and blocks from database """
-
-        db_layer = self.create_dblayer()
-
-        if (self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked()) and self.parent.dlg.option_polygons_db.isChecked():
-            blocks_layer = self.create_blocks(db_layer)
-
-
-    def create_dblayer(self):
-        """ add layer from database """
-
-        # 1. Check mandatory fields
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY):
             return False
 
-        # 2. Make base layer
-        table_name = self.parent.dlg.sections_table_db.currentData()["value"]
-        vlayer_query = self.create_baselayer(table_name)
+        self.progress = self.utils.initProgressBar("Import sections from database...", 100)
 
-        # 3. Points or blocks?
-        # if (self.parent.dlg.radioBlocks_db.isChecked() or (self.parent.dlg.radioPointsBlocks_db.isChecked() and file.find(BLOCK_PATTERN) > -1)) and self.parent.dlg.option_polygons_db.isChecked():
-        #     new_layer = self.create_blocks(gpkg_layer, prefix, layer_group, file)
+        if self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
-        selected_mats = self.get_selected_materials()
-        if selected_mats:
-            formatted_mats = ", ".join([f"'{m}'" for m in selected_mats])
-            vlayer_query += f" AND nom_cmateria NOT IN ({formatted_mats})"
+            # points
+            if not self.utils.check_mandatory_fields(["symbology_db"]):
+                return False
 
-        # 6. Add selected options to query
-        if self.parent.dlg.exclude_red_points_db.isChecked():
-            vlayer_query += " AND bol_nivelok = true"
+            layer_type = 'UA'
+            where_query = f" cod_tnivel = '{layer_type}'"
 
-        if self.parent.dlg.exclude_duplicated_points_db.isChecked():
-            vlayer_query += " AND bol_duplicado = false"
+            selected_mats = self.get_selected_materials()
+            if selected_mats:
+                formatted_mats = ", ".join([f"'{m}'" for m in selected_mats])
+                where_query += f" AND nom_cmateria NOT IN ({formatted_mats})"
 
-        if self.parent.dlg.exclude_no_coords_db.isChecked():
-            vlayer_query += " AND nom_cmateria != 'no coordenad'"
+            # Add selected options to query
+            if self.parent.dlg.exclude_red_points_db.isChecked():
+                where_query += " AND bol_nivelok = true"
 
-        vlayer_query += ";"
+            if self.parent.dlg.exclude_duplicated_points_db.isChecked():
+                where_query += " AND bol_duplicado = false"
 
-        print(vlayer_query)
+            self.import_dblayer(layer_type, where_query)
 
-        # 7. Create Virtual Layer (URL Encode the query to prevent URI parsing errors)
-        query_encoded = urllib.parse.quote(vlayer_query)
-        vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
-        
-        vlayer = QgsVectorLayer(vlayer_uri, f"{table_name}", "virtual")
-        vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+        if self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
-        # 8. Validate and Add to Project
-        if not vlayer.isValid():
-            self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {table_name}.", level=Qgis.Critical, duration=5)
+            # blocks
+            layer_type = 'FO'
+            where_query = f" cod_tnivel = '{layer_type}'"
+            where_query += f" AND nom_nivel LIKE '%bl' AND dib_pieza is not NULL "
+            #  AND coord_y < 78200
+
+            self.import_dblayer(layer_type, where_query)
+
+
+    def import_dblayer(self, layer_type, where_query):
+        """ import layers from database """
+
+        where_query = self.limit_projection(where_query)
+
+        # Make base layer and section layers
+        if not self.create_baselayer(where_query):
             return False
 
-        folder_name = self.get_folder_name(vlayer)
-        path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
-        self.utils.save_layer_gpkg(vlayer, path)
-        QgsProject.instance().addMapLayer(vlayer, True)
-        self.parent.dlg.messageBar.pushMessage(f"Layer {table_name} created successfully.", level=Qgis.Success, duration=5)
+        if self.parent.dlg.section_ew_db.isChecked():
+            vlayer_ew = self.create_dblayer("EW", where_query, layer_type)
 
-        self.slice_layer_by_y(vlayer, folder_name)
+            if vlayer_ew:
+                self.slice_layer("EW", vlayer_ew, layer_type)
 
-        return vlayer
+        if self.parent.dlg.section_ns_db.isChecked():
+            vlayer_ns = self.create_dblayer("NS", where_query, layer_type)
+
+            if vlayer_ns:
+                self.slice_layer("NS", vlayer_ns, layer_type)
+
+        if self.parent.dlg.section_ew_inverted_db.isChecked():
+            vlayer_ew_neg = self.create_dblayer("EW", where_query, layer_type)
+
+            if vlayer_ew_neg:
+                self.slice_layer("EW_NEG", vlayer_ew_neg, layer_type)
+
+        if self.parent.dlg.section_ns_inverted_db.isChecked():
+            vlayer_ns_neg = self.create_dblayer("NS", where_query, layer_type)
+
+            if vlayer_ns_neg:
+                self.slice_layer("NS_NEG", vlayer_ns_neg, layer_type)
+
+        self.progress.setValue(100)
+        #self.parent.dlg.messageBar.clearWidgets()
 
 
-    def create_baselayer(self, table_name):
-        """ """
+    def limit_projection(self, where_query):
+        """ add limits to where query """
+
+        xmin = self.parent.dlg.limit_xmin_db.value()
+        xmax = self.parent.dlg.limit_xmax_db.value()
+        ymin = self.parent.dlg.limit_ymin_db.value()
+        ymax = self.parent.dlg.limit_ymax_db.value()
+        
+        if xmin != 0 and xmax != 0 and ymin != 0 and ymax != 0:
+            where_query += f"AND {COORDX} >= {xmin} AND {COORDX} <= {xmax} AND {COORDY} >= {ymin} AND {COORDY} <= {ymax}"
+
+        return where_query
+
+
+    def create_baselayer(self, where_query):
+        """ load database layer as memory layer and return whole query """
 
         # 1. Get values from UI
-        x_col = self.parent.dlg.sections_x_db.currentData()["value"]
-        y_col = self.parent.dlg.sections_y_db.currentData()["value"]
-        z_col = self.parent.dlg.sections_z_db.currentData()["value"]
-        
         db_key = self.parent.dlg.sections_db.currentData()["value"]
         db_config = self.databases[db_key]
         db_name = db_config["db"]
 
-        # 2. Fetch all columns to build the [all other columns] list
-        sql_cols = f"""
-            SELECT COLUMN_NAME 
-            FROM information_schema.columns 
-            WHERE table_schema = '{db_name}' 
-              AND table_name = '{table_name}';
-        """
+        # 2. Fetch all columns to build columns list
+        # sql_cols = f"""
+        #     SELECT COLUMN_NAME 
+        #     FROM information_schema.columns 
+        #     WHERE table_schema = '{db_name}' 
+        #       AND table_name = '{TABLE_NAME}';
+        # """
         
-        records = self.dblayer_db_obj.get_rows(sql_cols)
+        # records = self.dblayer_db_obj.get_rows(sql_cols)
         
-        other_cols = []
-        if records:
-            for row in records:
-                col = row[0].data().decode('utf-8') if hasattr(row[0], 'data') else str(row[0])
-                # Skip X, Y, Z to avoid duplication in the SELECT statement
-                if col not in [x_col, y_col, z_col]:
-                    other_cols.append(f"d.{col}")
-                    
-        # Join the remaining columns with commas
-        other_cols_str = ", ".join(other_cols)
-        if other_cols_str:
-            other_cols_str = ", " + other_cols_str # Add leading comma for the SQL syntax
+        # columns = []
+        # if records:
+        #     for row in records:
+        #         col = row[0].data().decode('utf-8') if hasattr(row[0], 'data') else str(row[0])
+        #         columns.append(f"d.{col}")
+        # columns_str = ", ".join(columns)
+
+        self.progress.setValue(self.progress.value() + 1)
 
         # 3. Create Base Layer and add it to the project silently
         uri = QgsDataSourceUri()
         uri.setConnection(db_config['host'], str(db_config['port']), db_config['db'], db_config['user'], db_config['passwd'])
-        uri.setDataSource("", table_name, None) 
+        uri.setDataSource("", TABLE_NAME, "")
         
-        base_layer_name = f"{table_name}_base"
+        base_layer_name = f"{TABLE_NAME}_base"
         
         # Try the native QGIS MySQL provider first
         base_layer = QgsVectorLayer(uri.uri(), base_layer_name, "mysql")
         
         # Fallback to the standard OGR provider if native fails
         if not base_layer.isValid():
-            ogr_uri = f"MySQL:{db_name},host={db_config['host']},port={db_config['port']},user={db_config['user']},password={db_config['passwd']}|layername={table_name}"
+            ogr_uri = f"MySQL:{db_name},host={db_config['host']},port={db_config['port']},user={db_config['user']},password={db_config['passwd']}|layername={TABLE_NAME}"
             base_layer = QgsVectorLayer(ogr_uri, base_layer_name, "ogr")
             
             if not base_layer.isValid():
-                self.parent.dlg.messageBar.pushMessage(f"Failed to connect to base table or view {table_name}.", level=Qgis.Critical, duration=5)
+                self.parent.dlg.messageBar.pushMessage(f"Failed to connect to base table or view {TABLE_NAME}.", level=Qgis.Critical, duration=5)
                 return False
+
+        success = base_layer.setSubsetString(where_query)
+        
+        if not success:
+            self.parent.dlg.messageBar.pushMessage(f"Warning: Could not apply provider filter to {table_name}.", level=Qgis.Warning, duration=5)
 
         QgsProject.instance().addMapLayer(base_layer, False)
 
-        # 5. Construct the Virtual Layer query using the hidden base layer
-        vlayer_query = f"""
-            SELECT d.{x_col}, d.{y_col}, d.{z_col}{other_cols_str}, 
-                   make_point(d.{x_col}, d.{y_col}, d.{z_col}) AS geometry 
-            FROM "{base_layer_name}" AS d
-            WHERE d.cod_tnivel = 'UA'
-        """
-        # AND d.coord_y < 78200
+        self.progress.setValue(self.progress.value() + 1)
 
-        return vlayer_query
+        return True
 
 
-    def get_folder_name(self, layer):
+    def get_folder_name(self, layer, section_type):
         """ build folder name """
 
         yacimento = "Ortho_RB" # TODO
         thickness = int(self.parent.dlg.sections_thickness_db.value())
+        folder_name = f"{yacimento}_{thickness}_{section_type}"
 
-        folder_name = f"{yacimento}_{thickness}"
-
-        coord_y = self.parent.dlg.sections_y_db.currentText()
-        idx = layer.fields().indexOf(coord_y)
-        if idx == -1:
-            print(f"Error: Field '{field_name}' not found.")
-            return folder_name
-
-        min_val = int(layer.minimumValue(idx))
-        max_val = int(layer.maximumValue(idx))
-
+        min_val, max_val, field_name = self.get_min_max_val(section_type, layer)
         folder_name += f"_{min_val}_{max_val}"
 
         return folder_name
 
 
-    def slice_layer_by_y(self, layer, folder_name):
-        """
-        Slices a QgsVectorLayer into multiple memory layers based on a Y-coordinate field.
-        """
+    def get_min_max_val(self, section_type, layer):
+        """ return field min and max values """
 
-        field_name = self.parent.dlg.sections_y_db.currentText()
-        step = self.parent.dlg.sections_thickness_db.value()
-        
-        # 1. Get field index and min/max values
+        if section_type == 'EW':
+            field_name = COORDX
+        elif section_type == 'NS':
+            field_name = COORDY
+        elif section_type == 'EW_NEG':
+            field_name = COORDX_NEG
+        elif section_type == 'NS_NEG':
+            field_name = COORDY_NEG
+
         idx = layer.fields().indexOf(field_name)
         if idx == -1:
             print(f"Error: Field '{field_name}' not found.")
-            return
+            return False
 
-        min_val = layer.minimumValue(idx)
-        max_val = layer.maximumValue(idx)
+        min_val = int(layer.minimumValue(idx))
+        max_val = int(layer.maximumValue(idx))
 
-        if min_val is None or max_val is None:
-            print(f"Error: No valid values found in the '{field_name}' field.")
-            return
+        return min_val, max_val, field_name
+
+
+    def create_dblayer(self, section_type, where_query, layer_type):
+        """ create virtual layer using the hidden base layer and add to project """
+
+        if section_type == 'EW':
+            coord1 = COORDY
+        elif section_type == 'NS':
+            coord1 = COORDX
+        elif section_type == 'EW_NEG':
+            coord1 = COORDY_NEG
+        elif section_type == 'NS_NEG':
+            coord1 = COORDX_NEG
+
+        vlayer_query = f"""
+            SELECT *, make_point({coord1}, {COORDZ}) AS geometry 
+            FROM "{TABLE_NAME}_base" 
+            WHERE {where_query};
+        """
+
+        if layer_type == 'UA':
+            layer_type_name = "Pnt"
+        elif layer_type == 'FO':
+            layer_type_name = "Bl"
+
+        # Create Virtual Layer
+        query_encoded = urllib.parse.quote(vlayer_query)
+        vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
+
+        vlayer = QgsVectorLayer(vlayer_uri, f"{TABLE_NAME}_{section_type}_{layer_type_name}", "virtual")
+        vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+
+        # Validate and Add to Project
+        if not vlayer.isValid():
+            self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {TABLE_NAME}.", level=Qgis.Critical, duration=5)
+            return False
+
+        folder_name = self.get_folder_name(vlayer, section_type)
+        path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
+        self.utils.save_layer_gpkg(vlayer, path)
+        QgsProject.instance().addMapLayer(vlayer, True)
+        self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        return vlayer
+
+
+    def slice_layer(self, section_type, layer, layer_type):
+        """
+        Slices a QgsVectorLayer into multiple memory layers based on a X- or Y-coordinate field.
+        """
+
+        step = self.parent.dlg.sections_thickness_db.value()
+        min_val, max_val, coord_field = self.get_min_max_val(section_type, layer)
+
+        if layer_type == 'UA':
+            layer_type_name = "Pnt"
+        elif layer_type == 'FO':
+            layer_type_name = "Bl"
 
         # Create or find the group in the layer tree
         root = QgsProject.instance().layerTreeRoot()
-        group = root.findGroup(folder_name)
+        folder_name = self.get_folder_name(layer, section_type)
+        group_name = section_type + " cross-sections"
+        group = root.findGroup(group_name)
         if not group:
-            group = root.insertGroup(0, folder_name)
+            group = root.insertGroup(0, group_name)
 
         # Get the geometry type and CRS for the memory layer creation
         wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
@@ -512,14 +484,16 @@ class SectionsDbTool():
 
         # 2. Loop by ranges divided by thickness
         # Floor the min_val to the nearest thickness to get clean boundaries
-        current_y = math.floor(min_val / step) * step
+        current_val = math.floor(min_val / step) * step
 
-        while current_y <= max_val:
-            print(f"current slot: {current_y}, max: {max_val}")
-            next_y = current_y + step
+        while current_val <= max_val:
+            self.progress.setValue(self.progress.value() + 1)
+
+            print(f"current slot: {current_val}, max: {max_val}")
+            next_val = current_val + step
 
             # Use an expression to filter features within the current slot
-            expr = f'"{field_name}" >= {current_y} AND "{field_name}" < {next_y}'
+            expr = f'"{coord_field}" >= {current_val} AND "{coord_field}" < {next_val}'
             request = QgsFeatureRequest().setFilterExpression(expr)
             
             # Extract the features that match the slot
@@ -527,7 +501,7 @@ class SectionsDbTool():
 
             # 3. Save the vector layers in memory (only if the slot has features)
             if features:
-                layer_name = f"sec_{int(current_y)}_{int(next_y)}"
+                layer_name = f"{layer_type_name}_{section_type}_{int(current_val)}_{int(next_val)}"
                 uri = f"{wkb_type}?crs={crs_authid}"
                 
                 mem_layer = QgsVectorLayer(uri, layer_name, "memory")
@@ -543,12 +517,16 @@ class SectionsDbTool():
                 slice_save_path = os.path.join(workspace_path, folder_name)
                 self.utils.save_layer_gpkg(mem_layer, slice_save_path)
 
-                QgsProject.instance().addMapLayer(mem_layer, False)
-                group.addLayer(mem_layer)
+                # 3. Save points and/or blocks layers to file
+                if layer_type == 'UA':
+                    QgsProject.instance().addMapLayer(mem_layer, False)
+                    group.addLayer(mem_layer)
+                    self.apply_symbology(mem_layer, slice_save_path, group)
 
-                self.apply_symbology(mem_layer, slice_save_path, group)
+                elif layer_type == 'FO':
+                    self.create_blocks(mem_layer, group, slice_save_path)
 
-            current_y = next_y
+            current_val = next_val
             
         print(f"Successfully sliced layer into slots of {step}.")
 
@@ -577,19 +555,18 @@ class SectionsDbTool():
         self.utils.save_layer_gpkg(layer_clone, path, False)
 
         layer_final = self.remove_filtered_features(layer_clone.name(), True, self.parent.dlg.filter_expr_db.text(), path)
-        QgsProject.instance().addMapLayer(layer_final, False)
 
-        overlays_group_name = "overlays"
-        overlays_group = self.utils.get_layer_group(overlays_group_name, group)
-        if not overlays_group:
-            overlays_group = self.utils.create_group(overlays_group_name, group)
-        overlays_group.insertChildNode(1, QgsLayerTreeLayer(layer_final))
+        if len(list(layer_final.getFeatures())) > 0:
+            QgsProject.instance().addMapLayer(layer_final, False)
+            group.addLayer(layer_final)
 
-        # save style to gpkg
-        self.set_symbology(layer_final, True)
-        symbology = self.parent.dlg.symbology_overlay_db.currentText()
-        symbology_name = symbology.split(".qml")[0]
-        layer_final.saveStyleToDatabase(symbology_name, "", True, "")
+            # save style to gpkg
+            self.set_symbology(layer_final, True)
+            symbology = self.parent.dlg.symbology_overlay_db.currentText()
+            symbology_name = symbology.split(".qml")[0]
+            layer_final.saveStyleToDatabase(symbology_name, "", True, "")
+
+            # TODO remove layer_clone.gpkg
 
 
     def remove_filtered_features(self, layer_name, overlay, filter_text, path):
@@ -643,3 +620,66 @@ class SectionsDbTool():
         symbology_path = os.path.join(self.parent.utils.get_path_qml(), symbology)
         layer.loadNamedStyle(symbology_path)
         layer.triggerRepaint()
+
+
+    def create_blocks(self, layer, group, path):
+        """ create blocks from point layer """
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        #print("create block", layer.name())
+
+        uri_components = QgsProviderRegistry.instance().decodeUri(layer.dataProvider().name(), layer.publicSource());
+
+        field = 'dib_pieza'
+        #if self.parent.dlg.radioPointsBlocks_db.isChecked():
+        #    field = 'nom_nivel'
+
+        # apply geoprocess convex hull
+        params = {
+            'INPUT': layer.source(),
+            'FIELD': field,
+            'TYPE': 3,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+
+        result = processing.run("qgis:minimumboundinggeometry", params)
+
+        if len(list(result['OUTPUT'].getFeatures())) == 0:
+            return
+
+        if self.parent.dlg.option_polygons_db.isChecked():
+            QgsProject.instance().addMapLayer(result['OUTPUT'], False)
+            group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
+            result['OUTPUT'].setName(layer.name())
+
+            # apply style
+            symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
+            result['OUTPUT'].loadNamedStyle(symbology_path)
+            result['OUTPUT'].triggerRepaint()
+
+        self.utils.save_layer_gpkg(result['OUTPUT'], path)
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        # paint polygons as points
+        if self.parent.dlg.option_points_db.isChecked():
+            points = self.make_centroids(result['OUTPUT'], group, layer.name(), path)
+
+
+    def make_centroids(self, layer, group, layer_name, path):
+        """ make centroids from polygons """
+
+        params = {
+            'INPUT': layer.source(),
+            'ALL_PARTS': False,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+        points = processing.run("native:centroids", params)
+
+        QgsProject.instance().addMapLayer(points['OUTPUT'], False)
+        group.addChildNode(QgsLayerTreeLayer(points['OUTPUT']))
+        points['OUTPUT'].setName(layer_name)
+        self.utils.save_layer_gpkg(points['OUTPUT'], path)
+
+        return points

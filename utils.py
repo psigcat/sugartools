@@ -348,7 +348,7 @@ class utils:
 
         for field in fields:
             widget, widget_data = self.get_widget_data(field)
-            if widget_data in (COMBO_SELECT, '--') or not widget_data or widget_data == '':
+            if widget_data in (COMBO_SELECT, "--", "Please select a database connection") or not widget_data or widget_data == '':
                 self.parent.dlg.messageBar.pushMessage(f"Mandatory field without information: {field}", level=Qgis.Warning, duration=3)
                 widget.setFocus()
                 return False
