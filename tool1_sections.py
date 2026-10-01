@@ -226,7 +226,7 @@ class SectionsTool():
         # !!! hace falta limitarlo al directoria usado !!!
         for root_dir, cur_dir, files in os.walk(self.secciones_path):
             file_count += len(files)
-        self.progress = self.utils.initProgressBar("Import sections...", file_count)
+        self.progress, self.progress_msg = self.utils.initProgressBar("Import sections...", file_count)
         
         if self.parent.dlg.section_ew.isChecked():
             file_list = self.get_file_list(SECTION_EW_PATTERN)
@@ -261,7 +261,8 @@ class SectionsTool():
                     self.load_file(file, group, CSV_PARAMS_COORDS_NS_NEG, SECTION_NS_PATTERN, True)
 
         # remove progress bar
-        self.parent.dlg.messageBar.clearWidgets()
+        self.progress.setValue(100)
+        self.parent.dlg.messageBar.popWidget(self.progress_msg)
 
         if not success:
             self.parent.dlg.messageBar.pushMessage(f"No files imported, workspace has to have UA folder with points data or FO folder with blocks data.", level=Qgis.Warning)

@@ -83,7 +83,7 @@ class ExtractblocksTool():
                 position = str(position)
 
             if i == 0:
-                self.progress = self.utils.initProgressBar("Process extraction...", feature_count)
+                self.progress, self.progress_msg = self.utils.initProgressBar("Process extraction...", feature_count)
                 #print(extract_table, feature_count)
 
             #print(id_bloque, position, ua, restricted_uas, ua in restricted_uas)
@@ -96,7 +96,8 @@ class ExtractblocksTool():
 
         #self.reload_layers()
 
-        self.parent.dlg.messageBar.clearWidgets()
+        self.progress.setValue(100)
+        self.parent.dlg.messageBar.popWidget(self.progress_msg)
         self.parent.dlg.messageBar.pushMessage(f"Forms extracted and written to working directory", level=Qgis.Success)
 
 
