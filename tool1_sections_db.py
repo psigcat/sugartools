@@ -232,6 +232,8 @@ class SectionsDbTool():
         if not self.utils.check_mandatory_fields(FIELDS_MANDATORY):
             return False
 
+        self.progress, self.progress_msg = self.utils.initProgressBar("Import sections from database...", 100)
+
         if self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
             # points
@@ -240,7 +242,6 @@ class SectionsDbTool():
 
             layer_type = 'UA'
             where_query = f" cod_tnivel = '{layer_type}'"
-            #  AND coord_y < 78200
 
             selected_mats = self.get_selected_materials()
             if selected_mats:
@@ -256,13 +257,12 @@ class SectionsDbTool():
 
             self.import_dblayer(layer_type, where_query)
 
-        elif self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
+        if self.parent.dlg.radioBlocks_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
             # blocks
             layer_type = 'FO'
             where_query = f" cod_tnivel = '{layer_type}'"
             where_query += f" AND nom_nivel LIKE '%bl' AND dib_pieza is not NULL "
-            #  AND coord_y < 78200
 
             self.import_dblayer(layer_type, where_query)
 
@@ -276,10 +276,10 @@ class SectionsDbTool():
         where_query = self.limit_projection(where_query)
 
         # Make base layer and section layers
-        if not self.create_baselayer(where_query):
+        if not self.create_baselayer(where_query, layer_type):
             return False
 
-        if not self.create_planta(where_query):
+        if not self.create_planta(where_query, layer_type):
             return False
 
         if self.parent.dlg.section_ew_db.isChecked():
@@ -321,16 +321,14 @@ class SectionsDbTool():
         return where_query
 
 
-    def create_baselayer(self, where_query):
+    def create_baselayer(self, where_query, layer_type):
         """ load database layer as memory layer and return whole query """
-
-        self.progress, self.progress_msg = self.utils.initProgressBar("Import sections from database...", 100)
 
         # 1. Get values from UI
         db_key = self.parent.dlg.sections_db.currentData()["value"]
         db_config = self.databases[db_key]
         db_name = db_config["db"]
-        base_layer_name = f"{TABLE_NAME}_base"
+        base_layer_name = f"{TABLE_NAME}_{layer_type}"
 
         self.progress.setValue(self.progress.value() + 1)
         
@@ -373,12 +371,12 @@ class SectionsDbTool():
         return True
 
 
-    def create_planta(self, where_query):
+    def create_planta(self, where_query, layer_type):
         """ create planta with all points and x/y projection """
 
         vlayer_query = f"""
             SELECT *, make_point({COORDX}, {COORDY}) AS geometry 
-            FROM "{TABLE_NAME}_base" 
+            FROM "{TABLE_NAME}_{layer_type}" 
             WHERE {where_query};
         """
 
@@ -386,7 +384,7 @@ class SectionsDbTool():
         query_encoded = urllib.parse.quote(vlayer_query)
         vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
 
-        vlayer = QgsVectorLayer(vlayer_uri, "Planta", "virtual")
+        vlayer = QgsVectorLayer(vlayer_uri, f"Planta {layer_type}", "virtual")
         vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
 
         # Validate and Add to Project
@@ -455,7 +453,7 @@ class SectionsDbTool():
 
         vlayer_query = f"""
             SELECT *, make_point({coord1}, {COORDZ}) AS geometry 
-            FROM "{TABLE_NAME}_base" 
+            FROM "{TABLE_NAME}_{layer_type}" 
             WHERE {where_query};
         """
 
@@ -463,6 +461,8 @@ class SectionsDbTool():
             layer_type_name = "Pnt"
         elif layer_type == 'FO':
             layer_type_name = "Bl"
+        else:
+            layer_type_name = ""
 
         # Create Virtual Layer
         query_encoded = urllib.parse.quote(vlayer_query)
@@ -523,7 +523,7 @@ class SectionsDbTool():
         while current_val <= max_val:
             self.progress.setValue(self.progress.value() + 1)
 
-            print(f"current slot: {current_val}, max: {max_val}")
+            #print(f"current slot: {current_val}, max: {max_val}")
             next_val = current_val + step
 
             # Use an expression to filter features within the current slot
@@ -553,6 +553,7 @@ class SectionsDbTool():
 
                 # 3. Save points and/or blocks layers to file
                 if layer_type == 'UA':
+                    print("create points", mem_layer.name())
                     QgsProject.instance().addMapLayer(mem_layer, False)
                     group.addLayer(mem_layer)
                     self.apply_symbology(mem_layer, slice_save_path, group)
@@ -562,7 +563,7 @@ class SectionsDbTool():
 
             current_val = next_val
             
-        print(f"Successfully sliced layer into slots of {step}.")
+        self.parent.dlg.messageBar.pushMessage(f"Successfully sliced {section_type} into slots of {step}.", level=Qgis.Success, duration=5)
 
 
     def apply_symbology(self, layer, path, group):
@@ -608,7 +609,7 @@ class SectionsDbTool():
 
         layer = QgsVectorLayer(path + f"/{layer_name}.gpkg|layername={layer_name}", layer_name)
 
-        print("remove filtered features for layer", layer.name(), len(list(layer.getFeatures())))
+        #print("remove filtered features for layer", layer.name(), len(list(layer.getFeatures())))
 
         # get expression
         symbology = self.parent.dlg.symbology_db.currentText()
@@ -616,7 +617,7 @@ class SectionsDbTool():
             filter_text = self.parent.dlg.filter_expr_db.text()
             symbology = self.parent.dlg.symbology_overlay_db.currentText()
 
-        print("active filter", filter_text)
+        #print("active filter", filter_text)
 
         # check for expression to delete filtered out features
         if filter_text == "" or symbology == COMBO_SELECT:
@@ -625,7 +626,7 @@ class SectionsDbTool():
 
         # Use the inverse expression to get filtered-out features
         inverse_expression = f'NOT ({filter_text})'
-        print("inverse filter", inverse_expression)
+        #print("inverse filter", inverse_expression)
         request = QgsFeatureRequest(QgsExpression(inverse_expression))
         ids_to_delete = [f.id() for f in layer.getFeatures(request)]
 
@@ -633,7 +634,7 @@ class SectionsDbTool():
         if ids_to_delete:
             layer.startEditing()
             layer.deleteFeatures(ids_to_delete)
-            print(f"Deleted {len(ids_to_delete)} features.")
+            #print(f"Deleted {len(ids_to_delete)} features.")
 
         # Commit the changes
         if not layer.commitChanges():
@@ -661,7 +662,7 @@ class SectionsDbTool():
 
         self.progress.setValue(self.progress.value() + 1)
 
-        #print("create block", layer.name())
+        print("create blocks", layer.name())
 
         # paint polygons as points
         if self.parent.dlg.option_points_db.isChecked():
@@ -688,7 +689,7 @@ class SectionsDbTool():
 
         QgsProject.instance().addMapLayer(result['OUTPUT'], False)
         group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
-        result['OUTPUT'].setName(layer.name() + "_bl")
+        result['OUTPUT'].setName(f"{layer.name()}_bl")
 
         # apply style
         symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
