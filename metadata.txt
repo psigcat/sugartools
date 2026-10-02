@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.36
+version=0.2.37
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.37 - add planta, fix blocks and points&blocks on windows (#66)
 	0.2.36 - make mysql connection more robust and invert coord_x and coord_y for EW and NS (#66)
 	0.2.35 - EW and NS sections and limits for Ortho sections DB (#66)
 	0.2.34 - initial functions for Ortho sections DB (#66)
