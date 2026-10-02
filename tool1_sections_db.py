@@ -248,7 +248,6 @@ class SectionsDbTool():
                 formatted_mats = ", ".join([f"'{m}'" for m in selected_mats])
                 where_query += f" AND nom_cmateria NOT IN ({formatted_mats})"
 
-            # Add selected options to query
             if self.parent.dlg.exclude_red_points_db.isChecked():
                 where_query += " AND bol_nivelok = true"
 
@@ -354,7 +353,6 @@ class SectionsDbTool():
                 self.parent.dlg.messageBar.pushMessage(f"Failed to connect to base table or view '{TABLE_NAME}' on {ogr_uri}.", level=Qgis.Critical, duration=5)
                 return False
 
-        # Apply the subset string
         success = base_layer.setSubsetString(where_query)
         
         if not success:
@@ -380,28 +378,32 @@ class SectionsDbTool():
             WHERE {where_query};
         """
 
-        # Create Virtual Layer
         query_encoded = urllib.parse.quote(vlayer_query)
         vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
 
         vlayer = QgsVectorLayer(vlayer_uri, f"Planta {layer_type}", "virtual")
         vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
 
-        # Validate and Add to Project
         if not vlayer.isValid():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for Planta.", level=Qgis.Critical, duration=5)
             return False
 
-        QgsProject.instance().addMapLayer(vlayer, True)
-        self.utils.save_layer_gpkg(vlayer, self.parent.dlg.workspace_db.filePath())
-        self.parent.dlg.messageBar.pushMessage(f"Planta created successfully.", level=Qgis.Success, duration=5)
+        path = self.parent.dlg.workspace_db.filePath()
+        self.utils.save_layer_gpkg(vlayer, path)
+
+        if layer_type == 'UA':
+            QgsProject.instance().addMapLayer(vlayer, True)
+        elif layer_type == 'FO':
+            self.create_blocks(vlayer, path)
 
         self.progress.setValue(self.progress.value() + 1)
+
+        self.parent.dlg.messageBar.pushMessage(f"Planta created successfully.", level=Qgis.Success, duration=5)
 
         return True
 
 
-    def get_folder_name(self, layer, section_type):
+    def get_folder_name(self, layer, section_type, layer_type):
         """ build folder name """
 
         yacimento = "Ortho_RB" # TODO dynamic yacimiento name
@@ -409,7 +411,7 @@ class SectionsDbTool():
         folder_name = f"{yacimento}_{thickness}_{section_type}"
 
         min_val, max_val, field_name = self.get_min_max_val(layer, section_type)
-        folder_name += f"_{min_val}_{max_val}"
+        folder_name += f"_{min_val}_{max_val}_{layer_type}"
 
         return folder_name
 
@@ -478,7 +480,7 @@ class SectionsDbTool():
 
         # TESTING: add and show view_secciones
         # QgsProject.instance().addMapLayer(vlayer, True)
-        # folder_name = self.get_folder_name(vlayer, section_type)
+        # folder_name = self.get_folder_name(vlayer, section_type, layer_type_name)
         # path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
         # self.utils.save_layer_gpkg(vlayer, path)
         # self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
@@ -504,13 +506,9 @@ class SectionsDbTool():
             layer_type_name = ""
 
         # Create or find the group in the layer tree
-        root = QgsProject.instance().layerTreeRoot()
-        folder_name = self.get_folder_name(layer, section_type)
-        group_name = section_type + " cross-sections"
-        group = root.findGroup(group_name)
-        if not group:
-            group = root.insertGroup(0, group_name)
-            group.setExpanded(False)
+        group_name = f"{section_type} cross-sections"
+        group = self.get_or_make_group(group_name)
+        folder_name = self.get_folder_name(layer, section_type, layer_type_name)
 
         # Get the geometry type and CRS for the memory layer creation
         wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
@@ -535,7 +533,11 @@ class SectionsDbTool():
 
             # 3. Save the vector layers in memory (only if the slot has features)
             if features:
-                layer_name = f"{layer_type_name}_{section_type}_{int(current_val)}_{int(next_val)}"
+
+                sec_group_name = f"{section_type}_{int(current_val)}_{int(next_val)}"
+                sec_group = self.get_or_make_group(f"Sec_{sec_group_name}", group)
+
+                layer_name = f"{layer_type_name}_{sec_group_name}"
                 uri = f"{wkb_type}?crs={crs_authid}"
                 
                 mem_layer = QgsVectorLayer(uri, layer_name, "memory")
@@ -555,15 +557,26 @@ class SectionsDbTool():
                 if layer_type == 'UA':
                     print("create points", mem_layer.name())
                     QgsProject.instance().addMapLayer(mem_layer, False)
-                    group.addLayer(mem_layer)
-                    self.apply_symbology(mem_layer, slice_save_path, group)
+                    sec_group.addLayer(mem_layer)
+                    self.apply_symbology(mem_layer, slice_save_path, sec_group)
 
                 elif layer_type == 'FO':
-                    self.create_blocks(mem_layer, group, slice_save_path)
+                    self.create_blocks(mem_layer, slice_save_path, sec_group)
 
             current_val = next_val
             
         self.parent.dlg.messageBar.pushMessage(f"Successfully sliced {section_type} into slots of {step}.", level=Qgis.Success, duration=5)
+
+
+    def get_or_make_group(self, group_name, parent=QgsProject.instance().layerTreeRoot()):
+        """ get group from layer tree or create new if it doesn't exist """
+
+        group = parent.findGroup(group_name)
+        if not group:
+            group = parent.insertGroup(0, group_name)
+            group.setExpanded(False)
+
+        return group
 
 
     def apply_symbology(self, layer, path, group):
@@ -657,7 +670,7 @@ class SectionsDbTool():
         layer.triggerRepaint()
 
 
-    def create_blocks(self, layer, group, path):
+    def create_blocks(self, layer, path, group=QgsProject.instance().layerTreeRoot()):
         """ create blocks from point layer """
 
         self.progress.setValue(self.progress.value() + 1)
@@ -670,14 +683,10 @@ class SectionsDbTool():
             group.addLayer(layer)
             return
 
-        field = 'dib_pieza'
-        #if self.parent.dlg.radioPointsBlocks_db.isChecked():
-        #    field = 'nom_nivel'
-
         # apply geoprocess convex hull
         params = {
             'INPUT': layer.source(),
-            'FIELD': field,
+            'FIELD': 'dib_pieza',
             'TYPE': 3,
             'OUTPUT': 'TEMPORARY_OUTPUT'
         }
