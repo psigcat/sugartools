@@ -419,8 +419,6 @@ class SectionsDbTool():
     def get_min_max_val(self, layer, section_type):
         """ return field min and max values """
 
-        print(section_type)
-
         if section_type == 'EW':
             field_name = COORDY
         elif section_type == 'NS':
@@ -439,8 +437,6 @@ class SectionsDbTool():
 
         min_val = int(layer.minimumValue(idx))
         max_val = int(layer.maximumValue(idx))
-
-        print(field_name, section_type, layer.name(), min_val, max_val)
 
         return min_val, max_val, field_name
 
@@ -692,7 +688,7 @@ class SectionsDbTool():
 
         QgsProject.instance().addMapLayer(result['OUTPUT'], False)
         group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
-        result['OUTPUT'].setName(layer.name())
+        result['OUTPUT'].setName(layer.name() + "_bl")
 
         # apply style
         symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
