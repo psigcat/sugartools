@@ -274,7 +274,7 @@ class utils:
         layer.setDataSource(path + f'|layername={layer.name()}', layer.name(), 'ogr')
         #layer.setDataProvider(myParams, name, layer type, QgsDataProvider.ProviderOptions())
 
-        #print("created file", path, os.path.exists(path))
+        print("created file", path, os.path.exists(path))
 
 
     def add_layer_to_gpkg(self, layer, path, source_layer_name):

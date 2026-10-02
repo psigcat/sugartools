@@ -279,6 +279,9 @@ class SectionsDbTool():
         if not self.create_baselayer(where_query):
             return False
 
+        if not self.create_planta(where_query):
+            return False
+
         if self.parent.dlg.section_ew_db.isChecked():
             vlayer_ew = self.create_dblayer("EW", where_query, layer_type)
 
@@ -370,21 +373,53 @@ class SectionsDbTool():
         return True
 
 
+    def create_planta(self, where_query):
+        """ create planta with all points and x/y projection """
+
+        vlayer_query = f"""
+            SELECT *, make_point({COORDX}, {COORDY}) AS geometry 
+            FROM "{TABLE_NAME}_base" 
+            WHERE {where_query};
+        """
+
+        # Create Virtual Layer
+        query_encoded = urllib.parse.quote(vlayer_query)
+        vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
+
+        vlayer = QgsVectorLayer(vlayer_uri, "Planta", "virtual")
+        vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+
+        # Validate and Add to Project
+        if not vlayer.isValid():
+            self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for Planta.", level=Qgis.Critical, duration=5)
+            return False
+
+        QgsProject.instance().addMapLayer(vlayer, True)
+        self.utils.save_layer_gpkg(vlayer, self.parent.dlg.workspace_db.filePath())
+        self.parent.dlg.messageBar.pushMessage(f"Planta created successfully.", level=Qgis.Success, duration=5)
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        return True
+
+
     def get_folder_name(self, layer, section_type):
         """ build folder name """
 
-        yacimento = "Ortho_RB" # TODO
+        yacimento = "Ortho_RB" # TODO dynamic yacimiento name
         thickness = int(self.parent.dlg.sections_thickness_db.value())
         folder_name = f"{yacimento}_{thickness}_{section_type}"
 
-        min_val, max_val, field_name = self.get_min_max_val(section_type, layer)
+        min_val, max_val, field_name = self.get_min_max_val(layer, section_type)
         folder_name += f"_{min_val}_{max_val}"
 
         return folder_name
 
 
-    def get_min_max_val(self, section_type, layer):
+    def get_min_max_val(self, layer, section_type):
         """ return field min and max values """
+
+        print(section_type)
 
         if section_type == 'EW':
             field_name = COORDY
@@ -394,6 +429,8 @@ class SectionsDbTool():
             field_name = COORDY_NEG
         elif section_type == 'NS_NEG':
             field_name = COORDX_NEG
+        else:
+            return 0, 0, ""
 
         idx = layer.fields().indexOf(field_name)
         if idx == -1:
@@ -402,6 +439,8 @@ class SectionsDbTool():
 
         min_val = int(layer.minimumValue(idx))
         max_val = int(layer.maximumValue(idx))
+
+        print(field_name, section_type, layer.name(), min_val, max_val)
 
         return min_val, max_val, field_name
 
@@ -441,11 +480,12 @@ class SectionsDbTool():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {TABLE_NAME}.", level=Qgis.Critical, duration=5)
             return False
 
-        QgsProject.instance().addMapLayer(vlayer, True)
-        folder_name = self.get_folder_name(vlayer, section_type)
-        path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
-        self.utils.save_layer_gpkg(vlayer, path)
-        self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
+        # TESTING: add and show view_secciones
+        # QgsProject.instance().addMapLayer(vlayer, True)
+        # folder_name = self.get_folder_name(vlayer, section_type)
+        # path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
+        # self.utils.save_layer_gpkg(vlayer, path)
+        # self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -458,12 +498,14 @@ class SectionsDbTool():
         """
 
         step = self.parent.dlg.sections_thickness_db.value()
-        min_val, max_val, coord_field = self.get_min_max_val(section_type, layer)
+        min_val, max_val, coord_field = self.get_min_max_val(layer, section_type)
 
         if layer_type == 'UA':
             layer_type_name = "Pnt"
         elif layer_type == 'FO':
             layer_type_name = "Bl"
+        else:
+            layer_type_name = ""
 
         # Create or find the group in the layer tree
         root = QgsProject.instance().layerTreeRoot()
@@ -472,6 +514,7 @@ class SectionsDbTool():
         group = root.findGroup(group_name)
         if not group:
             group = root.insertGroup(0, group_name)
+            group.setExpanded(False)
 
         # Get the geometry type and CRS for the memory layer creation
         wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
