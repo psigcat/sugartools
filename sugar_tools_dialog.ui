@@ -414,17 +414,20 @@
              <string>Overlay symbology</string>
             </property>
             <layout class="QGridLayout" name="gridLayout_7_db">
-             <item row="1" column="0">
-              <widget class="QLineEdit" name="filter_expr_db">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
              <item row="2" column="0">
               <widget class="QLabel" name="label_7_db">
                <property name="text">
                 <string>Symbology</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="symbology_overlay_db">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
               </widget>
              </item>
@@ -442,15 +445,25 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
-              <widget class="QComboBox" name="symbology_overlay_db">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
+             <item row="1" column="0">
+              <widget class="QLineEdit" name="filter_expr_db">
+               <property name="text">
+                <string/>
                </property>
               </widget>
+             </item>
+             <item row="3" column="1">
+              <spacer name="verticalSpacer_17">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </widget>
@@ -466,6 +479,9 @@
          <layout class="QVBoxLayout" name="verticalLayout_19">
           <item>
            <widget class="QGroupBox" name="groupLimitProjection_db">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="title">
              <string>Limit projection area (optional)</string>
             </property>
@@ -483,16 +499,16 @@
                 <number>0</number>
                </property>
                <property name="minimum">
-                <double>-100000.000000000000000</double>
+                <double>-1000000.000000000000000</double>
                </property>
                <property name="maximum">
-                <double>100000.000000000000000</double>
+                <double>1000000.000000000000000</double>
                </property>
                <property name="singleStep">
                 <double>1000.000000000000000</double>
                </property>
                <property name="value">
-                <double>30000.000000000000000</double>
+                <double>0.000000000000000</double>
                </property>
               </widget>
              </item>
@@ -502,16 +518,16 @@
                 <number>0</number>
                </property>
                <property name="minimum">
-                <double>-100000.000000000000000</double>
+                <double>-1000000.000000000000000</double>
                </property>
                <property name="maximum">
-                <double>100000.000000000000000</double>
+                <double>1000000.000000000000000</double>
                </property>
                <property name="singleStep">
                 <double>1000.000000000000000</double>
                </property>
                <property name="value">
-                <double>70000.000000000000000</double>
+                <double>0.000000000000000</double>
                </property>
               </widget>
              </item>
@@ -521,16 +537,16 @@
                 <number>0</number>
                </property>
                <property name="minimum">
-                <double>-100000.000000000000000</double>
+                <double>-1000000.000000000000000</double>
                </property>
                <property name="maximum">
-                <double>100000.000000000000000</double>
+                <double>1000000.000000000000000</double>
                </property>
                <property name="singleStep">
                 <double>1000.000000000000000</double>
                </property>
                <property name="value">
-                <double>80000.000000000000000</double>
+                <double>0.000000000000000</double>
                </property>
               </widget>
              </item>
@@ -540,16 +556,16 @@
                 <number>0</number>
                </property>
                <property name="minimum">
-                <double>-100000.000000000000000</double>
+                <double>-1000000.000000000000000</double>
                </property>
                <property name="maximum">
-                <double>100000.000000000000000</double>
+                <double>1000000.000000000000000</double>
                </property>
                <property name="singleStep">
                 <double>1000.000000000000000</double>
                </property>
                <property name="value">
-                <double>40000.000000000000000</double>
+                <double>0.000000000000000</double>
                </property>
               </widget>
              </item>
@@ -874,7 +890,7 @@
                <x>0</x>
                <y>0</y>
                <width>202</width>
-               <height>243</height>
+               <height>251</height>
               </rect>
              </property>
             </widget>

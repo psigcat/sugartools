@@ -63,7 +63,7 @@ class SectionsDbTool():
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.sections_db, self.databases)
 
-        self.parent.dlg.sections_db.currentIndexChanged.connect(self.get_cmateria_values)
+        self.parent.dlg.sections_db.currentIndexChanged.connect(self.sections_db_loaded)
         self.parent.dlg.filter_expr_btn_db.clicked.connect(self.open_expr_builder)
 
 
@@ -139,24 +139,56 @@ class SectionsDbTool():
         return True
 
 
-    def get_cmateria_values(self):
-        """ get all unique values from column nom_cmateria """
+    def sections_db_loaded(self):
+        """ trigger events after db connection loaded """
+
 
         # Ensure a valid DB is selected
         if not self.connect_db():
             return
 
+        self.get_limit_area()        
+        self.get_cmateria_values()
+
+
+    def get_limit_area(self):
+        """ get acotacion_areas values from db connection """
+
+        sql_query = f"""
+            SELECT coord_x_min, coord_x_max, coord_y_min, coord_y_max
+            FROM acotacion_areas
+        """
+
+        records = self.dblayer_db_obj.get_rows(sql_query)
+        if records:
+            for row in records:
+                self.populate_projection_area(row)
+                return
+
+        self.populate_projection_area([0,0,0,0])
+
+
+    def populate_projection_area(self, row: list):
+        """ populate projection_area fields """
+
+        self.parent.dlg.limit_xmin_db.setValue(row[0])
+        self.parent.dlg.limit_xmax_db.setValue(row[1])
+        self.parent.dlg.limit_ymin_db.setValue(row[2])
+        self.parent.dlg.limit_ymax_db.setValue(row[3])
+
+
+    def get_cmateria_values(self):
+        """ get all unique values from column nom_cmateria """
+
         sql_query = f"""
             SELECT distinct(nom_cmateria) 
             FROM {TABLE_NAME}
         """
-        #    WHERE coord_y < 78200
-        
-        # Execute query using get_rows from utils_database.py
+
         records = self.dblayer_db_obj.get_rows(sql_query)
-        
+    
         unique_materials = []
-        
+
         if records:
             for row in records:
                 unique_materials.append(str(row[0]))
@@ -372,8 +404,13 @@ class SectionsDbTool():
     def create_planta(self, where_query, layer_type):
         """ create planta with all points and x/y projection """
 
+        if layer_type == 'UA':
+            coords = f"{COORDX}, {COORDY}"
+        elif layer_type == 'FO':
+            coords = f"{COORDX}, {COORDY}, {COORDZ}"
+
         vlayer_query = f"""
-            SELECT *, make_point({COORDX}, {COORDY}) AS geometry 
+            SELECT *, make_point({coords}) AS geometry 
             FROM "{TABLE_NAME}_{layer_type}" 
             WHERE {where_query};
         """
