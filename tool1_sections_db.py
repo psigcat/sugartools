@@ -148,17 +148,44 @@ class SectionsDbTool():
         if not self.connect_db():
             return
 
-        self.get_limit_area()        
+        self.parent.dlg.delimitation_db.clear()
+        self.get_delimitation()
+        self.get_limit_area()
         self.get_cmateria_values()
 
 
-    def get_limit_area(self):
+    def get_delimitation(self):
+        """ get nom_acotacion from db connection """
+
+        sql_query = f"""
+            SELECT nom_acotacion
+            FROM acotacion_areas
+        """
+
+        records = self.dblayer_db_obj.get_rows(sql_query)
+        if records:
+            for row in records:
+                name = str(row[0])
+                self.parent.dlg.delimitation_db.addItem(name)
+
+            self.parent.dlg.delimitation_db.currentIndexChanged.connect(lambda:self.get_limit_area(self.parent.dlg.delimitation_db.currentText()))
+            return
+
+        self.parent.dlg.delimitation_db.setEnabled(False)
+
+
+    def get_limit_area(self, name=None):
         """ get acotacion_areas values from db connection """
 
         sql_query = f"""
             SELECT coord_x_min, coord_x_max, coord_y_min, coord_y_max
             FROM acotacion_areas
         """
+
+        if name is not None:
+            sql_query += f"""
+                WHERE nom_acotacion = "{name}"
+            """
 
         records = self.dblayer_db_obj.get_rows(sql_query)
         if records:

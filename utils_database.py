@@ -89,11 +89,23 @@ class utils_database:
 			self.last_error = query.lastError().text()
 			return None
 
+		# Get number of records
+		self.num_records = query.size()
+		if self.num_records == 0:
+			self.last_msg = "No register with selected query"
+			return None
+
+		# Get number of fields
 		record = query.record()
-		print(record.count())
-		print(record.value(1))
-		print(record.value(field))
-		return record.value(field)
+		self.num_fields = record.count()
+		if self.num_fields == 0:
+			self.last_msg = "No s'han especificat camps a retornar"
+			return None
+
+		if query.next():
+			return query.value(field)
+		
+		return None
 
 
 	def get_rows(self, sql):
