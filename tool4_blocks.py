@@ -601,11 +601,6 @@ class BlocksTool():
             self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
             return False
 
-        # Layer validation checks are the same
-        if threed_layer.wkbType() != QgsWkbTypes.Type.MultiPolygonZ:
-            self.parent.dlg.messageBar.pushMessage(f"The active layer is not a MultiPolygonZ layer.", level=Qgis.Critical, duration=3)
-            return False
-
         points = self.get_points_3d()
 
         if not points or len(points) < 4:
