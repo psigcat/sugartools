@@ -143,14 +143,13 @@ class SectionsDbTool():
     def sections_db_loaded(self):
         """ trigger events after db connection loaded """
 
-
-        # Ensure a valid DB is selected
         if not self.connect_db():
             return
 
         self.parent.dlg.delimitation_db.clear()
+        self.parent.dlg.delimitation_db.addItem("None")
         self.get_delimitation()
-        self.get_limit_area()
+        self.get_xy_minmax()
         self.get_cmateria_values()
 
 
@@ -168,14 +167,36 @@ class SectionsDbTool():
                 name = str(row[0])
                 self.parent.dlg.delimitation_db.addItem(name)
 
+            self.parent.dlg.delimitation_db.setEnabled(True)
             self.parent.dlg.delimitation_db.currentIndexChanged.connect(lambda:self.get_limit_area(self.parent.dlg.delimitation_db.currentText()))
             return
 
         self.parent.dlg.delimitation_db.setEnabled(False)
 
 
+    def get_xy_minmax(self):
+        """ get x and y minimum and maximums from db connection """
+
+        sql_query = f"""
+            SELECT MIN({COORDX}), MIN({COORDY}), MAX({COORDX}), MAX({COORDY})
+            FROM {TABLE_NAME}
+        """
+
+        records = self.dblayer_db_obj.get_rows(sql_query)
+        if records:
+            for row in records:
+                self.populate_projection_area(row)
+                return
+
+        self.populate_projection_area([0,0,0,0])
+
+
     def get_limit_area(self, name=None):
         """ get acotacion_areas values from db connection """
+
+        if name == "None":
+            self.get_xy_minmax()
+            return
 
         sql_query = f"""
             SELECT coord_x_min, coord_x_max, coord_y_min, coord_y_max
