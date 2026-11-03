@@ -75,6 +75,7 @@ class SectionsDbTool():
         self.parent.dlg.radioBlocks_db.setEnabled(isOrthogonal)
         self.parent.dlg.radioPointsBlocks_db.setEnabled(isOrthogonal)
         self.parent.dlg.groupAnchorpoints_db.setVisible(not isOrthogonal)
+        self.parent.dlg.sectionsBox_db.setEnabled(isOrthogonal)
 
 
     def points_or_blocks(self):
@@ -175,6 +176,8 @@ class SectionsDbTool():
         self.parent.dlg.limit_xmax_db.setValue(row[1])
         self.parent.dlg.limit_ymin_db.setValue(row[2])
         self.parent.dlg.limit_ymax_db.setValue(row[3])
+
+        self.parent.dlg.groupLimitProjection_db.setEnabled(True)
 
 
     def get_cmateria_values(self):
@@ -313,27 +316,33 @@ class SectionsDbTool():
         if not self.create_planta(where_query, layer_type):
             return False
 
+        if self.parent.dlg.radioDistOblique_db.isChecked():
+            angle = self.get_angle()
+            sec = "EW"
+            if angle > 45:
+                sec = "NS"
+            vlayer = self.create_dblayer(sec, where_query, layer_type)
+            if vlayer:
+                self.slice_layer_oblique(vlayer, layer_type)
+                return
+
         if self.parent.dlg.section_ew_db.isChecked():
             vlayer_ew = self.create_dblayer("EW", where_query, layer_type)
-
             if vlayer_ew:
                 self.slice_layer("EW", vlayer_ew, layer_type)
 
         if self.parent.dlg.section_ns_db.isChecked():
             vlayer_ns = self.create_dblayer("NS", where_query, layer_type)
-
             if vlayer_ns:
                 self.slice_layer("NS", vlayer_ns, layer_type)
 
         if self.parent.dlg.section_ew_inverted_db.isChecked():
             vlayer_ew_neg = self.create_dblayer("EW", where_query, layer_type)
-
             if vlayer_ew_neg:
                 self.slice_layer("EW_NEG", vlayer_ew_neg, layer_type)
 
         if self.parent.dlg.section_ns_inverted_db.isChecked():
             vlayer_ns_neg = self.create_dblayer("NS", where_query, layer_type)
-
             if vlayer_ns_neg:
                 self.slice_layer("NS_NEG", vlayer_ns_neg, layer_type)
 
@@ -745,3 +754,162 @@ class SectionsDbTool():
         self.utils.save_layer_gpkg(result['OUTPUT'], path)
 
         self.progress.setValue(self.progress.value() + 1)
+
+
+    def is_angle(self):
+        """ Is angle filled """
+
+        return self.parent.dlg.anchorpoint_angle_db.value() != 0
+
+
+    def is_anchor_points(self):
+        """ Is anchor_points filled? """
+
+        return self.parent.dlg.anchorpoint_x1_db.value() != 0 and self.parent.dlg.anchorpoint_x2_db.value() != 0 and self.parent.dlg.anchorpoint_y1_db.value() != 0 and self.parent.dlg.anchorpoint_y2_db.value() != 0
+
+
+    def get_angle(self):
+        """ Get angle from anchor points or angle field """
+        if self.is_anchor_points() and not self.is_angle():
+            pnts = [
+                [self.parent.dlg.anchorpoint_x1_db.value(), self.parent.dlg.anchorpoint_y1_db.value()],
+                [self.parent.dlg.anchorpoint_x2_db.value(), self.parent.dlg.anchorpoint_y2_db.value()]
+            ]
+            print("P1: " + str(pnts[0]))
+            print("P2: " + str(pnts[1]))
+            
+            angle = self.calc_angle(pnts[0], pnts[1])
+            if angle == 0 or angle == 180:
+                self.parent.dlg.messageBar.pushMessage("You are generating E-W cross-sections.", level=Qgis.Critical, duration=3)
+            if angle == 90:
+                self.parent.dlg.messageBar.pushMessage("You are generating N-S cross-sections.", level=Qgis.Critical, duration=3)
+
+        elif not self.is_anchor_points() and self.is_angle():
+            angle = self.parent.dlg.anchorpoint_angle_db.value()
+
+        else:
+            self.parent.dlg.messageBar.pushMessage("You must specify either angle or anchor points.", level=Qgis.Critical, duration=3)
+            return
+
+        str_angle = str(int(angle)) + "_" + str(int((angle - int(angle)) * 10))
+        print("Angle (respect horizontal, clockwise): " + str(angle))
+
+        return angle
+
+
+    def calc_angle(self, P1, P2): 
+        """ Given two points as lists, calculate the angle of vector P1-P2 repect horizontal clockwise. """
+
+        V = [P2[0]-P1[0], P2[1]-P1[1]]
+        if V[0] < 0 and V[1] < 0 or V[0] > 0 and V[1] < 0:
+            V = [V[0]*(-1), V[1]*(-1)]
+        print("Direction vector: " + str(V))
+        
+        return math.degrees(math.acos(V[0]/(math.sqrt(V[0]**2 + V[1]**2))))
+
+
+    def slice_layer_oblique(self, layer, layer_type):
+        """
+        Slices a QgsVectorLayer into multiple memory layers based on an oblique baseline.
+        Distributes points based on perpendicular distance intervals (thickness).
+        """
+        step = self.parent.dlg.sections_thickness_db.value()
+        
+        # 1. Retrieve angle and reference origin point (P1)
+        x1 = self.parent.dlg.anchorpoint_x1_db.value()
+        y1 = self.parent.dlg.anchorpoint_y1_db.value()
+        angle_deg = 0
+        
+        if self.is_anchor_points() and not self.is_angle():
+            x2 = self.parent.dlg.anchorpoint_x2_db.value()
+            y2 = self.parent.dlg.anchorpoint_y2_db.value()
+            angle_deg = self.calc_angle([x1, y1], [x2, y2])
+        elif not self.is_anchor_points() and self.is_angle():
+            angle_deg = self.parent.dlg.anchorpoint_angle_db.value()
+        else:
+            self.parent.dlg.messageBar.pushMessage("Specify angle or anchor points.", level=Qgis.Critical, duration=3)
+            return
+
+        # Precompute trigonometry for the normal vector projection
+        angle_rad = math.radians(angle_deg)
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+
+        # 2. Iterate once to determine bounding min and max perpendicular distances
+        min_val = float('inf')
+        max_val = float('-inf')
+        
+        for feat in layer.getFeatures():
+            px = feat[COORDX]
+            py = feat[COORDY]
+            # Calculate perpendicular distance from baseline P1
+            perp_dist = -(px - x1) * sin_a + (py - y1) * cos_a
+            
+            if perp_dist < min_val: min_val = perp_dist
+            if perp_dist > max_val: max_val = perp_dist
+            
+        if min_val == float('inf'):
+            return # Layer is empty
+
+        # 3. Setup grouping and output destinations 
+        if layer_type == 'UA':
+            layer_type_name = "Pnt"
+        elif layer_type == 'FO':
+            layer_type_name = "Bl"
+        else:
+            layer_type_name = ""
+
+        group_name = "OBLIQUE cross-sections"
+        group = self.get_or_make_group(group_name)
+        
+        # Note: Bypassing self.get_folder_name() as it hardcodes orthogonal fields
+        yacimento = "Ortho_RB" # Dynamic implementation pending
+        folder_name = f"{yacimento}_{int(step)}_OBL_{int(min_val)}_{int(max_val)}_{layer_type_name}"
+
+        wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
+        crs_authid = layer.crs().authid()
+
+        # 4. Slice the layer by defined thickness steps
+        current_val = math.floor(min_val / step) * step
+
+        while current_val <= max_val:
+            self.progress.setValue(self.progress.value() + 1)
+            next_val = current_val + step
+
+            # Dynamic string expression mathematically equivalent to our perp_dist calculation
+            expr = (f"(-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) >= {current_val} "
+                    f"AND (-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) < {next_val}")
+            
+            request = QgsFeatureRequest().setFilterExpression(expr)
+            features = list(layer.getFeatures(request))
+
+            if features:
+                sec_group_name = f"OBL_{int(current_val)}_{int(next_val)}_from_X{x1}_Y{y1}"
+                if self.is_anchor_points():
+                    sec_group_name += f"_to_X{x2}_Y{y2}"
+                sec_group = self.get_or_make_group(f"Sec_{sec_group_name}", group)
+
+                layer_name = f"{layer_type_name}_{sec_group_name}"
+                uri = f"{wkb_type}?crs={crs_authid}"
+                
+                mem_layer = QgsVectorLayer(uri, layer_name, "memory")
+                mem_layer_data = mem_layer.dataProvider()
+                mem_layer_data.addAttributes(layer.fields())
+                mem_layer.updateFields()
+                mem_layer_data.addFeatures(features)
+                mem_layer.updateExtents()
+
+                workspace_path = self.parent.dlg.workspace_db.filePath()
+                slice_save_path = os.path.join(workspace_path, folder_name)
+                self.utils.save_layer_gpkg(mem_layer, slice_save_path)
+
+                if layer_type == 'UA':
+                    QgsProject.instance().addMapLayer(mem_layer, False)
+                    sec_group.addLayer(mem_layer)
+                    self.apply_symbology(mem_layer, slice_save_path, sec_group)
+                elif layer_type == 'FO':
+                    self.create_blocks(mem_layer, slice_save_path, sec_group)
+
+            current_val = next_val
+
+        self.parent.dlg.messageBar.pushMessage(f"Successfully sliced OBLIQUE into slots of {step}.", level=Qgis.Success, duration=5)

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1111</width>
-    <height>1042</height>
+    <height>1056</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -84,7 +84,7 @@
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="sectionsBox">
          <property name="title">
           <string>Sections Filter</string>
          </property>
@@ -599,44 +599,84 @@
              <string>Anchor points (optional)</string>
             </property>
             <layout class="QGridLayout" name="gridLayout_19">
-             <item row="2" column="0">
-              <widget class="QLabel" name="anchorpoint_distance_db_label">
-               <property name="text">
-                <string>Distance</string>
+             <item row="0" column="3">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_x2_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>1000000.000000000000000</double>
                </property>
               </widget>
              </item>
-             <item row="2" column="3">
-              <widget class="QLineEdit" name="anchorpoint_angle_db">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QLineEdit" name="anchorpoint_x1_db"/>
-             </item>
-             <item row="2" column="2">
+             <item row="3" column="2">
               <widget class="QLabel" name="anchorpoint_angle_db_label">
                <property name="text">
                 <string>Angle</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="anchorpoint_y1_db">
-               <property name="text">
-                <string/>
+             <item row="3" column="3">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_angle_db">
+               <property name="decimals">
+                <number>2</number>
+               </property>
+               <property name="maximum">
+                <double>180.000000000000000</double>
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
+             <item row="2" column="2">
               <widget class="QLabel" name="label_43_db_10">
                <property name="text">
                 <string>Y2</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_y1_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>1000000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_43_db_13">
+               <property name="text">
+                <string>X1</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_x1_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>1000000.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>1000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_distance_db">
+               <property name="decimals">
+                <number>0</number>
+               </property>
+               <property name="maximum">
+                <double>10000.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="anchorpoint_distance_db_label">
+               <property name="text">
+                <string>Distance</string>
                </property>
               </widget>
              </item>
@@ -647,37 +687,20 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="2" column="0">
               <widget class="QLabel" name="label_43_db_12">
                <property name="text">
                 <string>Y1</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="3">
-              <widget class="QLineEdit" name="anchorpoint_x2_db"/>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_43_db_13">
-               <property name="text">
-                <string>X1</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QgsDoubleSpinBox" name="anchorpoint_distance_db">
+             <item row="2" column="3">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_y2_db">
                <property name="decimals">
                 <number>0</number>
                </property>
                <property name="maximum">
-                <double>10000.000000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="3">
-              <widget class="QLineEdit" name="anchorpoint_y2_db">
-               <property name="text">
-                <string/>
+                <double>1000000.000000000000000</double>
                </property>
               </widget>
              </item>
@@ -900,7 +923,7 @@
         </widget>
        </item>
        <item row="0" column="2" colspan="2">
-        <widget class="QGroupBox" name="groupBox_db">
+        <widget class="QGroupBox" name="sectionsBox_db">
          <property name="title">
           <string>Sections Filter</string>
          </property>
