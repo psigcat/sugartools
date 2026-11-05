@@ -461,10 +461,7 @@ class SectionsDbTool():
     def create_planta(self, where_query, layer_type):
         """ create planta with all points and x/y projection """
 
-        if layer_type == 'UA':
-            coords = f"{COORDX}, {COORDY}"
-        elif layer_type == 'FO':
-            coords = f"{COORDX}, {COORDY}, {COORDZ}"
+        coords = f"{COORDX}, {COORDY}, {COORDZ}"
 
         vlayer_query = f"""
             SELECT *, make_point({coords}) AS geometry 
