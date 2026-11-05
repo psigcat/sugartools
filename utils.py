@@ -951,7 +951,8 @@ class utils:
             'name': 'circle',
             'color': new_color,
             'outline_style': 'no',
-            'size': '3'
+            'size': '2',
+            'size_unit': 'Points'
         })
 
 
