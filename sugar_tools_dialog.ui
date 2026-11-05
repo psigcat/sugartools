@@ -606,7 +606,7 @@
           <item>
            <widget class="QGroupBox" name="groupAnchorpoints_db">
             <property name="title">
-             <string>Anchor points (optional)</string>
+             <string>Anchor points or angle</string>
             </property>
             <layout class="QGridLayout" name="gridLayout_19">
              <item row="4" column="2">
@@ -646,23 +646,6 @@
                </property>
               </widget>
              </item>
-             <item row="5" column="3">
-              <widget class="QgsDoubleSpinBox" name="anchorpoint_angle_db">
-               <property name="decimals">
-                <number>2</number>
-               </property>
-               <property name="maximum">
-                <double>180.000000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="2">
-              <widget class="QLabel" name="anchorpoint_angle_db_label">
-               <property name="text">
-                <string>Angle</string>
-               </property>
-              </widget>
-             </item>
              <item row="2" column="1">
               <widget class="QgsDoubleSpinBox" name="anchorpoint_x1_db">
                <property name="decimals">
@@ -690,13 +673,6 @@
                </property>
               </widget>
              </item>
-             <item row="5" column="0">
-              <widget class="QLabel" name="anchorpoint_distance_db_label">
-               <property name="text">
-                <string>Distance</string>
-               </property>
-              </widget>
-             </item>
              <item row="2" column="0">
               <widget class="QLabel" name="label_43_db_13">
                <property name="text">
@@ -704,13 +680,20 @@
                </property>
               </widget>
              </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="anchorpoint_angle_db_label">
+               <property name="text">
+                <string>Angle</string>
+               </property>
+              </widget>
+             </item>
              <item row="5" column="1">
-              <widget class="QgsDoubleSpinBox" name="anchorpoint_distance_db">
+              <widget class="QgsDoubleSpinBox" name="anchorpoint_angle_db">
                <property name="decimals">
-                <number>0</number>
+                <number>2</number>
                </property>
                <property name="maximum">
-                <double>10000.000000000000000</double>
+                <double>180.000000000000000</double>
                </property>
               </widget>
              </item>

@@ -66,6 +66,12 @@ class SectionsDbTool():
         self.parent.dlg.sections_db.currentIndexChanged.connect(self.sections_db_loaded)
         self.parent.dlg.filter_expr_btn_db.clicked.connect(self.open_expr_builder)
 
+        self.parent.dlg.anchorpoint_x1_db.valueChanged.connect(lambda:self.set_angle())
+        self.parent.dlg.anchorpoint_y1_db.valueChanged.connect(lambda:self.set_angle())
+        self.parent.dlg.anchorpoint_x2_db.valueChanged.connect(lambda:self.set_angle())
+        self.parent.dlg.anchorpoint_y2_db.valueChanged.connect(lambda:self.set_angle())
+        #self.parent.dlg.anchorpoint_angle_db.valueChanged.connect(lambda:self.reset_anchorpoint2())
+
 
     def ortho_or_oblique(self):
         """ select type of distribution """
@@ -816,18 +822,21 @@ class SectionsDbTool():
     def get_angle(self):
         """ Get angle from anchor points or angle field """
         if self.is_anchor_points() and not self.is_angle():
-            pnts = [
-                [self.parent.dlg.anchorpoint_x1_db.value(), self.parent.dlg.anchorpoint_y1_db.value()],
-                [self.parent.dlg.anchorpoint_x2_db.value(), self.parent.dlg.anchorpoint_y2_db.value()]
-            ]
-            print("P1: " + str(pnts[0]))
-            print("P2: " + str(pnts[1]))
+            # pnts = [
+            #     [self.parent.dlg.anchorpoint_x1_db.value(), self.parent.dlg.anchorpoint_y1_db.value()],
+            #     [self.parent.dlg.anchorpoint_x2_db.value(), self.parent.dlg.anchorpoint_y2_db.value()]
+            # ]
+            # print("P1: " + str(pnts[0]))
+            # print("P2: " + str(pnts[1]))
             
-            angle = self.calc_angle(pnts[0], pnts[1])
-            if angle == 0 or angle == 180:
-                self.parent.dlg.messageBar.pushMessage("You are generating E-W cross-sections.", level=Qgis.Critical, duration=3)
-            if angle == 90:
-                self.parent.dlg.messageBar.pushMessage("You are generating N-S cross-sections.", level=Qgis.Critical, duration=3)
+            # angle = self.calc_angle(pnts[0], pnts[1])
+
+            # if angle == 0 or angle == 180:
+            #     self.parent.dlg.messageBar.pushMessage("You are generating E-W cross-sections.", level=Qgis.Critical, duration=3)
+            # if angle == 90:
+            #     self.parent.dlg.messageBar.pushMessage("You are generating N-S cross-sections.", level=Qgis.Critical, duration=3)
+
+            angle = self.parent.dlg.anchorpoint_angle_db.value()
 
         elif not self.is_anchor_points() and self.is_angle():
             angle = self.parent.dlg.anchorpoint_angle_db.value()
@@ -851,6 +860,26 @@ class SectionsDbTool():
         print("Direction vector: " + str(V))
         
         return math.degrees(math.acos(V[0]/(math.sqrt(V[0]**2 + V[1]**2))))
+
+
+    def set_angle(self):
+        """Set field angle with value calculated from points."""
+        x1 = self.parent.dlg.anchorpoint_x1_db.value()
+        y1 = self.parent.dlg.anchorpoint_y1_db.value()
+        x2 = self.parent.dlg.anchorpoint_x2_db.value()
+        y2 = self.parent.dlg.anchorpoint_y2_db.value()
+
+        if x1 == x2 and y2 == y2:
+            return
+
+        self.parent.dlg.anchorpoint_angle_db.setValue(self.calc_angle([x1, y1], [x2, y2]))
+
+
+    def reset_anchorpoint2(self):
+        """Reset point fields after angel changed manually."""
+        self.parent.dlg.anchorpoint_x2_db.clear()
+        self.parent.dlg.anchorpoint_y2_db.clear()
+
 
 
     def slice_layer_oblique(self, layer, layer_type):
