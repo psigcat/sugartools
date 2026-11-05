@@ -875,6 +875,10 @@ class utils:
         qml_path = os.path.join(self.get_path_qml(), file_name)
         existing_levels = self.get_categories(qml_path)
 
+        if existing_levels is None:
+            self.parent.dlg.messageBar.pushMessage(f"Given QML style path doesn't exist: '{qml_path}'. Check Default folder for Layer Stylings (QML) in tab General.", level=Qgis.Warning, duration=3)
+            return
+
         if level:
             existing_levels_str = ', '.join(existing_levels)
             self.parent.dlg.utils_sections_existing.setPlainText(existing_levels_str)
@@ -886,6 +890,9 @@ class utils:
         """ get list of categories from given QML file """
 
         layer = self.get_qml_layer(path)
+        if layer is None:
+            self.parent.dlg.messageBar.pushMessage(f"Given QML style path doesn't exist for '{path}'. Check Default folder for Layer Stylings (QML) in tab General.", level=Qgis.Warning, duration=3)
+            return
         renderer = layer.renderer()
         if not isinstance(renderer, QgsCategorizedSymbolRenderer):
             self.parent.dlg.messageBar.pushMessage(f"Style loaded, but it is not a Categorized Renderer, check file {path}", level=Qgis.Warning, duration=3)
@@ -901,7 +908,7 @@ class utils:
 
         if not os.path.exists(path):
             self.parent.dlg.messageBar.pushMessage(f"File {path} does not exist", level=Qgis.Warning, duration=3)
-            return
+            return None
 
         layer = QgsVectorLayer("Point?field=nom_nivel:string", "temp_layer", "memory")
         message, success = layer.loadNamedStyle(path)
