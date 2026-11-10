@@ -489,6 +489,7 @@ class SectionsDbTool():
         self.utils.save_layer_gpkg(vlayer, path)
 
         if layer_type == 'UA':
+            self.apply_symbology(vlayer, path)
             QgsProject.instance().addMapLayer(vlayer, True)
         elif layer_type == 'FO':
             self.create_blocks(vlayer, path)
@@ -676,7 +677,7 @@ class SectionsDbTool():
         return group
 
 
-    def apply_symbology(self, layer, path, group):
+    def apply_symbology(self, layer, path, group=False):
         """ filter active layer by query """
 
         self.set_symbology(layer)
@@ -686,7 +687,7 @@ class SectionsDbTool():
         symbology_name = symbology.split(".qml")[0]
         layer.saveStyleToDatabase(symbology_name, "", True, "")
 
-        if self.parent.dlg.filter_expr_db.text() != "" and self.parent.dlg.symbology_overlay_db.currentText() != COMBO_SELECT:
+        if group and self.parent.dlg.filter_expr_db.text() != "" and self.parent.dlg.symbology_overlay_db.currentText() != COMBO_SELECT:
             self.make_overlay(layer, path, group)
 
 
