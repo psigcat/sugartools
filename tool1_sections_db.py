@@ -492,12 +492,16 @@ class SectionsDbTool():
         if layer_type == 'UA':
             self.apply_symbology(points_layer, path)
             QgsProject.instance().addMapLayer(points_layer, True)
+            self.parent.iface.setActiveLayer(point_layer)
         elif layer_type == 'FO':
             blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Planta {layer_type}", "virtual")
             blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
             blocks_layer = self.get_blocks(points_layer, path)
             if blocks_layer:
                 self.utils_3d.create_polygon_3d(blocks_layer, points_layer, path)
+                self.parent.iface.setActiveLayer(blocks_layer)
+
+        self.parent.iface.zoomToActiveLayer()
 
         self.progress.setValue(self.progress.value() + 1)
 

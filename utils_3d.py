@@ -4,6 +4,7 @@ from qgis.PyQt.QtCore import QVariant
 import numpy as np
 from scipy.spatial import ConvexHull
 import trimesh
+import os
 
 
 class utils_3d:
@@ -40,6 +41,7 @@ class utils_3d:
 			#i += 1
 
 		if polygon_layer.featureCount() > 0:
+			self.apply_blocks_style(polygon_layer)
 			self.parent.utils.save_layer_gpkg(polygon_layer, path)
 
 
@@ -139,10 +141,17 @@ class utils_3d:
 
 		if success:
 			threed_layer.commitChanges()
-			self.parent.dlg.messageBar.pushMessage(f"SUCCESS: Feature successfully appended to GeoPackage layer '{threed_layer.name()}' via data provider.", level=Qgis.Success, duration=3)
+			# self.parent.dlg.messageBar.pushMessage(f"SUCCESS: Feature successfully appended to GeoPackage layer '{threed_layer.name()}' via data provider.", level=Qgis.Success, duration=3)
 			threed_layer.triggerRepaint()
 			return True
 		else:
 			threed_layer.rollBack()
 			self.parent.dlg.messageBar.pushMessage(f"FAILURE: Provider failed to add feature. The GeoPackage rejected the geometry during the edit commit.", level=Qgis.Critical, duration=3)
 			return False
+
+
+	def apply_blocks_style(self, layer):
+		"""Apply style to blocks layer."""
+		symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
+		layer.loadNamedStyle(symbology_path)
+		layer.triggerRepaint()
