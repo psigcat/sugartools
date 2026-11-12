@@ -496,7 +496,7 @@ class SectionsDbTool():
         if layer_type == 'UA':
             self.apply_symbology(points_layer, self.workspace_path)
             QgsProject.instance().addMapLayer(points_layer, True)
-            self.parent.iface.setActiveLayer(point_layer)
+            self.parent.iface.setActiveLayer(points_layer)
         elif layer_type == 'FO':
             blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Planta {layer_type}", "virtual")
             blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
@@ -555,29 +555,28 @@ class SectionsDbTool():
     def create_dblayer(self, section_type, where_query, layer_type):
         """ create virtual layer using the hidden base layer and add to project """
 
-        # if section_type == 'EW':
-        #     coord1 = COORDX
-        # elif section_type == 'NS':
-        #     coord1 = COORDY
-        # elif section_type == 'EW_NEG':
-        #     coord1 = COORDX_NEG
-        # elif section_type == 'NS_NEG':
-        #     coord1 = COORDY_NEG
+        if layer_type == 'UA':
+            if section_type == 'EW':
+                coord1 = COORDX
+            elif section_type == 'NS':
+                coord1 = COORDY
+            elif section_type == 'EW_NEG':
+                coord1 = COORDX_NEG
+            elif section_type == 'NS_NEG':
+                coord1 = COORDY_NEG
 
-        coords = f"{COORDX}, {COORDY}, {COORDZ}"
+            coords = f"{coord1}, {COORDZ}"
+            layer_type_name = "Pnt"
+
+        elif layer_type == 'FO':
+            coords = f"{COORDX}, {COORDY}, {COORDZ}"
+            layer_type_name = "Bl"
 
         vlayer_query = f"""
             SELECT *, make_point({coords}) AS geometry 
             FROM "{TABLE_NAME}_{layer_type}" 
             WHERE {where_query};
         """
-
-        if layer_type == 'UA':
-            layer_type_name = "Pnt"
-        elif layer_type == 'FO':
-            layer_type_name = "Bl"
-        else:
-            layer_type_name = ""
 
         # Create Virtual Layer
         query_encoded = urllib.parse.quote(vlayer_query)
