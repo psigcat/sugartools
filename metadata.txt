@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.41
+version=0.2.42
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.42 - folder structure, blocks symbology, fix ew and ns points (#66)
 	0.2.41 - convert 2d blocks geometries to 3d, apply symbology to plant (#66)
 	0.2.40 - recalculate angle (#69), new structure size (#70), PointZ for plant (#66)
 	0.2.39 - loading of delimitations and cave configurations (#66). initial commit for oblique sections (#69)
