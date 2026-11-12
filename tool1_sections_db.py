@@ -7,6 +7,7 @@ import math
 import os
 import processing
 import urllib.parse
+from datetime import datetime
 
 from .utils import utils
 from .utils_3d import utils_3d
@@ -25,23 +26,6 @@ TABLE_NAME = 'view_secciones'
 ORTO = "sec_orthogonal"
 OBLI = "sec_oblique"
 
-# copia de site_params.py
-SITES = {
-    "":["", 0, 0, 0, 0, "", ""],
-    "CG":["Cova Gran", 170000, 270000, 480000, 540000, "files\\simb_levels\\LYR_NOCREAT.lyr", "files\\simb_levels\\OVRLYR_NOCREAT.lyr"],
-    "CG_S1":["Cova Gran, S1", 180000, 205000, 490000, 505000, "files\\simb_levels\\levels_CG_S1.lyr", "files\\simb_levels\\overlay_levels_CG_S1.lyr"],
-    "CG_SV":["Cova Gran, SV", 202000, 205000, 494000, 500000, "files\\simb_levels\\levels_CG_S1.lyr", "files\\simb_levels\\overlay_levels_CG_S1.lyr"],
-    "CG_S2S8":["Cova Gran, S2-S8", 205750, 210250, 500750, 504250, "files\\simb_levels\\levels_CG_S2S8.lyr", "files\\simb_levels\\overlay_levels_CG_S2S8.lyr"],
-    "CG_SEA":["Cova Gran, SEA", 232500, 240700, 524600, 533000, "files\\simb_levels\\levels_CG_SEA.lyr", "files\\simb_levels\\overlay_levels_CG_SEA.lyr"],
-    "RB":["Roca dels Bous", 17000, 40800, 74900, 88600, "files\\simb_levels\\levels_RB.lyr", "files\\simb_levels\\overlay_levels_RB.lyr"],
-    "BG":["Balma Guilanyà", 98900, 110000, 505700, 512500, "files\\simb_levels\\levels_BG.lyr", "files\\simb_levels\\overlay_levels_BG.lyr"],
-    "FR":["Font del Ros", 1000, 83000, 1000, 54000, "files\\simb_levels\\levels_FR.lyr", "files\\simb_levels\\overlay_levels_FR.lyr"],
-    "PZ":["Abric Pizarro", 78000, 105000, 489000, 502000, "files\\simb_levels\\levels_PZ.lyr", "files\\simb_levels\\overlay_levels_PZ.lyr"],
-    "CT":["Cova del Tabac", 295000, 320000, 499900, 510000, "files\\simb_levels\\levels_CT.lyr", "files\\simb_levels\\overlay_levels_CT.lyr"],
-    "empty":["site_empty", 0, 1, 0, 1, "url_lyr", "url_overlyr"],
-    "empty":["site_empty", 0, 1, 0, 1, "url_lyr", "url_overlyr"]
-}
-
 
 class SectionsDbTool():
     def __init__(self, parent):
@@ -49,6 +33,7 @@ class SectionsDbTool():
 
         self.parent = parent
         self.databases = {}
+        self.workspace_path = None
 
         self.utils = utils(self.parent)
         self.utils_3d = utils_3d(self.parent)
@@ -96,6 +81,25 @@ class SectionsDbTool():
 
         self.parent.dlg.labelSymbology_db.setVisible(paint_points)
         self.parent.dlg.symbology_db.setVisible(paint_points)
+
+
+    def get_workspace(self, folder=False):
+        """Update the absolute workspace path."""
+        path = self.parent.dlg.workspace_db.filePath()
+        cave = self.parent.dlg.sections_db.currentData()["value"]
+        xmin = int(self.parent.dlg.limit_xmin_db.value())
+        xmax = int(self.parent.dlg.limit_xmax_db.value())
+        ymin = int(self.parent.dlg.limit_ymin_db.value())
+        ymax = int(self.parent.dlg.limit_ymax_db.value())
+        limit = f"{xmin}_{xmax}_{ymin}_{ymax}"
+        date = datetime.now().replace(microsecond=0)
+        sec_folder = f"Sec_{cave}_{limit}_{date}"
+        
+        path = path
+        if folder:
+            path = os.path.join(path, folder)
+
+        return os.path.join(path, sec_folder)
 
 
     def fill_symbology(self):
@@ -486,19 +490,19 @@ class SectionsDbTool():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for Planta.", level=Qgis.Critical, duration=5)
             return False
 
-        path = self.parent.dlg.workspace_db.filePath()
-        self.utils.save_layer_gpkg(points_layer, path)
+        self.workspace_path = self.get_workspace()
+        self.utils.save_layer_gpkg(points_layer, self.workspace_path)
 
         if layer_type == 'UA':
-            self.apply_symbology(points_layer, path)
+            self.apply_symbology(points_layer, self.workspace_path)
             QgsProject.instance().addMapLayer(points_layer, True)
             self.parent.iface.setActiveLayer(point_layer)
         elif layer_type == 'FO':
             blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Planta {layer_type}", "virtual")
             blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
-            blocks_layer = self.get_blocks(points_layer, path)
+            blocks_layer = self.get_blocks(points_layer, self.workspace_path)
             if blocks_layer:
-                self.utils_3d.create_polygon_3d(blocks_layer, points_layer, path)
+                self.utils_3d.create_polygon_3d(blocks_layer, points_layer, self.workspace_path)
                 self.parent.iface.setActiveLayer(blocks_layer)
 
         self.parent.iface.zoomToActiveLayer()
@@ -590,8 +594,8 @@ class SectionsDbTool():
         # TESTING: add and show view_secciones
         # QgsProject.instance().addMapLayer(vlayer, True)
         # folder_name = self.get_folder_name(vlayer, section_type, layer_type_name)
-        # path = os.path.join(self.parent.dlg.workspace_db.filePath(), folder_name)
-        # self.utils.save_layer_gpkg(vlayer, path)
+        # workspace_path = os.path.join(self.workspace_path, folder_name)
+        # self.utils.save_layer_gpkg(vlayer, workspace_path)
         # self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
 
         self.progress.setValue(self.progress.value() + 1)
@@ -658,8 +662,7 @@ class SectionsDbTool():
                 points_layer_data.addFeatures(features)
                 points_layer.updateExtents()
 
-                workspace_path = self.parent.dlg.workspace_db.filePath()
-                slice_save_path = os.path.join(workspace_path, folder_name)
+                slice_save_path = os.path.join(self.workspace_path, folder_name)
                 self.utils.save_layer_gpkg(points_layer, slice_save_path)
 
                 # 3. Save points and/or blocks layers to file
@@ -1020,8 +1023,7 @@ class SectionsDbTool():
                 mem_layer_data.addFeatures(features)
                 mem_layer.updateExtents()
 
-                workspace_path = self.parent.dlg.workspace_db.filePath()
-                slice_save_path = os.path.join(workspace_path, folder_name)
+                slice_save_path = os.path.join(self.workspace_path, folder_name)
                 self.utils.save_layer_gpkg(mem_layer, slice_save_path)
 
                 if layer_type == 'UA':
