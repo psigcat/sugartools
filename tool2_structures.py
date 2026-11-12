@@ -546,43 +546,42 @@ class StructuresTool():
     def create_3d_from_points(self, points):
         """ create 3d polygon from points """
 
-        for point in points:
-            if not points or len(points) < 4:
-                self.parent.dlg.messageBar.pushMessage(f"A 3D convex hull requires at least 4 unique points.", level=Qgis.Critical, duration=3)
-                return False
+        if not points or len(points) < 4:
+            self.parent.dlg.messageBar.pushMessage(f"A 3D convex hull requires at least 4 unique points.", level=Qgis.Critical, duration=3)
+            return False
 
-            points_array = np.array(points)
-            hull = ConvexHull(points_array)
+        points_array = np.array(points)
+        hull = ConvexHull(points_array)
 
-            # GeometryCollection Z WKT construction
-            polygon_components = [] # List to hold the WKT for each component: '((ring))'
+        # GeometryCollection Z WKT construction
+        polygon_components = [] # List to hold the WKT for each component: '((ring))'
 
-            # Iterate through hull simplices (triangular faces)
-            for simplex in hull.simplices:
-                ring_points_wkt = []
-                for i in simplex:
-                    x, y, z = points_array[i]
-                    ring_points_wkt.append(f"{x} {y} {z}") 
+        # Iterate through hull simplices (triangular faces)
+        for simplex in hull.simplices:
+            ring_points_wkt = []
+            for i in simplex:
+                x, y, z = points_array[i]
+                ring_points_wkt.append(f"{x} {y} {z}") 
 
-                # Close the ring
-                ring_points_wkt.append(ring_points_wkt[0])
+            # Close the ring
+            ring_points_wkt.append(ring_points_wkt[0])
 
-                # Component format for MultiPolygon Z is ((ring))
-                component_wkt = f"(({', '.join(ring_points_wkt)}))"
-                polygon_components.append(component_wkt)
+            # Component format for MultiPolygon Z is ((ring))
+            component_wkt = f"(({', '.join(ring_points_wkt)}))"
+            polygon_components.append(component_wkt)
 
-            # 3. Combine components into the final WKT
-            # WKT format: MULTIPOLYGON Z (((r1)), ((r2)), ...)
-            merged_wkt = f"MULTIPOLYGON Z ({', '.join(polygon_components)})"
+        # 3. Combine components into the final WKT
+        # WKT format: MULTIPOLYGON Z (((r1)), ((r2)), ...)
+        merged_wkt = f"MULTIPOLYGON Z ({', '.join(polygon_components)})"
 
-            # Parse the final WKT string
-            merged_geom = QgsGeometry.fromWkt(merged_wkt)
+        # Parse the final WKT string
+        merged_geom = QgsGeometry.fromWkt(merged_wkt)
 
-            if not merged_geom or merged_geom.isEmpty():
-                self.parent.dlg.messageBar.pushMessage(f"CRITICAL ERROR: Failed to parse GEOMETRYCOLLECTION Z WKT.", level=Qgis.Critical, duration=3)
-                return False
+        if not merged_geom or merged_geom.isEmpty():
+            self.parent.dlg.messageBar.pushMessage(f"CRITICAL ERROR: Failed to parse GEOMETRYCOLLECTION Z WKT.", level=Qgis.Critical, duration=3)
+            return False
 
-            return merged_geom
+        return merged_geom
 
 
     def append_polygons_to_layer(self, threed_layer, polygons_geom, nom_est, nom_nivel, label):

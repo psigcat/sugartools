@@ -9,6 +9,7 @@ import processing
 import urllib.parse
 
 from .utils import utils
+from .utils_3d import utils_3d
 from .utils_database import utils_database
 
 
@@ -50,6 +51,7 @@ class SectionsDbTool():
         self.databases = {}
 
         self.utils = utils(self.parent)
+        self.utils_3d = utils_3d(self.parent)
 
 
     def setup(self):
@@ -132,7 +134,7 @@ class SectionsDbTool():
 
 
     def connect_db(self):
-        """ get blocks from database """
+        """ make db connection """
 
         if not self.parent.dlg.sections_db.currentData()["value"]:
             self.parent.dlg.messageBar.pushMessage("Please select a database connection", level=Qgis.Warning, duration=3)
@@ -469,30 +471,33 @@ class SectionsDbTool():
 
         coords = f"{COORDX}, {COORDY}, {COORDZ}"
 
-        vlayer_query = f"""
+        points_layer_query = f"""
             SELECT *, make_point({coords}) AS geometry 
             FROM "{TABLE_NAME}_{layer_type}" 
             WHERE {where_query};
         """
 
-        query_encoded = urllib.parse.quote(vlayer_query)
-        vlayer_uri = f"?crs=epsg:25831&query={query_encoded}"
+        query_encoded = urllib.parse.quote(points_layer_query)
+        points_layer_uri = f"?crs=epsg:25831&query={query_encoded}"
+        points_layer = QgsVectorLayer(points_layer_uri, f"Planta {layer_type}", "virtual")
+        points_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
 
-        vlayer = QgsVectorLayer(vlayer_uri, f"Planta {layer_type}", "virtual")
-        vlayer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
-
-        if not vlayer.isValid():
+        if not points_layer.isValid():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for Planta.", level=Qgis.Critical, duration=5)
             return False
 
         path = self.parent.dlg.workspace_db.filePath()
-        self.utils.save_layer_gpkg(vlayer, path)
+        self.utils.save_layer_gpkg(points_layer, path)
 
         if layer_type == 'UA':
-            self.apply_symbology(vlayer, path)
-            QgsProject.instance().addMapLayer(vlayer, True)
+            self.apply_symbology(points_layer, path)
+            QgsProject.instance().addMapLayer(points_layer, True)
         elif layer_type == 'FO':
-            self.create_blocks(vlayer, path)
+            blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Planta {layer_type}", "virtual")
+            blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+            blocks_layer = self.get_blocks(points_layer, path)
+            if blocks_layer:
+                self.utils_3d.create_polygon_3d(blocks_layer, points_layer, path)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -542,17 +547,19 @@ class SectionsDbTool():
     def create_dblayer(self, section_type, where_query, layer_type):
         """ create virtual layer using the hidden base layer and add to project """
 
-        if section_type == 'EW':
-            coord1 = COORDX
-        elif section_type == 'NS':
-            coord1 = COORDY
-        elif section_type == 'EW_NEG':
-            coord1 = COORDX_NEG
-        elif section_type == 'NS_NEG':
-            coord1 = COORDY_NEG
+        # if section_type == 'EW':
+        #     coord1 = COORDX
+        # elif section_type == 'NS':
+        #     coord1 = COORDY
+        # elif section_type == 'EW_NEG':
+        #     coord1 = COORDX_NEG
+        # elif section_type == 'NS_NEG':
+        #     coord1 = COORDY_NEG
+
+        coords = f"{COORDX}, {COORDY}, {COORDZ}"
 
         vlayer_query = f"""
-            SELECT *, make_point({coord1}, {COORDZ}) AS geometry 
+            SELECT *, make_point({coords}) AS geometry 
             FROM "{TABLE_NAME}_{layer_type}" 
             WHERE {where_query};
         """
@@ -636,30 +643,34 @@ class SectionsDbTool():
                 sec_group = self.get_or_make_group(f"Sec_{sec_group_name}", group)
 
                 layer_name = f"{layer_type_name}_{sec_group_name}"
-                uri = f"{wkb_type}?crs={crs_authid}"
+                points_layer_uri = f"{wkb_type}?crs={crs_authid}"
                 
-                mem_layer = QgsVectorLayer(uri, layer_name, "memory")
-                mem_layer_data = mem_layer.dataProvider()
+                points_layer = QgsVectorLayer(points_layer_uri, layer_name, "memory")
+                points_layer_data = points_layer.dataProvider()
 
-                mem_layer_data.addAttributes(layer.fields())
-                mem_layer.updateFields()
+                points_layer_data.addAttributes(layer.fields())
+                points_layer.updateFields()
 
-                mem_layer_data.addFeatures(features)
-                mem_layer.updateExtents()
+                points_layer_data.addFeatures(features)
+                points_layer.updateExtents()
 
                 workspace_path = self.parent.dlg.workspace_db.filePath()
                 slice_save_path = os.path.join(workspace_path, folder_name)
-                self.utils.save_layer_gpkg(mem_layer, slice_save_path)
+                self.utils.save_layer_gpkg(points_layer, slice_save_path)
 
                 # 3. Save points and/or blocks layers to file
                 if layer_type == 'UA':
-                    print("create points", mem_layer.name())
-                    QgsProject.instance().addMapLayer(mem_layer, False)
-                    sec_group.addLayer(mem_layer)
-                    self.apply_symbology(mem_layer, slice_save_path, sec_group)
+                    print("create points", points_layer.name())
+                    QgsProject.instance().addMapLayer(points_layer, False)
+                    sec_group.addLayer(points_layer)
+                    self.apply_symbology(points_layer, slice_save_path, sec_group)
 
                 elif layer_type == 'FO':
-                    self.create_blocks(mem_layer, slice_save_path, sec_group)
+                    blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Sec {layer_type}", "virtual")
+                    blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+                    blocks_layer = self.get_blocks(points_layer, slice_save_path)
+                    if blocks_layer:
+                        self.utils_3d.create_polygon_3d(blocks_layer, points_layer, slice_save_path, sec_group)
 
             current_val = next_val
             
@@ -768,6 +779,35 @@ class SectionsDbTool():
         layer.triggerRepaint()
 
 
+    def get_blocks(self, layer, path, group=QgsProject.instance().layerTreeRoot()):
+        """ get blocks from point layer """
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        # apply geoprocess convex hull
+        params = {
+            'INPUT': layer.source(),
+            'FIELD': 'dib_pieza',
+            'TYPE': 3,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+
+        result = processing.run("qgis:minimumboundinggeometry", params)
+
+        if len(list(result['OUTPUT'].getFeatures())) == 0:
+            return
+
+        # QgsProject.instance().addMapLayer(result['OUTPUT'], False)
+        # group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
+        result['OUTPUT'].setName(f"{layer.name()}_bl")
+
+        # self.utils.save_layer_gpkg(result['OUTPUT'], path)
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        return result['OUTPUT']
+
+
     def create_blocks(self, layer, path, group=QgsProject.instance().layerTreeRoot()):
         """ create blocks from point layer """
 
@@ -806,6 +846,8 @@ class SectionsDbTool():
         self.utils.save_layer_gpkg(result['OUTPUT'], path)
 
         self.progress.setValue(self.progress.value() + 1)
+
+        return result['OUTPUT']
 
 
     def is_angle(self):
