@@ -367,6 +367,9 @@ class SectionsDbTool():
     def import_dblayer(self, layer_type, where_query):
         """ import layers from database """
 
+        if self.parent.dlg.radioDistOblique_db.isChecked() and self.get_angle() == False:
+            return
+
         where_query = self.limit_projection(where_query)
 
         # Make base layer and section layers
@@ -377,6 +380,7 @@ class SectionsDbTool():
             return False
 
         if self.parent.dlg.radioDistOblique_db.isChecked():
+            # oblique
             angle = self.get_angle()
             sec = "EW"
             if angle > 45:
@@ -814,48 +818,6 @@ class SectionsDbTool():
         return result['OUTPUT']
 
 
-    def create_blocks(self, layer, path, group=QgsProject.instance().layerTreeRoot()):
-        """ create blocks from point layer """
-
-        self.progress.setValue(self.progress.value() + 1)
-
-        print("create blocks", layer.name())
-
-        # paint polygons as points
-        if self.parent.dlg.option_points_db.isChecked():
-            QgsProject.instance().addMapLayer(layer, False)
-            group.addLayer(layer)
-            return
-
-        # apply geoprocess convex hull
-        params = {
-            'INPUT': layer.source(),
-            'FIELD': 'dib_pieza',
-            'TYPE': 3,
-            'OUTPUT': 'TEMPORARY_OUTPUT'
-        }
-
-        result = processing.run("qgis:minimumboundinggeometry", params)
-
-        if len(list(result['OUTPUT'].getFeatures())) == 0:
-            return
-
-        QgsProject.instance().addMapLayer(result['OUTPUT'], False)
-        group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
-        result['OUTPUT'].setName(f"{layer.name()}_bl")
-
-        # apply style
-        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
-        result['OUTPUT'].loadNamedStyle(symbology_path)
-        result['OUTPUT'].triggerRepaint()
-
-        self.utils.save_layer_gpkg(result['OUTPUT'], path)
-
-        self.progress.setValue(self.progress.value() + 1)
-
-        return result['OUTPUT']
-
-
     def is_angle(self):
         """ Is angle filled """
 
@@ -892,7 +854,7 @@ class SectionsDbTool():
 
         else:
             self.parent.dlg.messageBar.pushMessage("You must specify either angle or anchor points.", level=Qgis.Critical, duration=3)
-            return
+            return False
 
         str_angle = str(int(angle)) + "_" + str(int((angle - int(angle)) * 10))
         print("Angle (respect horizontal, clockwise): " + str(angle))
@@ -1029,8 +991,8 @@ class SectionsDbTool():
                     QgsProject.instance().addMapLayer(mem_layer, False)
                     sec_group.addLayer(mem_layer)
                     self.apply_symbology(mem_layer, slice_save_path, sec_group)
-                elif layer_type == 'FO':
-                    self.create_blocks(mem_layer, slice_save_path, sec_group)
+                # elif layer_type == 'FO':
+                #     self.utils_3d.create_polygon_3d(blocks_layer, mem_layer, slice_save_path, sec_group)
 
             current_val = next_val
 
