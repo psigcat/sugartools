@@ -386,8 +386,10 @@ class SectionsDbTool():
             if angle > 45:
                 sec = "NS"
             vlayer = self.create_dblayer(sec, where_query, layer_type)
-            if vlayer:
-                self.slice_layer_oblique(vlayer, layer_type)
+            vlayer2 = self.create_dblayer(sec, where_query, "3dpoints")
+            if vlayer and vlayer2:
+                self.slice_layer_oblique(sec, vlayer, layer_type, "2d")
+                self.slice_layer_oblique(sec, vlayer2, layer_type, "3d")
                 return
 
         if self.parent.dlg.section_ew_db.isChecked():
@@ -487,7 +489,16 @@ class SectionsDbTool():
 
         query_encoded = urllib.parse.quote(points_layer_query)
         points_layer_uri = f"?crs=epsg:25831&query={query_encoded}"
-        points_layer = QgsVectorLayer(points_layer_uri, f"Planta {layer_type}", "virtual")
+
+        section_type = "ortho"
+        if self.parent.dlg.radioDistOblique_db.isChecked():
+            section_type = "oblique"
+        xmin = int(self.parent.dlg.limit_xmin_db.value())
+        xmax = int(self.parent.dlg.limit_xmax_db.value())
+        ymin = int(self.parent.dlg.limit_ymin_db.value())
+        ymax = int(self.parent.dlg.limit_ymax_db.value())
+        points_layer_name = f"Azdo_{section_type}_{layer_type}_{xmin}_{xmax}_{ymin}_{ymax}"
+        points_layer = QgsVectorLayer(points_layer_uri, points_layer_name, "virtual")
         points_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
 
         if not points_layer.isValid():
@@ -518,15 +529,15 @@ class SectionsDbTool():
         return True
 
 
-    def get_folder_name(self, layer, section_type, layer_type):
+    def get_folder_name(self, layer, section_type, layer_type, name):
         """ build folder name """
 
-        yacimento = "Ortho_RB" # TODO dynamic yacimiento name
+        cave = self.parent.dlg.sections_db.currentData()["value"]
         thickness = int(self.parent.dlg.sections_thickness_db.value())
-        folder_name = f"{yacimento}_{thickness}_{section_type}"
+        folder_name = f"{name}_{cave}_{thickness}_{section_type}"
 
         min_val, max_val, field_name = self.get_min_max_val(layer, section_type)
-        folder_name += f"_{min_val}_{max_val}_{layer_type}"
+        folder_name += f"_{int(min_val)}_{int(max_val)}_{layer_type}"
 
         return folder_name
 
@@ -576,6 +587,11 @@ class SectionsDbTool():
             coords = f"{COORDX}, {COORDY}, {COORDZ}"
             layer_type_name = "Bl"
 
+        elif layer_type == '3dpoints':
+            coords = f"{COORDX}, {COORDY}, {COORDZ}"
+            layer_type_name = "Pnt"
+            layer_type = 'UA'
+
         vlayer_query = f"""
             SELECT *, make_point({coords}) AS geometry 
             FROM "{TABLE_NAME}_{layer_type}" 
@@ -596,7 +612,7 @@ class SectionsDbTool():
 
         # TESTING: add and show view_secciones
         # QgsProject.instance().addMapLayer(vlayer, True)
-        # folder_name = self.get_folder_name(vlayer, section_type, layer_type_name)
+        # folder_name = self.get_folder_name(vlayer, section_type, layer_type_name, "Ortho")
         # workspace_path = os.path.join(self.workspace_path, folder_name)
         # self.utils.save_layer_gpkg(vlayer, workspace_path)
         # self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
@@ -624,7 +640,7 @@ class SectionsDbTool():
         # Create or find the group in the layer tree
         group_name = f"{section_type} cross-sections"
         group = self.get_or_make_group(group_name)
-        folder_name = self.get_folder_name(layer, section_type, layer_type_name)
+        folder_name = self.get_folder_name(layer, section_type, layer_type_name, "Ortho")
 
         # Get the geometry type and CRS for the memory layer creation
         wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
@@ -670,7 +686,7 @@ class SectionsDbTool():
 
                 # 3. Save points and/or blocks layers to file
                 if layer_type == 'UA':
-                    print("create points", points_layer.name())
+                    # print("create points", points_layer.name())
                     QgsProject.instance().addMapLayer(points_layer, False)
                     sec_group.addLayer(points_layer)
                     self.apply_symbology(points_layer, slice_save_path, sec_group)
@@ -893,7 +909,7 @@ class SectionsDbTool():
 
 
 
-    def slice_layer_oblique(self, layer, layer_type):
+    def slice_layer_oblique(self, section_type, layer, layer_type, geom_type):
         """
         Slices a QgsVectorLayer into multiple memory layers based on an oblique baseline.
         Distributes points based on perpendicular distance intervals (thickness).
@@ -946,10 +962,7 @@ class SectionsDbTool():
 
         group_name = "OBLIQUE cross-sections"
         group = self.get_or_make_group(group_name)
-        
-        # Note: Bypassing self.get_folder_name() as it hardcodes orthogonal fields
-        yacimento = "Ortho_RB" # Dynamic implementation pending
-        folder_name = f"{yacimento}_{int(step)}_OBL_{int(min_val)}_{int(max_val)}_{layer_type_name}"
+        folder_name = self.get_folder_name(layer, section_type, layer_type, "Oblique")
 
         wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
         crs_authid = layer.crs().authid()
@@ -969,9 +982,9 @@ class SectionsDbTool():
             features = list(layer.getFeatures(request))
 
             if features:
-                sec_group_name = f"OBL_{int(current_val)}_{int(next_val)}_from_X{x1}_Y{y1}"
+                sec_group_name = f"OBL_{int(current_val)}_{int(next_val)}_from_X{int(x1)}_Y{int(y1)}_{geom_type}"
                 if self.is_anchor_points():
-                    sec_group_name += f"_to_X{x2}_Y{y2}"
+                    sec_group_name += f"_to_X{int(x2)}_Y{int(y2)}"
                 sec_group = self.get_or_make_group(f"Sec_{sec_group_name}", group)
 
                 layer_name = f"{layer_type_name}_{sec_group_name}"
@@ -988,6 +1001,7 @@ class SectionsDbTool():
                 self.utils.save_layer_gpkg(mem_layer, slice_save_path)
 
                 if layer_type == 'UA':
+                    # print("create points oblique", layer.name(), mem_layer.name())
                     QgsProject.instance().addMapLayer(mem_layer, False)
                     sec_group.addLayer(mem_layer)
                     self.apply_symbology(mem_layer, slice_save_path, sec_group)
