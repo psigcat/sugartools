@@ -92,7 +92,8 @@ class SectionsDbTool():
         ymin = int(self.parent.dlg.limit_ymin_db.value())
         ymax = int(self.parent.dlg.limit_ymax_db.value())
         limit = f"{xmin}_{xmax}_{ymin}_{ymax}"
-        date = datetime.now().replace(microsecond=0)
+        date = str(datetime.now().replace(microsecond=0))
+        date = date.replace(" ", "_").replace(":", "-")
         sec_folder = f"Sec_{cave}_{limit}_{date}"
         
         path = path
@@ -873,7 +874,7 @@ class SectionsDbTool():
             return False
 
         str_angle = str(int(angle)) + "_" + str(int((angle - int(angle)) * 10))
-        print("Angle (respect horizontal, clockwise): " + str(angle))
+        #print("Angle (respect horizontal, clockwise): " + str(angle))
 
         return angle
 
@@ -884,7 +885,7 @@ class SectionsDbTool():
         V = [P2[0]-P1[0], P2[1]-P1[1]]
         if V[0] < 0 and V[1] < 0 or V[0] > 0 and V[1] < 0:
             V = [V[0]*(-1), V[1]*(-1)]
-        print("Direction vector: " + str(V))
+        #print("Direction vector: " + str(V))
         
         return math.degrees(math.acos(V[0]/(math.sqrt(V[0]**2 + V[1]**2))))
 
