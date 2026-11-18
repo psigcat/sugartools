@@ -91,10 +91,11 @@ class SectionsDbTool():
         xmax = int(self.parent.dlg.limit_xmax_db.value())
         ymin = int(self.parent.dlg.limit_ymin_db.value())
         ymax = int(self.parent.dlg.limit_ymax_db.value())
+        thickness = int(self.parent.dlg.sections_thickness_db.value())
         limit = f"{xmin}_{xmax}_{ymin}_{ymax}"
         date = str(datetime.now().replace(microsecond=0))
         date = date.replace(" ", "_").replace(":", "-")
-        sec_folder = f"Sec_{cave}_{limit}_{date}"
+        sec_folder = f"Sec_{cave}_{thickness}_{limit}_{date}"
         
         path = path
         if folder:
@@ -491,14 +492,11 @@ class SectionsDbTool():
         query_encoded = urllib.parse.quote(points_layer_query)
         points_layer_uri = f"?crs=epsg:25831&query={query_encoded}"
 
-        section_type = "ortho"
-        if self.parent.dlg.radioDistOblique_db.isChecked():
-            section_type = "oblique"
         xmin = int(self.parent.dlg.limit_xmin_db.value())
         xmax = int(self.parent.dlg.limit_xmax_db.value())
         ymin = int(self.parent.dlg.limit_ymin_db.value())
         ymax = int(self.parent.dlg.limit_ymax_db.value())
-        points_layer_name = f"Azdo_{section_type}_{layer_type}_{xmin}_{xmax}_{ymin}_{ymax}"
+        points_layer_name = f"Planta_{layer_type}_{xmin}_{xmax}_{ymin}_{ymax}"
         points_layer = QgsVectorLayer(points_layer_uri, points_layer_name, "virtual")
         points_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
 
