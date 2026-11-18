@@ -585,12 +585,10 @@ class SectionsDbTool():
         elif layer_type == 'FO':
             if section_type == 'EW':
                 coord1 = COORDX
-                coord2 = COORDY
             elif section_type == 'NS':
                 coord1 = COORDY
-                coord2 = COORDX
 
-            coords = f"{coord1}, {COORDZ}, {coord2}"
+            coords = f"{coord1}, {COORDZ}"
             layer_type_name = "Bl"
 
         elif layer_type == '3dpoints':
@@ -698,11 +696,12 @@ class SectionsDbTool():
                     self.apply_symbology(points_layer, slice_save_path, sec_group)
 
                 elif layer_type == 'FO':
-                    blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Sec {layer_type}", "virtual")
-                    blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
-                    blocks_layer = self.get_blocks(points_layer, slice_save_path)
-                    if blocks_layer:
-                        self.utils_3d.create_polygon_3d(blocks_layer, points_layer, slice_save_path, sec_group)
+                    self.create_blocks(points_layer, slice_save_path, sec_group)
+                    # blocks2d_layer = QgsVectorLayer(points_layer_uri, f"Sec {layer_type}", "virtual")
+                    # blocks2d_layer.setCrs(QgsCoordinateReferenceSystem("EPSG:25831"))
+                    # blocks_layer = self.get_blocks(points_layer, slice_save_path)
+                    # if blocks_layer:
+                    #     self.utils_3d.create_polygon_3d(blocks_layer, points_layer, slice_save_path, sec_group)
 
             current_val = next_val
             
@@ -834,6 +833,46 @@ class SectionsDbTool():
         result['OUTPUT'].setName(f"{layer.name()}_bl")
 
         # self.utils.save_layer_gpkg(result['OUTPUT'], path)
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        return result['OUTPUT']
+
+
+    def create_blocks(self, layer, path, group=QgsProject.instance().layerTreeRoot()):
+        """ create blocks from point layer """
+
+        self.progress.setValue(self.progress.value() + 1)
+
+        # paint polygons as points
+        if self.parent.dlg.option_points_db.isChecked():
+            QgsProject.instance().addMapLayer(layer, False)
+            group.addLayer(layer)
+            return
+
+        # apply geoprocess convex hull
+        params = {
+            'INPUT': layer.source(),
+            'FIELD': 'dib_pieza',
+            'TYPE': 3,
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+
+        result = processing.run("qgis:minimumboundinggeometry", params)
+
+        if len(list(result['OUTPUT'].getFeatures())) == 0:
+            return
+
+        QgsProject.instance().addMapLayer(result['OUTPUT'], False)
+        group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
+        result['OUTPUT'].setName(f"{layer.name()}_bl")
+
+        # apply style
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "blocks.qml")
+        result['OUTPUT'].loadNamedStyle(symbology_path)
+        result['OUTPUT'].triggerRepaint()
+
+        self.utils.save_layer_gpkg(result['OUTPUT'], path)
 
         self.progress.setValue(self.progress.value() + 1)
 
