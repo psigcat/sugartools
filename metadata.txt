@@ -3,7 +3,7 @@ name=Sugar Tools
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 description=Aqueological tools for QGIS
-version=0.2.44
+version=0.2.45
 author=PSIG
 email=geraldo@servus.at
 license=GPL-3.0-or-later
@@ -26,6 +26,7 @@ supportsQt6=True
 plugin_dependencies=qpip,Append Features to Layer
 
 changelog=
+	0.2.45 - move blocks sections to point area changing coordx and coordy (#66)
 	0.2.44 - replace : by - in order to make filename work on windows (#66)
 	0.2.43 - rename oblique layer files, fix mandatory anchor point (#69)
 	0.2.42 - folder structure, blocks symbology, fix ew and ns points (#66)
