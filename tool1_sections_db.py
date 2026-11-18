@@ -585,7 +585,14 @@ class SectionsDbTool():
             layer_type_name = "Pnt"
 
         elif layer_type == 'FO':
-            coords = f"{COORDX}, {COORDY}, {COORDZ}"
+            if section_type == 'EW':
+                coord1 = COORDX
+                coord2 = COORDY
+            elif section_type == 'NS':
+                coord1 = COORDY
+                coord2 = COORDX
+
+            coords = f"{coord1}, {COORDZ}, {coord2}"
             layer_type_name = "Bl"
 
         elif layer_type == '3dpoints':
