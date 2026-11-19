@@ -69,6 +69,7 @@ class SectionsDbTool():
         self.parent.dlg.radioPointsBlocks_db.setEnabled(isOrthogonal)
         self.parent.dlg.groupAnchorpoints_db.setVisible(not isOrthogonal)
         self.parent.dlg.sectionsBox_db.setEnabled(isOrthogonal)
+        self.parent.dlg.groupLimitProjection_db.setEnabled(isOrthogonal)
 
 
     def points_or_blocks(self):
@@ -165,6 +166,8 @@ class SectionsDbTool():
         self.get_delimitation()
         self.get_xy_minmax()
         self.get_cmateria_values()
+        isOrthogonal = self.parent.dlg.radioDistOrthogonal_db.isChecked()
+        self.parent.dlg.groupLimitProjection_db.setEnabled(isOrthogonal)
 
 
     def get_delimitation(self):
@@ -372,7 +375,10 @@ class SectionsDbTool():
         if self.parent.dlg.radioDistOblique_db.isChecked() and self.get_angle() == False:
             return
 
-        where_query = self.limit_projection(where_query)
+        if self.parent.dlg.radioDistOblique_db.isChecked():
+            where_query = self.limit_projection_anchor(where_query)
+        else:
+            where_query = self.limit_projection(where_query)
 
         # Make base layer and section layers
         if not self.create_baselayer(where_query, layer_type):
@@ -425,6 +431,18 @@ class SectionsDbTool():
         
         if xmin != 0 and xmax != 0 and ymin != 0 and ymax != 0:
             where_query += f" AND {COORDX} >= {xmin} AND {COORDX} <= {xmax} AND {COORDY} >= {ymin} AND {COORDY} <= {ymax}"
+
+        return where_query
+
+
+    def limit_projection_anchor(self, where_query):
+        """ add limits to where query """
+
+        xmin = self.parent.dlg.anchorpoint_x1_db.value()
+        xmax = self.parent.dlg.anchorpoint_x2_db.value()
+        
+        if xmin != 0 and xmax != 0:
+            where_query += f" AND {COORDX} >= {xmin} AND {COORDX} <= {xmax}"
 
         return where_query
 
@@ -893,30 +911,11 @@ class SectionsDbTool():
 
     def get_angle(self):
         """ Get angle from anchor points or angle field """
-        if self.is_anchor_points() and not self.is_angle():
-            # pnts = [
-            #     [self.parent.dlg.anchorpoint_x1_db.value(), self.parent.dlg.anchorpoint_y1_db.value()],
-            #     [self.parent.dlg.anchorpoint_x2_db.value(), self.parent.dlg.anchorpoint_y2_db.value()]
-            # ]
-            # print("P1: " + str(pnts[0]))
-            # print("P2: " + str(pnts[1]))
-            
-            # angle = self.calc_angle(pnts[0], pnts[1])
-
-            # if angle == 0 or angle == 180:
-            #     self.parent.dlg.messageBar.pushMessage("You are generating E-W cross-sections.", level=Qgis.Critical, duration=3)
-            # if angle == 90:
-            #     self.parent.dlg.messageBar.pushMessage("You are generating N-S cross-sections.", level=Qgis.Critical, duration=3)
-
-            angle = self.parent.dlg.anchorpoint_angle_db.value()
-
-        elif not self.is_anchor_points() and self.is_angle():
-            angle = self.parent.dlg.anchorpoint_angle_db.value()
-
-        else:
-            self.parent.dlg.messageBar.pushMessage("You must specify either angle or anchor points.", level=Qgis.Critical, duration=3)
+        if not self.is_anchor_points():
+            self.parent.dlg.messageBar.pushMessage("You must specify anchor points.", level=Qgis.Critical, duration=3)
             return False
 
+        angle = self.parent.dlg.anchorpoint_angle_db.value()
         str_angle = str(int(angle)) + "_" + str(int((angle - int(angle)) * 10))
         #print("Angle (respect horizontal, clockwise): " + str(angle))
 
@@ -941,7 +940,7 @@ class SectionsDbTool():
         x2 = self.parent.dlg.anchorpoint_x2_db.value()
         y2 = self.parent.dlg.anchorpoint_y2_db.value()
 
-        if x1 == x2 and y2 == y2:
+        if x1 == x2 and y1 == y2:
             return
 
         self.parent.dlg.anchorpoint_angle_db.setValue(self.calc_angle([x1, y1], [x2, y2]))
@@ -953,30 +952,24 @@ class SectionsDbTool():
         self.parent.dlg.anchorpoint_y2_db.clear()
 
 
-
     def slice_layer_oblique(self, section_type, layer, layer_type, geom_type):
         """
         Slices a QgsVectorLayer into multiple memory layers based on an oblique baseline.
         Distributes points based on perpendicular distance intervals (thickness).
         """
-        step = self.parent.dlg.sections_thickness_db.value()
-        
+        if not self.is_anchor_points():
+            self.parent.dlg.messageBar.pushMessage("You must specify anchor points.", level=Qgis.Critical, duration=3)
+            return
+
         # 1. Retrieve angle and reference origin point (P1)
         x1 = self.parent.dlg.anchorpoint_x1_db.value()
         y1 = self.parent.dlg.anchorpoint_y1_db.value()
-        angle_deg = 0
-        
-        if self.is_anchor_points() and not self.is_angle():
-            x2 = self.parent.dlg.anchorpoint_x2_db.value()
-            y2 = self.parent.dlg.anchorpoint_y2_db.value()
-            angle_deg = self.calc_angle([x1, y1], [x2, y2])
-        elif not self.is_anchor_points() and self.is_angle():
-            angle_deg = self.parent.dlg.anchorpoint_angle_db.value()
-        else:
-            self.parent.dlg.messageBar.pushMessage("Specify angle or anchor points.", level=Qgis.Critical, duration=3)
-            return
+        x2 = self.parent.dlg.anchorpoint_x2_db.value()
+        y2 = self.parent.dlg.anchorpoint_y2_db.value()
 
         # Precompute trigonometry for the normal vector projection
+        step = self.parent.dlg.sections_thickness_db.value()
+        angle_deg = self.parent.dlg.anchorpoint_angle_db.value()
         angle_rad = math.radians(angle_deg)
         cos_a = math.cos(angle_rad)
         sin_a = math.sin(angle_rad)
