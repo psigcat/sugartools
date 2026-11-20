@@ -400,31 +400,31 @@ class SectionsDbTool():
 
             vlayer_planta = self.create_dblayer(sec, where_query, layer_type, "3d")
             if vlayer_planta:
-                self.slice_layer_oblique_single(sec, vlayer_planta, layer_type, "3d")
+                self.slice_layer_ortho_oblique(sec, vlayer_planta, layer_type, "3d")
             vlayer_sec = self.create_dblayer(sec, where_query, layer_type)
             if vlayer_sec:
-                self.slice_layer_oblique_single(sec, vlayer_sec, layer_type, "2d")
+                self.slice_layer_ortho_oblique(sec, vlayer_sec, layer_type, "2d")
             return
 
         if self.parent.dlg.section_ew_db.isChecked():
             vlayer_ew = self.create_dblayer("EW", where_query, layer_type)
             if vlayer_ew:
-                self.slice_layer("EW", vlayer_ew, layer_type)
+                self.slice_layer_ortho("EW", vlayer_ew, layer_type)
 
         if self.parent.dlg.section_ns_db.isChecked():
             vlayer_ns = self.create_dblayer("NS", where_query, layer_type)
             if vlayer_ns:
-                self.slice_layer("NS", vlayer_ns, layer_type)
+                self.slice_layer_ortho("NS", vlayer_ns, layer_type)
 
         if self.parent.dlg.section_ew_inverted_db.isChecked():
             vlayer_ew_neg = self.create_dblayer("EW", where_query, layer_type)
             if vlayer_ew_neg:
-                self.slice_layer("EW_NEG", vlayer_ew_neg, layer_type)
+                self.slice_layer_ortho("EW_NEG", vlayer_ew_neg, layer_type)
 
         if self.parent.dlg.section_ns_inverted_db.isChecked():
             vlayer_ns_neg = self.create_dblayer("NS", where_query, layer_type)
             if vlayer_ns_neg:
-                self.slice_layer("NS_NEG", vlayer_ns_neg, layer_type)
+                self.slice_layer_ortho("NS_NEG", vlayer_ns_neg, layer_type)
 
 
     def limit_projection(self, where_query):
@@ -640,19 +640,12 @@ class SectionsDbTool():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for {TABLE_NAME}.", level=Qgis.Critical, duration=5)
             return False
 
-        # TESTING: add and show view_secciones
-        # QgsProject.instance().addMapLayer(vlayer, True)
-        # folder_name = self.get_folder_name(vlayer, section_type, layer_type_name, "Ortho")
-        # workspace_path = os.path.join(self.workspace_path, folder_name)
-        # self.utils.save_layer_gpkg(vlayer, workspace_path)
-        # self.parent.dlg.messageBar.pushMessage(f"Layer {TABLE_NAME} created successfully.", level=Qgis.Success, duration=5)
-
         self.progress.setValue(self.progress.value() + 1)
 
         return vlayer
 
 
-    def slice_layer(self, section_type, layer, layer_type):
+    def slice_layer_ortho(self, section_type, layer, layer_type):
         """
         Slices a QgsVectorLayer into multiple memory layers based on a X- or Y-coordinate field.
         """
@@ -862,11 +855,7 @@ class SectionsDbTool():
         if len(list(result['OUTPUT'].getFeatures())) == 0:
             return
 
-        # QgsProject.instance().addMapLayer(result['OUTPUT'], False)
-        # group.addChildNode(QgsLayerTreeLayer(result['OUTPUT']))
         result['OUTPUT'].setName(f"{layer.name()}_bl")
-
-        # self.utils.save_layer_gpkg(result['OUTPUT'], path)
 
         self.progress.setValue(self.progress.value() + 1)
 
@@ -968,106 +957,7 @@ class SectionsDbTool():
         self.parent.dlg.anchorpoint_y2_db.clear()
 
 
-    def slice_layer_oblique(self, section_type, layer, layer_type, geom_type):
-        """
-        Slices a QgsVectorLayer into multiple memory layers based on an oblique baseline.
-        Distributes points based on perpendicular distance intervals (thickness).
-        """
-        if not self.is_anchor_points():
-            self.parent.dlg.messageBar.pushMessage("You must specify anchor points.", level=Qgis.Critical, duration=3)
-            return
-
-        # 1. Retrieve angle and reference origin point (P1)
-        x1 = self.parent.dlg.anchorpoint_x1_db.value()
-        y1 = self.parent.dlg.anchorpoint_y1_db.value()
-        x2 = self.parent.dlg.anchorpoint_x2_db.value()
-        y2 = self.parent.dlg.anchorpoint_y2_db.value()
-
-        # Precompute trigonometry for the normal vector projection
-        step = self.parent.dlg.sections_thickness_db.value()
-        angle_deg = self.get_angle()
-        angle_rad = math.radians(angle_deg)
-        cos_a = math.cos(angle_rad)
-        sin_a = math.sin(angle_rad)
-
-        # 2. Iterate once to determine bounding min and max perpendicular distances
-        min_val = float('inf')
-        max_val = float('-inf')
-        
-        for feat in layer.getFeatures():
-            px = feat[COORDX]
-            py = feat[COORDY]
-            # Calculate perpendicular distance from baseline P1
-            perp_dist = -(px - x1) * sin_a + (py - y1) * cos_a
-            
-            if perp_dist < min_val: min_val = perp_dist
-            if perp_dist > max_val: max_val = perp_dist
-            
-        if min_val == float('inf'):
-            return # Layer is empty
-
-        # 3. Setup grouping and output destinations 
-        if layer_type == 'UA':
-            layer_type_name = "Pnt"
-        elif layer_type == 'FO':
-            layer_type_name = "Bl"
-        else:
-            layer_type_name = ""
-
-        group_name = "OBLIQUE cross-sections"
-        group = self.get_or_make_group(group_name)
-        folder_name = self.get_folder_name(layer, section_type, layer_type, "Oblique")
-
-        wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
-        crs_authid = layer.crs().authid()
-
-        # 4. Slice the layer by defined thickness steps
-        current_val = math.floor(min_val / step) * step
-
-        while current_val <= max_val:
-            self.progress.setValue(self.progress.value() + 1)
-            next_val = current_val + step
-
-            # Dynamic string expression mathematically equivalent to our perp_dist calculation
-            expr = (f"(-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) >= {current_val} "
-                    f"AND (-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) < {next_val}")
-            
-            request = QgsFeatureRequest().setFilterExpression(expr)
-            features = list(layer.getFeatures(request))
-
-            if features:
-                sec_group_name = f"OBL_{int(current_val)}_{int(next_val)}_from_X{int(x1)}_Y{int(y1)}_{geom_type}"
-                if self.is_anchor_points():
-                    sec_group_name += f"_to_X{int(x2)}_Y{int(y2)}"
-                sec_group = self.get_or_make_group(f"Sec_{sec_group_name}", group)
-
-                layer_name = f"{layer_type_name}_{sec_group_name}"
-                uri = f"{wkb_type}?crs={crs_authid}"
-                
-                mem_layer = QgsVectorLayer(uri, layer_name, "memory")
-                mem_layer_data = mem_layer.dataProvider()
-                mem_layer_data.addAttributes(layer.fields())
-                mem_layer.updateFields()
-                mem_layer_data.addFeatures(features)
-                mem_layer.updateExtents()
-
-                slice_save_path = os.path.join(self.workspace_path, folder_name)
-                self.utils.save_layer_gpkg(mem_layer, slice_save_path)
-
-                if layer_type == 'UA':
-                    # print("create points oblique", layer.name(), mem_layer.name())
-                    QgsProject.instance().addMapLayer(mem_layer, False)
-                    sec_group.addLayer(mem_layer)
-                    self.apply_symbology(mem_layer, slice_save_path, sec_group)
-                # elif layer_type == 'FO':
-                #     self.utils_3d.create_polygon_3d(blocks_layer, mem_layer, slice_save_path, sec_group)
-
-            current_val = next_val
-
-        self.parent.dlg.messageBar.pushMessage(f"Successfully sliced OBLIQUE into slots of {step}.", level=Qgis.Success, duration=5)
-
-
-    def slice_layer_oblique_single(self, section_type, layer, layer_type, geom_type):
+    def slice_layer_ortho_oblique(self, section_type, layer, layer_type, geom_type):
         """Creates a single slice as memory layers based on an oblique baseline."""
         if not self.is_anchor_points():
             self.parent.dlg.messageBar.pushMessage("You must specify anchor points.", level=Qgis.Critical, duration=3)
