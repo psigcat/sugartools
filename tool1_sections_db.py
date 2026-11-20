@@ -390,14 +390,14 @@ class SectionsDbTool():
         if self.parent.dlg.radioDistOblique_db.isChecked():
             # oblique
             angle = self.get_angle()
-            sec = "EW"
-            if angle > 45:
-                sec = "NS"
-            vlayer = self.create_dblayer(sec, where_query, layer_type)
-            vlayer2 = self.create_dblayer(sec, where_query, "3dpoints")
-            if vlayer and vlayer2:
-                self.slice_layer_oblique(sec, vlayer, layer_type, "2d")
-                self.slice_layer_oblique(sec, vlayer2, layer_type, "3d")
+            sec = "NS"
+            if (angle > 45 and angle < 90) or (angle > 135 and angle < 180):
+                sec = "EW"
+            vlayer_planta = self.create_dblayer(sec, where_query, "3dpoints")
+            vlayer_sec = self.create_dblayer(sec, where_query, layer_type)
+            if vlayer_planta and vlayer_sec:
+                self.slice_layer_oblique_single(sec, vlayer_planta, layer_type, "3d")
+                self.slice_layer_oblique_single(sec, vlayer_sec, layer_type, "2d")
                 return
 
         if self.parent.dlg.section_ew_db.isChecked():
@@ -828,6 +828,14 @@ class SectionsDbTool():
         layer.triggerRepaint()
 
 
+    def set_symbology_simple(self, layer):
+        """ set symbology from selected qml file """
+
+        symbology_path = os.path.join(self.parent.utils.get_path_qml(), "structures_db_simple.qml")
+        layer.loadNamedStyle(symbology_path)
+        layer.triggerRepaint()
+        
+
     def get_blocks(self, layer, path, group=QgsProject.instance().layerTreeRoot()):
         """ get blocks from point layer """
 
@@ -915,7 +923,7 @@ class SectionsDbTool():
             self.parent.dlg.messageBar.pushMessage("You must specify anchor points.", level=Qgis.Critical, duration=3)
             return False
 
-        angle = self.parent.dlg.anchorpoint_angle_db.value()
+        angle = 180 - self.parent.dlg.anchorpoint_angle_db.value()
         str_angle = str(int(angle)) + "_" + str(int((angle - int(angle)) * 10))
         #print("Angle (respect horizontal, clockwise): " + str(angle))
 
@@ -930,7 +938,7 @@ class SectionsDbTool():
             V = [V[0]*(-1), V[1]*(-1)]
         #print("Direction vector: " + str(V))
         
-        return math.degrees(math.acos(V[0]/(math.sqrt(V[0]**2 + V[1]**2))))
+        return 180 - math.degrees(math.acos(V[0]/(math.sqrt(V[0]**2 + V[1]**2))))
 
 
     def set_angle(self):
@@ -947,7 +955,7 @@ class SectionsDbTool():
 
 
     def reset_anchorpoint2(self):
-        """Reset point fields after angel changed manually."""
+        """Reset point fields."""
         self.parent.dlg.anchorpoint_x2_db.clear()
         self.parent.dlg.anchorpoint_y2_db.clear()
 
@@ -969,7 +977,7 @@ class SectionsDbTool():
 
         # Precompute trigonometry for the normal vector projection
         step = self.parent.dlg.sections_thickness_db.value()
-        angle_deg = self.parent.dlg.anchorpoint_angle_db.value()
+        angle_deg = self.get_angle()
         angle_rad = math.radians(angle_deg)
         cos_a = math.cos(angle_rad)
         sin_a = math.sin(angle_rad)
@@ -1049,3 +1057,78 @@ class SectionsDbTool():
             current_val = next_val
 
         self.parent.dlg.messageBar.pushMessage(f"Successfully sliced OBLIQUE into slots of {step}.", level=Qgis.Success, duration=5)
+
+
+    def slice_layer_oblique_single(self, section_type, layer, layer_type, geom_type):
+        """Creates a single slice as memory layers based on an oblique baseline."""
+        if not self.is_anchor_points():
+            self.parent.dlg.messageBar.pushMessage("You must specify anchor points.", level=Qgis.Critical, duration=3)
+            return
+
+        # Retrieve angle and reference origin point (P1)
+        x1 = self.parent.dlg.anchorpoint_x1_db.value()
+        y1 = self.parent.dlg.anchorpoint_y1_db.value()
+        x2 = self.parent.dlg.anchorpoint_x2_db.value()
+        y2 = self.parent.dlg.anchorpoint_y2_db.value()
+
+        # Precompute trigonometry for the normal vector projection
+        step = self.parent.dlg.sections_thickness_db.value()
+        angle_deg = self.get_angle()
+        angle_rad = math.radians(angle_deg)
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+
+        # Setup grouping and output destinations 
+        if layer_type == 'UA':
+            layer_type_name = "Pnt"
+        elif layer_type == 'FO':
+            layer_type_name = "Bl"
+        else:
+            layer_type_name = ""
+
+        folder_name = self.get_folder_name(layer, section_type, layer_type, "Oblique")
+        wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
+        crs_authid = layer.crs().authid()
+
+        # Slice the layer by defined thickness steps
+        self.progress.setValue(self.progress.value() + 1)
+        current_val = 0
+        next_val = current_val + step
+
+        # Dynamic string expression mathematically equivalent to our perp_dist calculation
+        expr = (f"(-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) >= {current_val} "
+                f"AND (-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) < {next_val}")
+        
+        request = QgsFeatureRequest().setFilterExpression(expr)
+        features = list(layer.getFeatures(request))
+
+        if features:
+            name = "Azdo_OBL"
+            if geom_type == "3d":
+                name = "Planta"
+            sec_group_name = f"{name}_{int(current_val)}_{int(next_val)}_from_X{int(x1)}_Y{int(y1)}"
+            if self.is_anchor_points():
+                sec_group_name += f"_to_X{int(x2)}_Y{int(y2)}"
+
+            layer_name = f"{layer_type_name}_{sec_group_name}"
+            uri = f"{wkb_type}?crs={crs_authid}"
+            
+            mem_layer = QgsVectorLayer(uri, layer_name, "memory")
+            mem_layer_data = mem_layer.dataProvider()
+            mem_layer_data.addAttributes(layer.fields())
+            mem_layer.updateFields()
+            mem_layer_data.addFeatures(features)
+            mem_layer.updateExtents()
+
+            slice_save_path = os.path.join(self.workspace_path, folder_name)
+            self.utils.save_layer_gpkg(mem_layer, slice_save_path)
+
+            if layer_type == 'UA':
+                # print("create points oblique", layer.name(), mem_layer.name())
+                QgsProject.instance().addMapLayer(mem_layer)
+                if geom_type == "2d":
+                    self.apply_symbology(mem_layer, slice_save_path)
+                else:
+                    self.set_symbology_simple(mem_layer)
+            # elif layer_type == 'FO':
+            #     self.utils_3d.create_polygon_3d(blocks_layer, mem_layer, slice_save_path, sec_group)
