@@ -46,6 +46,7 @@ class SectionsDbTool():
         self.points_or_blocks()
         self.fill_symbology()
         self.fill_symbology_overlay()
+        self.set_angle()
 
         self.databases = self.utils.read_database_config()
         self.utils.fill_db_combo(self.parent.dlg.sections_db, self.databases)
@@ -65,8 +66,8 @@ class SectionsDbTool():
 
         isOrthogonal = self.parent.dlg.radioDistOrthogonal_db.isChecked()
         self.parent.dlg.radioPoints_db.setChecked(True)
-        self.parent.dlg.radioBlocks_db.setEnabled(isOrthogonal)
-        self.parent.dlg.radioPointsBlocks_db.setEnabled(isOrthogonal)
+        self.parent.dlg.radioBlocks_db.setEnabled(True)
+        self.parent.dlg.radioPointsBlocks_db.setEnabled(True)
         self.parent.dlg.groupAnchorpoints_db.setVisible(not isOrthogonal)
         self.parent.dlg.sectionsBox_db.setEnabled(isOrthogonal)
         self.parent.dlg.groupLimitProjection_db.setEnabled(isOrthogonal)
@@ -381,11 +382,13 @@ class SectionsDbTool():
             where_query = self.limit_projection(where_query)
 
         # Make base layer and section layers
+        self.workspace_path = self.get_workspace()
         if not self.create_baselayer(where_query, layer_type):
             return False
 
-        if not self.create_planta(where_query, layer_type):
-            return False
+        if not self.parent.dlg.radioDistOblique_db.isChecked() or (self.parent.dlg.radioDistOblique_db.isChecked() and self.parent.dlg.radioPoints_db.isChecked()):
+            if not self.create_planta(where_query, layer_type):
+                return False
 
         if self.parent.dlg.radioDistOblique_db.isChecked():
             # oblique
@@ -393,12 +396,14 @@ class SectionsDbTool():
             sec = "NS"
             if (angle > 45 and angle < 90) or (angle > 135 and angle < 180):
                 sec = "EW"
-            vlayer_planta = self.create_dblayer(sec, where_query, "3dpoints")
-            vlayer_sec = self.create_dblayer(sec, where_query, layer_type)
-            if vlayer_planta and vlayer_sec:
+
+            vlayer_planta = self.create_dblayer(sec, where_query, layer_type, "3d")
+            if vlayer_planta:
                 self.slice_layer_oblique_single(sec, vlayer_planta, layer_type, "3d")
+            vlayer_sec = self.create_dblayer(sec, where_query, layer_type)
+            if vlayer_sec:
                 self.slice_layer_oblique_single(sec, vlayer_sec, layer_type, "2d")
-                return
+            return
 
         if self.parent.dlg.section_ew_db.isChecked():
             vlayer_ew = self.create_dblayer("EW", where_query, layer_type)
@@ -522,7 +527,6 @@ class SectionsDbTool():
             self.parent.dlg.messageBar.pushMessage(f"Failed to create virtual layer for Planta.", level=Qgis.Critical, duration=5)
             return False
 
-        self.workspace_path = self.get_workspace()
         self.utils.save_layer_gpkg(points_layer, self.workspace_path)
 
         if layer_type == 'UA':
@@ -584,10 +588,18 @@ class SectionsDbTool():
         return min_val, max_val, field_name
 
 
-    def create_dblayer(self, section_type, where_query, layer_type):
+    def create_dblayer(self, section_type, where_query, layer_type, geom_type="2d"):
         """ create virtual layer using the hidden base layer and add to project """
 
-        if layer_type == 'UA':
+        if geom_type == '3d':
+            coords = f"{COORDX}, {COORDY}, {COORDZ}"
+
+            if layer_type == 'UA':
+                layer_type_name = "Pnt"
+            elif layer_type == 'FO':
+                layer_type_name = "Bl"
+
+        elif layer_type == 'UA':
             if section_type == 'EW':
                 coord1 = COORDX
             elif section_type == 'NS':
@@ -608,11 +620,6 @@ class SectionsDbTool():
 
             coords = f"{coord1}, {COORDZ}"
             layer_type_name = "Bl"
-
-        elif layer_type == '3dpoints':
-            coords = f"{COORDX}, {COORDY}, {COORDZ}"
-            layer_type_name = "Pnt"
-            layer_type = 'UA'
 
         vlayer_query = f"""
             SELECT *, make_point({coords}) AS geometry 
@@ -1130,5 +1137,5 @@ class SectionsDbTool():
                     self.apply_symbology(mem_layer, slice_save_path)
                 else:
                     self.set_symbology_simple(mem_layer)
-            # elif layer_type == 'FO':
-            #     self.utils_3d.create_polygon_3d(blocks_layer, mem_layer, slice_save_path, sec_group)
+            elif layer_type == 'FO':
+                self.create_blocks(mem_layer, slice_save_path)
