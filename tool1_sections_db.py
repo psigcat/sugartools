@@ -335,6 +335,8 @@ class SectionsDbTool():
 
         self.progress, self.progress_msg = self.utils.initProgressBar("Import sections from database...", 100)
 
+        self.workspace_path = self.get_workspace()
+
         if self.parent.dlg.radioPoints_db.isChecked() or self.parent.dlg.radioPointsBlocks_db.isChecked():
 
             # points
@@ -382,7 +384,6 @@ class SectionsDbTool():
             where_query = self.limit_projection(where_query)
 
         # Make base layer and section layers
-        self.workspace_path = self.get_workspace()
         if not self.create_baselayer(where_query, layer_type):
             return False
 
@@ -1097,33 +1098,30 @@ class SectionsDbTool():
         wkb_type = QgsWkbTypes.displayString(layer.wkbType()).replace(" ", "")
         crs_authid = layer.crs().authid()
 
-        # Slice the layer by defined thickness steps
         self.progress.setValue(self.progress.value() + 1)
-        current_val = 0
-        next_val = current_val + step
 
         # Dynamic string expression mathematically equivalent to our perp_dist calculation
-        expr = (f"(-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) >= {current_val} "
-                f"AND (-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) < {next_val}")
+        expr = (f"(-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) >= 0 "
+                f"AND (-(\"{COORDX}\" - {x1}) * {sin_a} + (\"{COORDY}\" - {y1}) * {cos_a}) < {step}")
         
         request = QgsFeatureRequest().setFilterExpression(expr)
         features = list(layer.getFeatures(request))
 
         if features:
-            name = "Azdo_OBL"
+            name = "Azdo_oblicua"
             if geom_type == "3d":
-                name = "Planta"
-            sec_group_name = f"{name}_{int(current_val)}_{int(next_val)}_from_X{int(x1)}_Y{int(y1)}"
+                name = f"{layer_type_name}_oblicua"
+            layer_name = f"{name}_{int(step)}_from_X{int(x1)}_Y{int(y1)}"
             if self.is_anchor_points():
-                sec_group_name += f"_to_X{int(x2)}_Y{int(y2)}"
+                layer_name += f"_to_X{int(x2)}_Y{int(y2)}"
 
-            layer_name = f"{layer_type_name}_{sec_group_name}"
             uri = f"{wkb_type}?crs={crs_authid}"
-            
             mem_layer = QgsVectorLayer(uri, layer_name, "memory")
             mem_layer_data = mem_layer.dataProvider()
+
             mem_layer_data.addAttributes(layer.fields())
             mem_layer.updateFields()
+
             mem_layer_data.addFeatures(features)
             mem_layer.updateExtents()
 
@@ -1132,7 +1130,7 @@ class SectionsDbTool():
 
             if layer_type == 'UA':
                 # print("create points oblique", layer.name(), mem_layer.name())
-                QgsProject.instance().addMapLayer(mem_layer)
+                QgsProject.instance().addMapLayer(mem_layer, True)
                 if geom_type == "2d":
                     self.apply_symbology(mem_layer, slice_save_path)
                 else:
