@@ -1,7 +1,7 @@
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import QProgressBar, QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QLabel, QScrollArea
 from qgis.gui import QgsExpressionBuilderDialog
-from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsDataSourceUri, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsProviderRegistry, QgsFeature, QgsLayout, QgsExpression, QgsWkbTypes, QgsCoordinateReferenceSystem
+from qgis.core import Qgis, QgsProject, QgsVectorLayer, QgsDataSourceUri, QgsSymbol, QgsMarkerSymbol, QgsSimpleFillSymbolLayer, QgsRendererCategory, QgsCategorizedSymbolRenderer, QgsLayerTreeLayer, QgsLayerTreeNode, QgsLayerTreeGroup, QgsExpressionContextUtils, QgsFeatureRequest, QgsExpressionContext, QgsProviderRegistry, QgsFeature, QgsLayout, QgsExpression, QgsWkbTypes, QgsCoordinateReferenceSystem, QgsGeometry, QgsPointXY
 
 import math
 import os
@@ -395,15 +395,16 @@ class SectionsDbTool():
             # oblique
             angle = self.get_angle()
             sec = "NS"
-            if (angle > 45 and angle < 90) or (angle > 135 and angle < 180):
+            if (angle > 45 and angle <= 135):
                 sec = "EW"
 
             vlayer_planta = self.create_dblayer(sec, where_query, layer_type, "3d")
             if vlayer_planta:
                 self.slice_layer_ortho_oblique(sec, vlayer_planta, layer_type, "3d")
             vlayer_sec = self.create_dblayer(sec, where_query, layer_type)
-            if vlayer_sec:
-                self.slice_layer_ortho_oblique(sec, vlayer_sec, layer_type, "2d")
+            vlayer_rotated = self.layer_rotate(vlayer_sec)
+            if vlayer_rotated:
+                self.slice_layer_ortho_oblique(sec, vlayer_rotated, layer_type, "2d")
             return
 
         if self.parent.dlg.section_ew_db.isChecked():
@@ -425,6 +426,28 @@ class SectionsDbTool():
             vlayer_ns_neg = self.create_dblayer("NS", where_query, layer_type)
             if vlayer_ns_neg:
                 self.slice_layer_ortho("NS_NEG", vlayer_ns_neg, layer_type)
+
+
+    def layer_rotate(self, layer):
+        """
+        Rotates a layer of 2D point clockwise by `angle` (in degrees) around (origin_x, origin_y).
+        """
+        angle = self.get_angle()
+        origin_x = self.parent.dlg.anchorpoint_x2_db.value()
+        origin_y = self.parent.dlg.anchorpoint_y2_db.value()
+        if angle > 90:
+            origin_x = self.parent.dlg.anchorpoint_x1_db.value()
+            origin_y = self.parent.dlg.anchorpoint_y1_db.value()
+
+        params = {
+            'INPUT': layer,
+            'ANGLE': angle,
+            'ANCHOR': f"{origin_x},{origin_y}",
+            'OUTPUT': 'TEMPORARY_OUTPUT'
+        }
+
+        result = processing.run("native:rotatefeatures", params)
+        return result['OUTPUT']
 
 
     def limit_projection(self, where_query):
